@@ -3,13 +3,20 @@ import styled from "styled-components";
 import Playfield from "../Playfield";
 import VideoFrame from "../VideoFrame";
 import StatusBar from "../StatusBar";
+import useFaceLandmarks from "../../hooks/use-face-landmarks";
 
 function App() {
+  const videoRef = React.useRef();
+  const [videoEnabled, setVideoEnabled] = React.useState(false);
+  const [results, setResults] = React.useState([]);
+
+  useFaceLandmarks({ videoRef, videoEnabled, setResults });
+
   return (
     <GameHolder>
       <Header />
       <One>
-        <VideoFrame />
+        <VideoFrame setVideoEnabled={setVideoEnabled} videoRef={videoRef} />
       </One>
       <Two />
     </GameHolder>
@@ -57,27 +64,5 @@ const Two = styled(FittedSquare)`
   grid-area: playfield;
   background-color: slategrey;
 `;
-
-// const MaxWidthWrapper = styled.div`
-//   max-width: 800px;
-//   padding: 0 32px;
-//   margin: 0 auto;
-//   background-color: slategrey;
-// `;
-
-// const Wrapper = styled.div`
-//   display: flex;
-//   height: 100%;
-//   flex-direction: column;
-// `;
-
-// const InnerWrapper = styled.div`
-//   flex-grow: 1;
-//   display: grid;
-//   flex-direction: column;
-//   align-items: center;
-//   background-color: green;
-//   grid-template-columns: 1fr;
-// `;
 
 export default App;

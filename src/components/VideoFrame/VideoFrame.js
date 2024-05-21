@@ -2,9 +2,7 @@ import React from "react";
 import styled from "styled-components";
 import UnstyledButton from "../UnstyledButton";
 
-function VideoFrame() {
-  const videoRef = React.useRef();
-  const [videoEnabled, setVideoEnabled] = React.useState(false);
+function VideoFrame({ videoRef, setVideoEnabled }) {
   const [buttonDisabled, setButtonDisabled] = React.useState(false);
 
   const onClick = React.useCallback(() => {
@@ -19,7 +17,7 @@ function VideoFrame() {
       .catch((err) => {
         console.error("Error accessing the camera.", err);
       });
-  }, [videoRef]);
+  }, [setVideoEnabled, videoRef]);
 
   return (
     <Wrapper>
@@ -62,6 +60,7 @@ const Video = styled.video`
   width: 100%;
   height: 100%;
   pointer-events: none;
+  transform: scaleX(-1);
 `;
 
 export default VideoFrame;
