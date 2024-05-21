@@ -49,7 +49,6 @@ const EnableVideoButton = styled(UnstyledButton)`
 `;
 
 const Wrapper = styled.div`
-  background-color: blue;
   position: relative;
   width: 100%;
   height: 100%;

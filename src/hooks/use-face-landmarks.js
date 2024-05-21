@@ -33,9 +33,61 @@ function useFaceLandmarks({ videoEnabled, videoRef, setResults }) {
         return;
       }
       const newResults = [];
-      const jawOpen = results.faceBlendshapes.categories[25];
-      const jawIsOpen = jawOpen.score > 0.6;
-      newResults.push({ key: "jawOpen", value: jawIsOpen });
+      const jawOpen = results.faceBlendshapes[0].categories[25];
+      const jawIsOpen = jawOpen.score > 0.45;
+      newResults.push({ key: "jawOpen", value: String(jawIsOpen) });
+
+      const landmarks = results.faceLandmarks[0].map((landmark) => ({
+        x: 1 - landmark.x,
+        y: landmark.y,
+      }));
+
+      const minY = Math.min(...landmarks.map((landmark) => landmark.y));
+      const maxY = Math.max(...landmarks.map((landmark) => landmark.y));
+      const minX = Math.min(...landmarks.map((landmark) => landmark.x));
+      const maxX = Math.max(...landmarks.map((landmark) => landmark.x));
+
+      const nose = landmarks[4];
+
+      const height = maxY - minY;
+      const width = maxX - minX;
+
+      const noseRelativeHeight = nose.y - minY;
+      const noseHeight = noseRelativeHeight / height;
+
+      const noseRelativeWidth = nose.x - minX;
+      const noseWidth = noseRelativeWidth / width;
+
+      let noseHorizontalState = "middle";
+      if (noseWidth < 0.25) {
+        noseHorizontalState = "left";
+      } else if (noseWidth > 0.75) {
+        noseHorizontalState = "right";
+      }
+      newResults.push({
+        key: "noseHorizontalState",
+        value: noseHorizontalState,
+      });
+
+      let noseVerticalState = "middle";
+      if (
+        (!jawIsOpen && noseHeight < 0.44) ||
+        (jawIsOpen && noseHeight < 0.35)
+      ) {
+        noseVerticalState = "up";
+      } else if (
+        (!jawIsOpen && noseHeight > 0.53) ||
+        (jawIsOpen && noseHeight > 0.49)
+      ) {
+        noseVerticalState = "down";
+      }
+
+      if (noseVerticalState === "middle") {
+        console.log("MIDDLE");
+      }
+
+      newResults.push({ key: "noseVerticalState", value: noseVerticalState });
+
       setResults(newResults);
       if (z < 1) {
         console.log(JSON.stringify(results.faceBlendshapes[0].categories[0]));
@@ -57,12 +109,13 @@ function useFaceLandmarks({ videoEnabled, videoRef, setResults }) {
       function loop() {
         const video = videoRef.current;
         if (video.currentTime !== lastVideoTime) {
+          const startTime = performance.now();
           const results = landmarker.detectForVideo(
             videoRef.current,
-            lastVideoTime
+            startTime
           );
           processResults(results);
-          lastVideoTime = video.currentTime;
+          lastVideoTime = startTime;
         }
         animationFrameId = requestAnimationFrame(loop);
       }

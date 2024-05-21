@@ -2,7 +2,6 @@ import React from "react";
 import styled from "styled-components";
 import Playfield from "../Playfield";
 import VideoFrame from "../VideoFrame";
-import StatusBar from "../StatusBar";
 import useFaceLandmarks from "../../hooks/use-face-landmarks";
 
 function App() {
@@ -18,7 +17,9 @@ function App() {
       <One>
         <VideoFrame setVideoEnabled={setVideoEnabled} videoRef={videoRef} />
       </One>
-      <Two />
+      <Two>
+        <Playfield results={results} />
+      </Two>
     </GameHolder>
   );
 }
@@ -42,6 +43,7 @@ const GameHolder = styled.div`
 const Header = styled.div`
   grid-area: header;
   background-color: #d3d3d366;
+  opacity: 0;
   height: 50px;
 `;
 
