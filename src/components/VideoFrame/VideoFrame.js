@@ -60,6 +60,7 @@ const Video = styled.video`
   height: 100%;
   pointer-events: none;
   transform: scaleX(-1);
+  border-radius: 8px;
 `;
 
 export default VideoFrame;

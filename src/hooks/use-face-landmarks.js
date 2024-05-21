@@ -25,7 +25,17 @@ async function createFaceLandmarker() {
   return getLandmarker();
 }
 
-function useFaceLandmarks({ videoEnabled, videoRef, setResults }) {
+function useFaceLandmarks({
+  videoEnabled,
+  videoRef,
+  setResults,
+  turnUp,
+  turnDown,
+  turnLeft,
+  turnRight,
+  openMouth,
+  closeMouth,
+}) {
   const [z, setZ] = React.useState(0);
   const processResults = React.useCallback(
     (results) => {
@@ -35,6 +45,12 @@ function useFaceLandmarks({ videoEnabled, videoRef, setResults }) {
       const newResults = [];
       const jawOpen = results.faceBlendshapes[0].categories[25];
       const jawIsOpen = jawOpen.score > 0.45;
+
+      if (jawIsOpen) {
+        openMouth();
+      } else {
+        closeMouth();
+      }
       newResults.push({ key: "jawOpen", value: String(jawIsOpen) });
 
       const landmarks = results.faceLandmarks[0].map((landmark) => ({
@@ -61,8 +77,10 @@ function useFaceLandmarks({ videoEnabled, videoRef, setResults }) {
       let noseHorizontalState = "middle";
       if (noseWidth < 0.25) {
         noseHorizontalState = "left";
+        turnLeft();
       } else if (noseWidth > 0.75) {
         noseHorizontalState = "right";
+        turnRight();
       }
       newResults.push({
         key: "noseHorizontalState",
@@ -75,15 +93,13 @@ function useFaceLandmarks({ videoEnabled, videoRef, setResults }) {
         (jawIsOpen && noseHeight < 0.35)
       ) {
         noseVerticalState = "up";
+        turnUp();
       } else if (
         (!jawIsOpen && noseHeight > 0.53) ||
         (jawIsOpen && noseHeight > 0.49)
       ) {
         noseVerticalState = "down";
-      }
-
-      if (noseVerticalState === "middle") {
-        console.log("MIDDLE");
+        turnDown();
       }
 
       newResults.push({ key: "noseVerticalState", value: noseVerticalState });
@@ -94,7 +110,16 @@ function useFaceLandmarks({ videoEnabled, videoRef, setResults }) {
         setZ(z + 1);
       }
     },
-    [setResults, z]
+    [
+      closeMouth,
+      openMouth,
+      setResults,
+      turnDown,
+      turnLeft,
+      turnRight,
+      turnUp,
+      z,
+    ]
   );
 
   React.useEffect(() => {
