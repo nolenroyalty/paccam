@@ -35,6 +35,7 @@ function useFaceLandmarks({
   turnRight,
   openMouth,
   closeMouth,
+  setVideoCoordinates,
 }) {
   const [z, setZ] = React.useState(0);
   const processResults = React.useCallback(
@@ -62,6 +63,8 @@ function useFaceLandmarks({
       const maxY = Math.max(...landmarks.map((landmark) => landmark.y));
       const minX = Math.min(...landmarks.map((landmark) => landmark.x));
       const maxX = Math.max(...landmarks.map((landmark) => landmark.x));
+
+      setVideoCoordinates({ minX, minY, maxX, maxY });
 
       const nose = landmarks[4];
 

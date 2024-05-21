@@ -6,32 +6,37 @@ import useFaceLandmarks from "../../hooks/use-face-landmarks";
 import ResultsDisplay from "../ResultsDisplay/ResultsDisplay";
 
 function faceReducer(state, action) {
-  if (action === "look-right" && state.direction !== "right") {
+  if (action.kind === "look-right" && state.direction !== "right") {
     return { ...state, direction: "right" };
-  } else if (action === "look-left" && state.direction !== "left") {
+  } else if (action.kind === "look-left" && state.direction !== "left") {
     return { ...state, direction: "left" };
-  } else if (action === "look-up" && state.direction !== "up") {
+  } else if (action.kind === "look-up" && state.direction !== "up") {
     return { ...state, direction: "up" };
-  } else if (action === "look-down" && state.direction !== "down") {
+  } else if (action.kind === "look-down" && state.direction !== "down") {
     return { ...state, direction: "down" };
-  } else if (action === "open-mouth" && !state.mouthOpen) {
+  } else if (action.kind === "open-mouth" && !state.mouthOpen) {
     return {
       ...state,
       mouthOpen: true,
       consumedMouthClosed: true,
       consumedMouthOpen: false,
     };
-  } else if (action === "close-mouth" && state.mouthOpen) {
+  } else if (action.kind === "close-mouth" && state.mouthOpen) {
     return {
       ...state,
       mouthOpen: false,
       consumedMouthOpen: true,
       consumedMouthClosed: false,
     };
-  } else if (action === "consume-mouth-open" && !state.consumedMouthOpen) {
+  } else if (action.kind === "consume-mouth-open" && !state.consumedMouthOpen) {
     return { ...state, consumedMouthOpen: true };
-  } else if (action === "consume-mouth-closed" && !state.consumedMouthClosed) {
+  } else if (
+    action.kind === "consume-mouth-closed" &&
+    !state.consumedMouthClosed
+  ) {
     return { ...state, consumedMouthClosed: true };
+  } else if (action.kind === "set-video-coordinates") {
+    return { ...state, videoCoordinates: action.coordinates };
   }
   return state;
 }
@@ -46,39 +51,44 @@ function App() {
     mouthOpen: false,
     consumedMouthOpen: false,
     consumedMouthClosed: false,
+    videoCoordinates: null,
   });
 
   const turnUp = React.useCallback(() => {
-    dispatchFaceAction("look-up");
+    dispatchFaceAction({ kind: "look-up" });
   }, [dispatchFaceAction]);
 
   const turnDown = React.useCallback(() => {
-    dispatchFaceAction("look-down");
+    dispatchFaceAction({ kind: "look-down" });
   }, [dispatchFaceAction]);
 
   const turnLeft = React.useCallback(() => {
-    dispatchFaceAction("look-left");
+    dispatchFaceAction({ kind: "look-left" });
   }, [dispatchFaceAction]);
 
   const turnRight = React.useCallback(() => {
-    dispatchFaceAction("look-right");
+    dispatchFaceAction({ kind: "look-right" });
   }, [dispatchFaceAction]);
 
   const openMouth = React.useCallback(() => {
-    dispatchFaceAction("open-mouth");
+    dispatchFaceAction({ kind: "open-mouth" });
   }, [dispatchFaceAction]);
 
   const closeMouth = React.useCallback(() => {
-    dispatchFaceAction("close-mouth");
+    dispatchFaceAction({ kind: "close-mouth" });
   }, [dispatchFaceAction]);
 
   const consumeMouthOpen = React.useCallback(() => {
-    dispatchFaceAction("consume-mouth-open");
+    dispatchFaceAction({ kind: "consume-mouth-open" });
   }, [dispatchFaceAction]);
 
   const consumeMouthClosed = React.useCallback(() => {
-    dispatchFaceAction("consume-mouth-closed");
+    dispatchFaceAction({ kind: "consume-mouth-closed" });
   }, [dispatchFaceAction]);
+
+  const setVideoCoordinates = React.useCallback((coordinates) => {
+    dispatchFaceAction({ kind: "set-video-coordinates", coordinates });
+  }, []);
 
   useFaceLandmarks({
     videoRef,
@@ -90,6 +100,7 @@ function App() {
     turnRight,
     openMouth,
     closeMouth,
+    setVideoCoordinates,
   });
 
   return (
@@ -102,6 +113,7 @@ function App() {
       <Two>
         <Playfield
           faceState={faceState}
+          videoRef={videoRef}
           videoEnabled={videoEnabled}
           consumeMouthClosed={consumeMouthClosed}
           consumeMouthOpen={consumeMouthOpen}

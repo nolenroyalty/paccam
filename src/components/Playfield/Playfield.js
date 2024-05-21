@@ -11,18 +11,24 @@ function Playfield({
   faceState,
   consumeMouthClosed,
   consumeMouthOpen,
+  videoRef,
 }) {
   const [coords, setCoords] = React.useState({ x: 40, y: 40 });
 
   const movementPoints = React.useRef(0);
   const direction = React.useRef("center");
+  const mouthState = React.useRef("closed");
+  const videoCoordinates = React.useRef(null);
   const lastFrameTime = React.useRef(0);
+  const canvasRef = React.useRef();
 
   React.useEffect(() => {
     if (!videoEnabled) {
       return;
     }
     direction.current = faceState.direction;
+    mouthState.current = faceState.mouthOpen ? "open" : "closed";
+    videoCoordinates.current = faceState.videoCoordinates;
     if (faceState.mouthOpen && !faceState.consumedMouthOpen) {
       console.log("ADD MOUTH OPEN POINTS");
       movementPoints.current += MOVEMENT_POINTS_PER_CONSUME;
@@ -33,6 +39,93 @@ function Playfield({
       consumeMouthClosed();
     }
   }, [consumeMouthClosed, consumeMouthOpen, faceState, videoEnabled]);
+
+  React.useEffect(() => {
+    if (!videoEnabled) {
+      return;
+    }
+    const ctx = canvasRef.current.getContext("2d");
+    let animationFrameId;
+
+    function loop() {
+      // create new drawing context
+      ctx.save();
+      ctx.fillStyle = "yellow";
+      if (mouthState.current === "closed") {
+        ctx.clearRect(0, 0, SIZE, SIZE);
+        ctx.beginPath();
+        ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, 2 * Math.PI);
+        ctx.fill();
+      } else {
+        ctx.clearRect(0, 0, SIZE, SIZE);
+        ctx.beginPath();
+        ctx.moveTo(SIZE / 2, SIZE / 2);
+
+        let startAngle = Math.PI / 7;
+        if (direction.current === "up") {
+          startAngle += 1.5 * Math.PI;
+        } else if (direction.current === "left") {
+          startAngle += Math.PI;
+        } else if (direction.current === "down") {
+          startAngle += Math.PI / 2;
+        }
+
+        const endAngle = startAngle - (2 * Math.PI) / 7;
+
+        ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, startAngle, endAngle);
+        ctx.moveTo(SIZE / 2, SIZE / 2);
+        ctx.fill();
+      }
+
+      // const tempCanvas = document.createElement("canvas");
+      // tempCanvas.width = videoRef.current.videoWidth;
+      // tempCanvas.height = videoRef.current.videoHeight;
+      // copy video frame to temp canvas, but only the part of the video
+      // frame in the `videoCoordinates` rect
+
+      if (videoCoordinates.current) {
+        ctx.globalCompositeOperation = "source-atop";
+        let { minX, minY, maxX, maxY } = videoCoordinates.current;
+        let tempMaxX = 1 - minX;
+        minX = 1 - maxX;
+        maxX = tempMaxX;
+        const height = maxY - minY;
+        minY -= height * 0.1;
+        maxY += height * 0.1;
+        const videoWidth = videoRef.current.videoWidth;
+        const videoHeight = videoRef.current.videoHeight;
+
+        ctx.globalAlpha = 0.6;
+        ctx.scale(-1, 1);
+        ctx.translate(-SIZE, 0);
+        const sx = minX * videoWidth;
+        const sy = minY * videoHeight;
+        const sWidth = (maxX - minX) * videoWidth;
+        const sHeight = (maxY - minY) * videoHeight;
+
+        ctx.drawImage(
+          videoRef.current,
+          sx,
+          sy,
+          sWidth,
+          sHeight,
+          0,
+          0,
+          SIZE,
+          SIZE
+        );
+      }
+      ctx.restore();
+
+      animationFrameId = requestAnimationFrame(loop);
+    }
+
+    animationFrameId = requestAnimationFrame(loop);
+    return () => {
+      console.log("BUG: cancelling pacman draw animation...");
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [videoEnabled]);
 
   React.useEffect(() => {
     if (!videoEnabled) {
@@ -95,10 +188,17 @@ function Playfield({
           "--left": (coords.x / SIZE) * 100 + "%",
           "--top": (coords.y / SIZE) * 100 + "%",
         }}
-      />
+      >
+        <InteriorCanvas ref={canvasRef} width={SIZE} height={SIZE} />
+      </Player>
     </Wrapper>
   );
 }
+
+const InteriorCanvas = styled.canvas`
+  width: 100%;
+  height: 100%;
+`;
 
 const Player = styled.div`
   position: absolute;
@@ -107,7 +207,6 @@ const Player = styled.div`
   left: var(--left);
   top: var(--top);
   border-radius: 50%;
-  background-color: white;
 `;
 
 const Wrapper = styled.div`
