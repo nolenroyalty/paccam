@@ -48,3 +48,19 @@ h6 {
   isolation: isolate;
   height: 100%;
 }
+
+@font-face {
+  font-family: "Pixelify Sans Regular";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/static/fonts/Pixelify_Sans/static/PixelifySans-Regular.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Arcade Classic";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/static/fonts/arcade_classic_2/ARCADECLASSIC.ttf")
+    format("truetype");
+}

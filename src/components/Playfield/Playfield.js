@@ -1,5 +1,5 @@
 import React from "react";
-import styled from "styled-components";
+import styled, { keyframes, css } from "styled-components";
 import { PLAYFIELD_SIZE, PLAYER_SIZE, SLOT_WIDTH } from "../../constants";
 
 /* nroyalty: instead of "consuming" like this maybe we can just
@@ -123,8 +123,15 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
     ctx.restore();
   }, [videoEnabled, videoRef, direction, mouthState, videoCoordinates]);
 
+  const score = pellets.filter((pellet) => !pellet.enabled).length;
+
   return (
     <Wrapper>
+      <ScoreContainer>
+        <ScoreText key={score} $noAnimation={score === 0}>
+          {score}
+        </ScoreText>
+      </ScoreContainer>
       <Player
         style={{
           "--left": (coords.x / PLAYFIELD_SIZE) * 100 + "%",
@@ -154,6 +161,40 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
     </Wrapper>
   );
 }
+
+const ScoreContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin: 0;
+`;
+
+const ScorePulse = keyframes`
+  0% {
+    transform: revert;
+  }
+
+  10% {
+    transform: translateY(calc(var(--jump-amount) * -0.5));
+  }
+
+  60% {
+    transform: translateY(var(--jump-amount));
+  }
+
+  100% {
+    transform: revert;
+  }
+`;
+
+const ScoreText = styled.h2`
+  color: white;
+  font-size: 3.5rem;
+  font-family: "Arcade Classic";
+  margin: 0;
+
+  --jump-amount: ${(p) => (p.$noAnimation ? "0" : "-10%")};
+  animation: ${ScorePulse} 0.3s ease-out;
+`;
 
 const InteriorCanvas = styled.canvas`
   width: 100%;

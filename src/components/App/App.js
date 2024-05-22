@@ -32,9 +32,6 @@ function App() {
 
   return (
     <Wrapper>
-      <Z>
-        <ScoreBanner>Test Text</ScoreBanner>
-      </Z>
       <GameHolderOverlapping>
         <VideoFrame
           videoRef={videoRef}
@@ -52,18 +49,6 @@ function App() {
   );
 }
 
-const Z = styled.div`
-  height: 60px;
-  display: flex;
-  justify-content: center;
-  margin: 0;
-`;
-
-const ScoreBanner = styled.h2`
-  color: white;
-  margin: 0;
-`;
-
 const Wrapper = styled.div`
   display: grid;
   place-items: center;
@@ -73,7 +58,7 @@ const Wrapper = styled.div`
 
 const GameHolderOverlapping = styled.div`
   position: relative;
-  --max-size: min(92vh, 92vw);
+  --max-size: min(95vh, 95vw);
   max-width: var(--max-size);
   max-height: var(--max-size);
   width: 100%;
