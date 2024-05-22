@@ -6,6 +6,16 @@ const PLAYER_SIZE = 15;
 const SPEED_PER_SECOND = SIZE / 2;
 const MOVEMENT_POINTS_PER_CONSUME = 0.15;
 
+/* nroyalty: instead of "consuming" like this maybe we can just
+  embed a counter directly in our state that it increments when
+  we move, and every time that updates we add movement points.
+
+  On top of that, maybe we can just only add movement points like
+  0.1 seconds after they've been submitted if the mouth is still in the
+  same state? Maybe only doing something different if there are no movement
+  points, so that movement always starts immediately.
+*/
+
 function Playfield({
   videoEnabled,
   faceState,
