@@ -1,10 +1,6 @@
 import React from "react";
 import styled from "styled-components";
-
-const SIZE = 100;
-const PLAYER_SIZE = 15;
-const SPEED_PER_SECOND = SIZE / 2;
-const MOVEMENT_POINTS_PER_CONSUME = 0.15;
+import { PLAYFIELD_SIZE, PLAYER_SIZE } from "../../constants";
 
 /* nroyalty: instead of "consuming" like this maybe we can just
   embed a counter directly in our state that it increments when
@@ -16,37 +12,13 @@ const MOVEMENT_POINTS_PER_CONSUME = 0.15;
   points, so that movement always starts immediately.
 */
 
-function Playfield({
-  videoEnabled,
-  faceState,
-  consumeMouthClosed,
-  consumeMouthOpen,
-  videoRef,
-  gameRef,
-}) {
+function Playfield({ videoEnabled, videoRef, gameRef }) {
   const [coords, setCoords] = React.useState({ x: 40, y: 40 });
 
-  const movementPoints = React.useRef(0);
   const canvasRef = React.useRef();
   const [direction, setDirection] = React.useState("center");
   const [mouthState, setMouthState] = React.useState("closed");
   const [videoCoordinates, setVideoCoordinates] = React.useState(null);
-
-  React.useEffect(() => {
-    if (!videoEnabled) {
-      return;
-    }
-
-    if (faceState.mouthOpen && !faceState.consumedMouthOpen) {
-      console.log("ADD MOUTH OPEN POINTS");
-      movementPoints.current += MOVEMENT_POINTS_PER_CONSUME;
-      consumeMouthOpen();
-    } else if (!faceState.mouthOpen && !faceState.consumedMouthClosed) {
-      console.log("ADD MOUTH CLOSED POINTS");
-      movementPoints.current += MOVEMENT_POINTS_PER_CONSUME;
-      consumeMouthClosed();
-    }
-  }, [consumeMouthClosed, consumeMouthOpen, faceState, videoEnabled]);
 
   // nroyalty: This could soon live in a separate pacman component
   // that we move around by subscribing to position (??)
@@ -68,10 +40,15 @@ function Playfield({
       setVideoCoordinates({ minY, maxY, minX, maxX });
     };
 
+    const updatePosition = (pos) => {
+      setCoords(pos);
+    };
+
     if (!gameRef.current) {
       throw new Error("BUG: gameRef.current is not set.");
     }
     gameRef.current.subscribeToFaceState(updateFaceState);
+    gameRef.current.subscribeToPosition(updatePosition);
   }, [gameRef, videoEnabled]);
 
   React.useEffect(() => {
@@ -82,9 +59,9 @@ function Playfield({
     const ctx = canvasRef.current.getContext("2d");
     ctx.save();
     ctx.fillStyle = "yellow";
-    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.clearRect(0, 0, PLAYFIELD_SIZE, PLAYFIELD_SIZE);
     ctx.beginPath();
-    ctx.moveTo(SIZE / 2, SIZE / 2);
+    ctx.moveTo(PLAYFIELD_SIZE / 2, PLAYFIELD_SIZE / 2);
 
     let halfAngle = mouthState === "closed" ? Math.PI / 25 : Math.PI / 5;
     let startAngle = halfAngle;
@@ -97,8 +74,14 @@ function Playfield({
     }
     const endAngle = startAngle - 2 * halfAngle;
 
-    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, startAngle, endAngle);
-    ctx.moveTo(SIZE / 2, SIZE / 2);
+    ctx.arc(
+      PLAYFIELD_SIZE / 2,
+      PLAYFIELD_SIZE / 2,
+      PLAYFIELD_SIZE / 2,
+      startAngle,
+      endAngle
+    );
+    ctx.moveTo(PLAYFIELD_SIZE / 2, PLAYFIELD_SIZE / 2);
     ctx.fill();
 
     if (videoCoordinates) {
@@ -115,7 +98,7 @@ function Playfield({
       const videoHeight = videoRef.current.videoHeight;
       ctx.globalAlpha = 0.6;
       ctx.scale(-1, 1);
-      ctx.translate(-SIZE, 0);
+      ctx.translate(-PLAYFIELD_SIZE, 0);
       const sx = minX * videoWidth;
       const sy = minY * videoHeight;
       const sWidth = (maxX - minX) * videoWidth;
@@ -128,76 +111,26 @@ function Playfield({
         sHeight,
         0,
         0,
-        SIZE,
-        SIZE
+        PLAYFIELD_SIZE,
+        PLAYFIELD_SIZE
       );
     }
     ctx.restore();
   }, [videoEnabled, videoRef, direction, mouthState, videoCoordinates]);
 
-  // React.useEffect(() => {
-  //   if (!videoEnabled) {
-  //     return;
-  //   }
-
-  //   let animationFrameId;
-
-  //   function loop(timestamp) {
-  //     const consumptionAmount =
-  //       lastFrameTime.current === 0 ? 0 : timestamp - lastFrameTime.current;
-  //     lastFrameTime.current = timestamp;
-
-  //     // bug where you can rack up lots of points before moving...
-  //     if (direction.current !== "center") {
-  //       const pointsToConsume = Math.min(
-  //         movementPoints.current,
-  //         consumptionAmount / 1000
-  //       );
-  //       movementPoints.current -= pointsToConsume;
-  //       const movementAmount = pointsToConsume * SPEED_PER_SECOND;
-  //       if (direction.current === "up") {
-  //         setCoords((coords) => {
-  //           const y = Math.max(coords.y - movementAmount, 0);
-  //           console.log(`SET Y TO ${y}`);
-  //           return { ...coords, y };
-  //         });
-  //       } else if (direction.current === "down") {
-  //         setCoords((coords) => {
-  //           const y = Math.min(coords.y + movementAmount, SIZE - PLAYER_SIZE);
-  //           return { ...coords, y };
-  //         });
-  //       } else if (direction.current === "left") {
-  //         setCoords((coords) => {
-  //           const x = Math.max(coords.x - movementAmount, 0);
-  //           return { ...coords, x };
-  //         });
-  //       } else if (direction.current === "right") {
-  //         setCoords((coords) => {
-  //           const x = Math.min(coords.x + movementAmount, SIZE - PLAYER_SIZE);
-  //           return { ...coords, x };
-  //         });
-  //       }
-  //     }
-
-  //     animationFrameId = requestAnimationFrame(loop);
-  //   }
-
-  //   animationFrameId = requestAnimationFrame(loop);
-  //   return () => {
-  //     console.log("BUG: cancelling game loop animation...");
-  //     cancelAnimationFrame(animationFrameId);
-  //   };
-  // }, [videoEnabled]);
-
   return (
     <Wrapper>
       <Player
         style={{
-          "--left": (coords.x / SIZE) * 100 + "%",
-          "--top": (coords.y / SIZE) * 100 + "%",
+          "--left": (coords.x / PLAYFIELD_SIZE) * 100 + "%",
+          "--top": (coords.y / PLAYFIELD_SIZE) * 100 + "%",
         }}
       >
-        <InteriorCanvas ref={canvasRef} width={SIZE} height={SIZE} />
+        <InteriorCanvas
+          ref={canvasRef}
+          width={PLAYFIELD_SIZE}
+          height={PLAYFIELD_SIZE}
+        />
       </Player>
     </Wrapper>
   );
@@ -210,7 +143,7 @@ const InteriorCanvas = styled.canvas`
 
 const Player = styled.div`
   position: absolute;
-  width: ${(PLAYER_SIZE * 100) / SIZE}%;
+  width: ${(PLAYER_SIZE * 100) / PLAYFIELD_SIZE}%;
   aspect-ratio: 1/1;
   left: var(--left);
   top: var(--top);

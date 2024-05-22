@@ -1,7 +1,13 @@
 import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+import {
+  PLAYFIELD_SIZE,
+  PLAYER_SIZE,
+  PLAYER_SPEED_PER_SECOND,
+  SECONDS_OF_MOVEMENT_PER_MOUTH_MOVE,
+} from "./constants";
 
 const JAW_OPEN_THRESHOLD = 0.56;
-const JAW_CLOSE_THRESHOLD = 0.03;
+const JAW_CLOSE_THRESHOLD = 0.2;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
 
@@ -37,13 +43,24 @@ class GameEngine {
   constructor(video) {
     console.log(video);
     this.video = video;
-    this.updateWithFaceState = [];
+    this.faceStateConsumers = [];
+    this.positionConsumers = [];
     this.direction = "center";
     this.jawIsOpen = false;
+    this.movementPoints = 0;
+    this.position = { x: 40, y: 40 };
   }
 
   subscribeToFaceState(callback) {
-    this.updateWithFaceState.push(callback);
+    this.faceStateConsumers.push(callback);
+  }
+
+  subscribeToPosition(callback) {
+    this.positionConsumers.push(callback);
+  }
+
+  addMovementPoints() {
+    this.movementPoints += SECONDS_OF_MOVEMENT_PER_MOUTH_MOVE;
   }
 
   updateFaceState({
@@ -66,7 +83,11 @@ class GameEngine {
       direction = vertical;
     }
     this.direction = direction;
-    this.updateWithFaceState.forEach((callback) => {
+    if (this.jawIsOpen !== jawIsOpen) {
+      this.addMovementPoints();
+    }
+    this.jawIsOpen = jawIsOpen;
+    this.faceStateConsumers.forEach((callback) => {
       callback({ jawIsOpen, direction, minY, maxY, minX, maxX });
     });
   }
@@ -142,6 +163,49 @@ class GameEngine {
 
   updateState() {}
 
+  updatePositionConsumers() {
+    this.positionConsumers.forEach((callback) => {
+      callback(this.position);
+    });
+  }
+
+  maybeMove({ tickTimeMs }) {
+    const amountToConsume = Math.min(this.movementPoints, tickTimeMs / 1000);
+    console.log(`maybeMove: ${amountToConsume}`);
+    if (amountToConsume > 0) {
+      this.movementPoints -= amountToConsume;
+      const movementAmount = amountToConsume * PLAYER_SPEED_PER_SECOND;
+      if (this.direction === "up") {
+        this.position = {
+          x: this.position.x,
+          y: Math.max(this.position.y - movementAmount, 0),
+        };
+      } else if (this.direction === "down") {
+        this.position = {
+          x: this.position.x,
+          y: Math.min(
+            this.position.y + movementAmount,
+            PLAYFIELD_SIZE - PLAYER_SIZE
+          ),
+        };
+      } else if (this.direction === "left") {
+        this.position = {
+          x: Math.max(this.position.x - movementAmount, 0),
+          y: this.position.y,
+        };
+      } else if (this.direction === "right") {
+        this.position = {
+          x: Math.min(
+            this.position.x + movementAmount,
+            PLAYFIELD_SIZE - PLAYER_SIZE
+          ),
+          y: this.position.y,
+        };
+      }
+      this.updatePositionConsumers();
+    }
+  }
+
   async start() {
     this.landmarker = await createFaceLandmarker();
     let lastVideoTime = -1;
@@ -150,6 +214,8 @@ class GameEngine {
         const startTime = performance.now();
         const results = this.landmarker.detectForVideo(this.video, startTime);
         this.processResults(results);
+        const tickTimeMs = lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
+        this.maybeMove({ tickTimeMs });
         lastVideoTime = startTime;
       }
       requestAnimationFrame(loop.bind(this));
