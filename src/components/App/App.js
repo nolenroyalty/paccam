@@ -104,13 +104,9 @@ function App() {
   });
 
   return (
-    <GameHolder>
-      <ResultsDisplay results={results} />
-      <Header />
-      <One>
+    <Wrapper>
+      <GameHolderOverlapping>
         <VideoFrame setVideoEnabled={setVideoEnabled} videoRef={videoRef} />
-      </One>
-      <Two>
         <Playfield
           faceState={faceState}
           videoRef={videoRef}
@@ -119,10 +115,44 @@ function App() {
           consumeMouthOpen={consumeMouthOpen}
           results={results}
         />
-      </Two>
-    </GameHolder>
+      </GameHolderOverlapping>
+    </Wrapper>
+    // <GameHolder>
+    //   <ResultsDisplay results={results} />
+    //   <Header />
+    //   <One>
+    //     <VideoFrame setVideoEnabled={setVideoEnabled} videoRef={videoRef} />
+    //   </One>
+    //   <Two>
+    //     <Playfield
+    //       faceState={faceState}
+    //       videoRef={videoRef}
+    //       videoEnabled={videoEnabled}
+    //       consumeMouthClosed={consumeMouthClosed}
+    //       consumeMouthOpen={consumeMouthOpen}
+    //       results={results}
+    //     />
+    //   </Two>
+    // </GameHolder>
   );
 }
+
+const Wrapper = styled.div`
+  display: grid;
+  place-items: center;
+  height: 100%;
+`;
+
+const GameHolderOverlapping = styled.div`
+  position: relative;
+  --max-size: min(90vh, 90vw);
+  max-width: var(--max-size);
+  max-height: var(--max-size);
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  outline: 4px solid grey;
+  border-radius: 4px;
+`;
 
 const GameHolder = styled.div`
   display: grid;

@@ -48,40 +48,30 @@ function Playfield({
     let animationFrameId;
 
     function loop() {
-      // create new drawing context
       ctx.save();
       ctx.fillStyle = "yellow";
-      if (mouthState.current === "closed") {
-        ctx.clearRect(0, 0, SIZE, SIZE);
-        ctx.beginPath();
-        ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, 2 * Math.PI);
-        ctx.fill();
-      } else {
-        ctx.clearRect(0, 0, SIZE, SIZE);
-        ctx.beginPath();
-        ctx.moveTo(SIZE / 2, SIZE / 2);
 
-        let startAngle = Math.PI / 7;
-        if (direction.current === "up") {
-          startAngle += 1.5 * Math.PI;
-        } else if (direction.current === "left") {
-          startAngle += Math.PI;
-        } else if (direction.current === "down") {
-          startAngle += Math.PI / 2;
-        }
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      ctx.beginPath();
+      ctx.moveTo(SIZE / 2, SIZE / 2);
 
-        const endAngle = startAngle - (2 * Math.PI) / 7;
+      let halfAngle =
+        mouthState.current === "closed" ? Math.PI / 25 : Math.PI / 5;
 
-        ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, startAngle, endAngle);
-        ctx.moveTo(SIZE / 2, SIZE / 2);
-        ctx.fill();
+      let startAngle = halfAngle;
+      if (direction.current === "up") {
+        startAngle += 1.5 * Math.PI;
+      } else if (direction.current === "left") {
+        startAngle += Math.PI;
+      } else if (direction.current === "down") {
+        startAngle += Math.PI / 2;
       }
 
-      // const tempCanvas = document.createElement("canvas");
-      // tempCanvas.width = videoRef.current.videoWidth;
-      // tempCanvas.height = videoRef.current.videoHeight;
-      // copy video frame to temp canvas, but only the part of the video
-      // frame in the `videoCoordinates` rect
+      const endAngle = startAngle - 2 * halfAngle;
+
+      ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, startAngle, endAngle);
+      ctx.moveTo(SIZE / 2, SIZE / 2);
+      ctx.fill();
 
       if (videoCoordinates.current) {
         ctx.globalCompositeOperation = "source-atop";
@@ -212,7 +202,8 @@ const Player = styled.div`
 const Wrapper = styled.div`
   width: 100%;
   height: 100%;
-  position: relative;
+  position: absolute;
+  pointer-events: none;
 `;
 
 export default Playfield;

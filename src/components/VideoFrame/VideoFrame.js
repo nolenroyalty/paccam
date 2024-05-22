@@ -49,7 +49,7 @@ const EnableVideoButton = styled(UnstyledButton)`
 `;
 
 const Wrapper = styled.div`
-  position: relative;
+  position: absolute;
   width: 100%;
   height: 100%;
 `;
@@ -61,6 +61,7 @@ const Video = styled.video`
   pointer-events: none;
   transform: scaleX(-1);
   border-radius: 8px;
+  opacity: 0.2;
 `;
 
 export default VideoFrame;

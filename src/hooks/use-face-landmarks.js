@@ -25,6 +25,16 @@ async function createFaceLandmarker() {
   return getLandmarker();
 }
 
+/* we need to do some weighted moving average clever thing to smooth things out,
+   and prevent flipping between states. Should also recalculate expetected nose position
+   based on jaw open state, since the nose's position changes relative to the size of the head
+   regardless of whether the jaw is actually marked "open". 
+   
+   
+   maybe it'd be easier to reference nose position relative to some other landmarks?
+   
+*/
+
 function useFaceLandmarks({
   videoEnabled,
   videoRef,
