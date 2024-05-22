@@ -1,8 +1,9 @@
 import React from "react";
 import styled from "styled-components";
 import UnstyledButton from "../UnstyledButton";
+import GameEngine from "../../CoreGame";
 
-function VideoFrame({ videoRef, setVideoEnabled }) {
+function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
   const [buttonDisabled, setButtonDisabled] = React.useState(false);
 
   const onClick = React.useCallback(() => {
@@ -11,17 +12,23 @@ function VideoFrame({ videoRef, setVideoEnabled }) {
     navigator.mediaDevices
       .getUserMedia({ video: true })
       .then((stream) => {
+        gameRef.current = new GameEngine(videoRef.current);
         videoRef.current.srcObject = stream;
+        gameRef.current.start();
         setVideoEnabled(true);
       })
       .catch((err) => {
         console.error("Error accessing the camera.", err);
       });
-  }, [setVideoEnabled, videoRef]);
+  }, [gameRef, setVideoEnabled, videoRef]);
 
   return (
     <Wrapper>
-      <EnableVideoButton $disabled={buttonDisabled} onClick={onClick}>
+      <EnableVideoButton
+        $disabled={buttonDisabled}
+        disabled={buttonDisabled}
+        onClick={onClick}
+      >
         <ButtonText>Enable Video</ButtonText>
       </EnableVideoButton>
       <Video autoPlay muted ref={videoRef} />

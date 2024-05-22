@@ -43,6 +43,7 @@ function faceReducer(state, action) {
 
 function App() {
   const videoRef = React.useRef();
+  const gameRef = React.useRef();
   const [videoEnabled, setVideoEnabled] = React.useState(false);
   const [results, setResults] = React.useState([]);
   const [faceState, dispatchFaceAction] = React.useReducer(faceReducer, {
@@ -106,14 +107,18 @@ function App() {
   return (
     <Wrapper>
       <GameHolderOverlapping>
-        <VideoFrame setVideoEnabled={setVideoEnabled} videoRef={videoRef} />
+        <VideoFrame
+          videoRef={videoRef}
+          gameRef={gameRef}
+          setVideoEnabled={setVideoEnabled}
+        />
         <Playfield
           faceState={faceState}
           videoRef={videoRef}
           videoEnabled={videoEnabled}
           consumeMouthClosed={consumeMouthClosed}
           consumeMouthOpen={consumeMouthOpen}
-          results={results}
+          gameRef={gameRef}
         />
       </GameHolderOverlapping>
     </Wrapper>

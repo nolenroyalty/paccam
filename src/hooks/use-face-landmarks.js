@@ -120,6 +120,7 @@ function useFaceLandmarks({
       closeMouth,
       openMouth,
       setResults,
+      setVideoCoordinates,
       turnDown,
       turnLeft,
       turnRight,

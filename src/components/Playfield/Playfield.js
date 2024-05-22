@@ -22,23 +22,21 @@ function Playfield({
   consumeMouthClosed,
   consumeMouthOpen,
   videoRef,
+  gameRef,
 }) {
   const [coords, setCoords] = React.useState({ x: 40, y: 40 });
 
   const movementPoints = React.useRef(0);
-  const direction = React.useRef("center");
-  const mouthState = React.useRef("closed");
-  const videoCoordinates = React.useRef(null);
-  const lastFrameTime = React.useRef(0);
   const canvasRef = React.useRef();
+  const [direction, setDirection] = React.useState("center");
+  const [mouthState, setMouthState] = React.useState("closed");
+  const [videoCoordinates, setVideoCoordinates] = React.useState(null);
 
   React.useEffect(() => {
     if (!videoEnabled) {
       return;
     }
-    direction.current = faceState.direction;
-    mouthState.current = faceState.mouthOpen ? "open" : "closed";
-    videoCoordinates.current = faceState.videoCoordinates;
+
     if (faceState.mouthOpen && !faceState.consumedMouthOpen) {
       console.log("ADD MOUTH OPEN POINTS");
       movementPoints.current += MOVEMENT_POINTS_PER_CONSUME;
@@ -50,136 +48,146 @@ function Playfield({
     }
   }, [consumeMouthClosed, consumeMouthOpen, faceState, videoEnabled]);
 
+  // nroyalty: This could soon live in a separate pacman component
+  // that we move around by subscribing to position (??)
   React.useEffect(() => {
     if (!videoEnabled) {
       return;
     }
+
+    const updateFaceState = ({
+      jawIsOpen,
+      direction,
+      minY,
+      maxY,
+      minX,
+      maxX,
+    }) => {
+      setDirection(direction);
+      setMouthState(jawIsOpen ? "open" : "closed");
+      setVideoCoordinates({ minY, maxY, minX, maxX });
+    };
+
+    if (!gameRef.current) {
+      throw new Error("BUG: gameRef.current is not set.");
+    }
+    gameRef.current.subscribeToFaceState(updateFaceState);
+  }, [gameRef, videoEnabled]);
+
+  React.useEffect(() => {
+    if (!videoEnabled) {
+      return;
+    }
+
     const ctx = canvasRef.current.getContext("2d");
-    let animationFrameId;
+    ctx.save();
+    ctx.fillStyle = "yellow";
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.beginPath();
+    ctx.moveTo(SIZE / 2, SIZE / 2);
 
-    function loop() {
-      ctx.save();
-      ctx.fillStyle = "yellow";
-
-      ctx.clearRect(0, 0, SIZE, SIZE);
-      ctx.beginPath();
-      ctx.moveTo(SIZE / 2, SIZE / 2);
-
-      let halfAngle =
-        mouthState.current === "closed" ? Math.PI / 25 : Math.PI / 5;
-
-      let startAngle = halfAngle;
-      if (direction.current === "up") {
-        startAngle += 1.5 * Math.PI;
-      } else if (direction.current === "left") {
-        startAngle += Math.PI;
-      } else if (direction.current === "down") {
-        startAngle += Math.PI / 2;
-      }
-
-      const endAngle = startAngle - 2 * halfAngle;
-
-      ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, startAngle, endAngle);
-      ctx.moveTo(SIZE / 2, SIZE / 2);
-      ctx.fill();
-
-      if (videoCoordinates.current) {
-        ctx.globalCompositeOperation = "source-atop";
-        let { minX, minY, maxX, maxY } = videoCoordinates.current;
-        let tempMaxX = 1 - minX;
-        minX = 1 - maxX;
-        maxX = tempMaxX;
-        const height = maxY - minY;
-        minY -= height * 0.05;
-        maxY += height * 0.1;
-        const videoWidth = videoRef.current.videoWidth;
-        const videoHeight = videoRef.current.videoHeight;
-
-        ctx.globalAlpha = 0.6;
-        ctx.scale(-1, 1);
-        ctx.translate(-SIZE, 0);
-        const sx = minX * videoWidth;
-        const sy = minY * videoHeight;
-        const sWidth = (maxX - minX) * videoWidth;
-        const sHeight = (maxY - minY) * videoHeight;
-
-        ctx.drawImage(
-          videoRef.current,
-          sx,
-          sy,
-          sWidth,
-          sHeight,
-          0,
-          0,
-          SIZE,
-          SIZE
-        );
-      }
-      ctx.restore();
-
-      animationFrameId = requestAnimationFrame(loop);
+    let halfAngle = mouthState === "closed" ? Math.PI / 25 : Math.PI / 5;
+    let startAngle = halfAngle;
+    if (direction === "up") {
+      startAngle += 1.5 * Math.PI;
+    } else if (direction === "left") {
+      startAngle += Math.PI;
+    } else if (direction === "down") {
+      startAngle += Math.PI / 2;
     }
+    const endAngle = startAngle - 2 * halfAngle;
 
-    animationFrameId = requestAnimationFrame(loop);
-    return () => {
-      console.log("BUG: cancelling pacman draw animation...");
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [videoEnabled, videoRef]);
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, startAngle, endAngle);
+    ctx.moveTo(SIZE / 2, SIZE / 2);
+    ctx.fill();
 
-  React.useEffect(() => {
-    if (!videoEnabled) {
-      return;
+    if (videoCoordinates) {
+      ctx.globalCompositeOperation = "source-atop";
+      let { minX, minY, maxX, maxY } = videoCoordinates;
+      const tempMaxX = 1 - minX;
+      minX = 1 - maxX;
+      maxX = tempMaxX;
+
+      const height = maxY - minY;
+      minY -= height * 0.05;
+      maxY += height * 0.1;
+      const videoWidth = videoRef.current.videoWidth;
+      const videoHeight = videoRef.current.videoHeight;
+      ctx.globalAlpha = 0.6;
+      ctx.scale(-1, 1);
+      ctx.translate(-SIZE, 0);
+      const sx = minX * videoWidth;
+      const sy = minY * videoHeight;
+      const sWidth = (maxX - minX) * videoWidth;
+      const sHeight = (maxY - minY) * videoHeight;
+      ctx.drawImage(
+        videoRef.current,
+        sx,
+        sy,
+        sWidth,
+        sHeight,
+        0,
+        0,
+        SIZE,
+        SIZE
+      );
     }
+    ctx.restore();
+  }, [videoEnabled, videoRef, direction, mouthState, videoCoordinates]);
 
-    let animationFrameId;
+  // React.useEffect(() => {
+  //   if (!videoEnabled) {
+  //     return;
+  //   }
 
-    function loop(timestamp) {
-      const consumptionAmount =
-        lastFrameTime.current === 0 ? 0 : timestamp - lastFrameTime.current;
-      lastFrameTime.current = timestamp;
+  //   let animationFrameId;
 
-      // bug where you can rack up lots of points before moving...
-      if (direction.current !== "center") {
-        const pointsToConsume = Math.min(
-          movementPoints.current,
-          consumptionAmount / 1000
-        );
-        movementPoints.current -= pointsToConsume;
-        const movementAmount = pointsToConsume * SPEED_PER_SECOND;
-        if (direction.current === "up") {
-          setCoords((coords) => {
-            const y = Math.max(coords.y - movementAmount, 0);
-            console.log(`SET Y TO ${y}`);
-            return { ...coords, y };
-          });
-        } else if (direction.current === "down") {
-          setCoords((coords) => {
-            const y = Math.min(coords.y + movementAmount, SIZE - PLAYER_SIZE);
-            return { ...coords, y };
-          });
-        } else if (direction.current === "left") {
-          setCoords((coords) => {
-            const x = Math.max(coords.x - movementAmount, 0);
-            return { ...coords, x };
-          });
-        } else if (direction.current === "right") {
-          setCoords((coords) => {
-            const x = Math.min(coords.x + movementAmount, SIZE - PLAYER_SIZE);
-            return { ...coords, x };
-          });
-        }
-      }
+  //   function loop(timestamp) {
+  //     const consumptionAmount =
+  //       lastFrameTime.current === 0 ? 0 : timestamp - lastFrameTime.current;
+  //     lastFrameTime.current = timestamp;
 
-      animationFrameId = requestAnimationFrame(loop);
-    }
+  //     // bug where you can rack up lots of points before moving...
+  //     if (direction.current !== "center") {
+  //       const pointsToConsume = Math.min(
+  //         movementPoints.current,
+  //         consumptionAmount / 1000
+  //       );
+  //       movementPoints.current -= pointsToConsume;
+  //       const movementAmount = pointsToConsume * SPEED_PER_SECOND;
+  //       if (direction.current === "up") {
+  //         setCoords((coords) => {
+  //           const y = Math.max(coords.y - movementAmount, 0);
+  //           console.log(`SET Y TO ${y}`);
+  //           return { ...coords, y };
+  //         });
+  //       } else if (direction.current === "down") {
+  //         setCoords((coords) => {
+  //           const y = Math.min(coords.y + movementAmount, SIZE - PLAYER_SIZE);
+  //           return { ...coords, y };
+  //         });
+  //       } else if (direction.current === "left") {
+  //         setCoords((coords) => {
+  //           const x = Math.max(coords.x - movementAmount, 0);
+  //           return { ...coords, x };
+  //         });
+  //       } else if (direction.current === "right") {
+  //         setCoords((coords) => {
+  //           const x = Math.min(coords.x + movementAmount, SIZE - PLAYER_SIZE);
+  //           return { ...coords, x };
+  //         });
+  //       }
+  //     }
 
-    animationFrameId = requestAnimationFrame(loop);
-    return () => {
-      console.log("BUG: cancelling game loop animation...");
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [videoEnabled]);
+  //     animationFrameId = requestAnimationFrame(loop);
+  //   }
+
+  //   animationFrameId = requestAnimationFrame(loop);
+  //   return () => {
+  //     console.log("BUG: cancelling game loop animation...");
+  //     cancelAnimationFrame(animationFrameId);
+  //   };
+  // }, [videoEnabled]);
 
   return (
     <Wrapper>
