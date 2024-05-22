@@ -6,13 +6,19 @@ import GameEngine from "../../CoreGame";
 
 function App() {
   const videoRef = React.useRef();
-  const gameRef = React.useRef(new GameEngine());
+  const gameRef = React.useRef();
   const pacmanChomp = React.useRef();
 
   const [videoEnabled, setVideoEnabled] = React.useState(false);
 
   React.useEffect(() => {
+    gameRef.current = new GameEngine();
     gameRef.current.initAudio({ pacmanChomp: pacmanChomp.current });
+
+    return () => {
+      // delete gameref current
+      delete gameRef.current;
+    };
   }, []);
 
   React.useEffect(() => {

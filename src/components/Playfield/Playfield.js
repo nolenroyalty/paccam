@@ -1,9 +1,6 @@
 import React from "react";
 import styled from "styled-components";
-import { PLAYFIELD_SIZE, PLAYER_SIZE } from "../../constants";
-import { range } from "../../utils";
-
-const NUM_PELLETS = 10;
+import { PLAYFIELD_SIZE, PLAYER_SIZE, SLOT_WIDTH } from "../../constants";
 
 /* nroyalty: instead of "consuming" like this maybe we can just
   embed a counter directly in our state that it increments when
@@ -22,12 +19,7 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
   const [direction, setDirection] = React.useState("center");
   const [mouthState, setMouthState] = React.useState("closed");
   const [videoCoordinates, setVideoCoordinates] = React.useState(null);
-
-  const pellets = range(NUM_PELLETS).flatMap((x) => {
-    return range(NUM_PELLETS).map((y) => {
-      return { x: 0.05 + x / NUM_PELLETS, y: 0.05 + y / NUM_PELLETS };
-    });
-  });
+  const [pellets, setPellets] = React.useState([]);
 
   // nroyalty: This could soon live in a separate pacman component
   // that we move around by subscribing to position (??)
@@ -56,8 +48,12 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
     if (!gameRef.current) {
       throw new Error("BUG: gameRef.current is not set.");
     }
+
     gameRef.current.subscribeToFaceState(updateFaceState);
     gameRef.current.subscribeToPosition(updatePosition);
+    gameRef.current.subscribeToPellets(setPellets);
+
+    gameRef.current.generatePellets();
   }, [gameRef, videoEnabled]);
 
   React.useEffect(() => {
@@ -141,15 +137,19 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
           height={PLAYFIELD_SIZE}
         />
       </Player>
-      {pellets.map((pellet) => (
-        <Pellet
-          key={`${pellet.x}-${pellet.y}`}
-          style={{
-            "--left": `${pellet.x * 100}%`,
-            "--top": `${pellet.y * 100}%`,
-          }}
-        />
-      ))}
+      {pellets.map((pellet) => {
+        return (
+          <PelletWrapper
+            key={`${pellet.x}-${pellet.y}`}
+            style={{
+              "--left": `${(pellet.x / PLAYFIELD_SIZE) * 100}%`,
+              "--top": `${(pellet.y / PLAYFIELD_SIZE) * 100}%`,
+            }}
+          >
+            <Pellet data-x={pellet.x} />
+          </PelletWrapper>
+        );
+      })}
     </Wrapper>
   );
 }
@@ -176,15 +176,23 @@ const Wrapper = styled.div`
 `;
 
 const Pellet = styled.span`
-  position: absolute;
   display: inline-block;
-  left: var(--left);
-  top: var(--top);
-  width: 3%;
+  width: ${50}%;
+
   aspect-ratio: 1/1;
   background-color: white;
-  transform: translate(-50%, -50%);
   border-radius: 50%;
+  opacity: 0.7;
+`;
+
+const PelletWrapper = styled.div`
+  position: absolute;
+  left: var(--left);
+  top: var(--top);
+  width: ${SLOT_WIDTH}%;
+  aspect-ratio: 1/1;
+  display: grid;
+  place-items: center;
 `;
 
 export default Playfield;

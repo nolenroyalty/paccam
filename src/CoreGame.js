@@ -4,7 +4,11 @@ import {
   PLAYER_SIZE,
   PLAYER_SPEED_PER_SECOND,
   SECONDS_OF_MOVEMENT_PER_MOUTH_MOVE,
+  SLOT_WIDTH,
+  NUM_PELLETS,
+  SLOT_WIDTH,
 } from "./constants";
+import { range } from "./utils";
 
 const JAW_OPEN_THRESHOLD = 0.53;
 const JAW_CLOSE_THRESHOLD = 0.3;
@@ -43,10 +47,12 @@ class GameEngine {
   constructor() {
     this.faceStateConsumers = [];
     this.positionConsumers = [];
+    this.pelletConsumers = [];
     this.direction = "center";
     this.jawIsOpen = false;
     this.movementPoints = 0;
     this.position = { x: 40, y: 40 };
+    this.pellets = [];
   }
 
   initVideo(video) {
@@ -65,8 +71,34 @@ class GameEngine {
     this.positionConsumers.push(callback);
   }
 
+  subscribeToPellets(callback) {
+    this.pelletConsumers.push(callback);
+  }
+
   addMovementPoints() {
     this.movementPoints += SECONDS_OF_MOVEMENT_PER_MOUTH_MOVE;
+  }
+
+  updatePelletConsumers() {
+    this.pelletConsumers.forEach((callback) => {
+      callback(this.pellets);
+    });
+  }
+
+  generatePellets() {
+    const pellets = range(NUM_PELLETS).flatMap((x) => {
+      return range(NUM_PELLETS).map((y) => {
+        const xPad = (2 * x + 1) * SLOT_WIDTH;
+        const yPad = (2 * y + 1) * SLOT_WIDTH;
+        return {
+          x: xPad,
+          y: yPad,
+          enabled: true,
+        };
+      });
+    });
+    this.pellets = pellets;
+    this.updatePelletConsumers();
   }
 
   updateFaceState({
