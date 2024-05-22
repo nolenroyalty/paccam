@@ -171,7 +171,6 @@ class GameEngine {
 
   maybeMove({ tickTimeMs }) {
     const amountToConsume = Math.min(this.movementPoints, tickTimeMs / 1000);
-    console.log(`maybeMove: ${amountToConsume}`);
     if (amountToConsume > 0) {
       this.movementPoints -= amountToConsume;
       const movementAmount = amountToConsume * PLAYER_SPEED_PER_SECOND;
