@@ -2,11 +2,10 @@ import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import {
   PLAYFIELD_SIZE,
   PLAYER_SIZE,
-  PLAYER_SPEED_PER_SECOND,
   SECONDS_OF_MOVEMENT_PER_MOUTH_MOVE,
   SLOT_WIDTH,
   NUM_PELLETS,
-  SLOT_WIDTH,
+  SLOTS_MOVED_PER_SECOND,
 } from "./constants";
 import { range } from "./utils";
 
@@ -51,6 +50,7 @@ class GameEngine {
     this.direction = "center";
     this.jawIsOpen = false;
     this.movementPoints = 0;
+    this.slotsToMove = 0;
     this.position = { x: 40, y: 40 };
     this.pellets = [];
   }
@@ -77,6 +77,7 @@ class GameEngine {
 
   addMovementPoints() {
     this.movementPoints += SECONDS_OF_MOVEMENT_PER_MOUTH_MOVE;
+    this.slotsToMove += 1;
   }
 
   updatePelletConsumers() {
@@ -222,12 +223,16 @@ class GameEngine {
   }
 
   maybeMove({ tickTimeMs }) {
-    const amountToConsume = Math.min(this.movementPoints, tickTimeMs / 1000);
-    const isMoving = amountToConsume > 0;
+    const secondsOfMovement = tickTimeMs / 1000;
+    const maxSlotsToConsume = secondsOfMovement * SLOTS_MOVED_PER_SECOND;
+    const slotsToConsume = Math.min(this.slotsToMove, maxSlotsToConsume);
+
+    const isMoving = slotsToConsume > 0;
     this.handleAudio({ isMoving });
+
     if (isMoving) {
-      this.movementPoints -= amountToConsume;
-      const movementAmount = amountToConsume * PLAYER_SPEED_PER_SECOND;
+      this.slotsToMove -= slotsToConsume;
+      const movementAmount = slotsToConsume * SLOT_WIDTH;
       if (this.direction === "up") {
         this.position = {
           x: this.position.x,
