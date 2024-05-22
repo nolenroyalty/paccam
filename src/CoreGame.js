@@ -222,6 +222,30 @@ class GameEngine {
     }
   }
 
+  updatePelletsForPosition() {
+    let updated = false;
+    const myX = this.position.x + PLAYER_SIZE / 2;
+    const myY = this.position.y + PLAYER_SIZE / 2;
+
+    this.pellets = this.pellets.map((pellet) => {
+      const pelletX = pellet.x + SLOT_WIDTH / 2;
+      const pelletY = pellet.y + SLOT_WIDTH / 2;
+
+      const distance = Math.sqrt((myX - pelletX) ** 2 + (myY - pelletY) ** 2);
+      if (distance < PLAYER_SIZE / 2 && pellet.enabled) {
+        updated = true;
+        return {
+          ...pellet,
+          enabled: false,
+        };
+      }
+      return pellet;
+    });
+    if (updated) {
+      this.updatePelletConsumers();
+    }
+  }
+
   maybeMove({ tickTimeMs }) {
     const secondsOfMovement = tickTimeMs / 1000;
     const maxSlotsToConsume = secondsOfMovement * SLOTS_MOVED_PER_SECOND;
@@ -260,6 +284,7 @@ class GameEngine {
           y: this.position.y,
         };
       }
+      this.updatePelletsForPosition();
       this.updatePositionConsumers();
     }
   }
