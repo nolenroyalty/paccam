@@ -13,7 +13,7 @@ import { PLAYFIELD_SIZE, PLAYER_SIZE, SLOT_WIDTH } from "../../constants";
 */
 
 function Playfield({ videoEnabled, videoRef, gameRef }) {
-  const [coords, setCoords] = React.useState({ x: 40, y: 40 });
+  const [coords, setCoords] = React.useState({ x: 0, y: 0 });
 
   const canvasRef = React.useRef();
   const [direction, setDirection] = React.useState("center");
@@ -144,6 +144,7 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
             style={{
               "--left": `${(pellet.x / PLAYFIELD_SIZE) * 100}%`,
               "--top": `${(pellet.y / PLAYFIELD_SIZE) * 100}%`,
+              "--opacity": pellet.enabled ? 0.7 : 0,
             }}
           >
             <Pellet data-x={pellet.x} />
@@ -182,7 +183,7 @@ const Pellet = styled.span`
   aspect-ratio: 1/1;
   background-color: white;
   border-radius: 50%;
-  opacity: 0.7;
+  opacity: var(--opacity);
 `;
 
 const PelletWrapper = styled.div`

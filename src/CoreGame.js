@@ -51,7 +51,7 @@ class GameEngine {
     this.jawIsOpen = false;
     this.movementPoints = 0;
     this.slotsToMove = 0;
-    this.position = { x: 40, y: 40 };
+    this.position = { x: SLOT_WIDTH * 3.25, y: SLOT_WIDTH * 4.25 };
     this.pellets = [];
   }
 
