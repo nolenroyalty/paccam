@@ -90,7 +90,7 @@ function Playfield({
         minX = 1 - maxX;
         maxX = tempMaxX;
         const height = maxY - minY;
-        minY -= height * 0.1;
+        minY -= height * 0.05;
         maxY += height * 0.1;
         const videoWidth = videoRef.current.videoWidth;
         const videoHeight = videoRef.current.videoHeight;
@@ -125,7 +125,7 @@ function Playfield({
       console.log("BUG: cancelling pacman draw animation...");
       cancelAnimationFrame(animationFrameId);
     };
-  }, [videoEnabled]);
+  }, [videoEnabled, videoRef]);
 
   React.useEffect(() => {
     if (!videoEnabled) {

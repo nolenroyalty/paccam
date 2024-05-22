@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  FaceLandmarker,
-  FaceDetector,
-  FilesetResolver,
-  DrawingUtils,
-} from "@mediapipe/tasks-vision";
+import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 
 async function createFaceLandmarker() {
   const filesetResolver = await FilesetResolver.forVisionTasks(
@@ -30,9 +25,7 @@ async function createFaceLandmarker() {
    based on jaw open state, since the nose's position changes relative to the size of the head
    regardless of whether the jaw is actually marked "open". 
    
-   
    maybe it'd be easier to reference nose position relative to some other landmarks?
-   
 */
 
 function useFaceLandmarks({
