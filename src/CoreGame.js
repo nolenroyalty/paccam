@@ -7,7 +7,7 @@ import {
 } from "./constants";
 
 const JAW_OPEN_THRESHOLD = 0.53;
-const JAW_CLOSE_THRESHOLD = 0.2;
+const JAW_CLOSE_THRESHOLD = 0.3;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
 
@@ -40,15 +40,22 @@ function invertLandmarks(landmarks) {
 }
 
 class GameEngine {
-  constructor(video) {
-    console.log(video);
-    this.video = video;
+  constructor() {
     this.faceStateConsumers = [];
     this.positionConsumers = [];
     this.direction = "center";
     this.jawIsOpen = false;
     this.movementPoints = 0;
     this.position = { x: 40, y: 40 };
+  }
+
+  initVideo(video) {
+    this.video = video;
+  }
+
+  initAudio({ pacmanChomp }) {
+    this.pacmanChomp = pacmanChomp;
+    this.pacmanChomp.volume = 0.3;
   }
 
   subscribeToFaceState(callback) {
@@ -169,9 +176,25 @@ class GameEngine {
     });
   }
 
+  handleAudio({ isMoving }) {
+    if (isMoving) {
+      // play audio if it's not playing
+      if (this.pacmanChomp.paused) {
+        this.pacmanChomp.currentTime = 0;
+        this.pacmanChomp.play();
+      }
+      this.pacmanChomp.loop = true;
+    } else {
+      // pause audio if it's playing
+      this.pacmanChomp.loop = false;
+    }
+  }
+
   maybeMove({ tickTimeMs }) {
     const amountToConsume = Math.min(this.movementPoints, tickTimeMs / 1000);
-    if (amountToConsume > 0) {
+    const isMoving = amountToConsume > 0;
+    this.handleAudio({ isMoving });
+    if (isMoving) {
       this.movementPoints -= amountToConsume;
       const movementAmount = amountToConsume * PLAYER_SPEED_PER_SECOND;
       if (this.direction === "up") {

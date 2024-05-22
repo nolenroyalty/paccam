@@ -12,7 +12,7 @@ function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
     navigator.mediaDevices
       .getUserMedia({ video: true })
       .then((stream) => {
-        gameRef.current = new GameEngine(videoRef.current);
+        gameRef.current.initVideo(videoRef.current);
         videoRef.current.srcObject = stream;
         gameRef.current.start();
         setVideoEnabled(true);

@@ -2,11 +2,27 @@ import React from "react";
 import styled from "styled-components";
 import Playfield from "../Playfield";
 import VideoFrame from "../VideoFrame";
+import GameEngine from "../../CoreGame";
 
 function App() {
   const videoRef = React.useRef();
-  const gameRef = React.useRef();
+  const gameRef = React.useRef(new GameEngine());
+  const pacmanChomp = React.useRef();
+
   const [videoEnabled, setVideoEnabled] = React.useState(false);
+
+  React.useEffect(() => {
+    gameRef.current.initAudio({ pacmanChomp: pacmanChomp.current });
+  }, []);
+
+  React.useEffect(() => {
+    if (!videoEnabled) {
+      return;
+    }
+
+    pacmanChomp.current.src = "/pacman-onetime.mp3";
+    pacmanChomp.current.volume = 0.3;
+  }, [videoEnabled]);
 
   return (
     <Wrapper>
@@ -21,6 +37,7 @@ function App() {
           videoEnabled={videoEnabled}
           gameRef={gameRef}
         />
+        <audio ref={pacmanChomp} src="/pacman-onetime.mp3" />
       </GameHolderOverlapping>
     </Wrapper>
   );
