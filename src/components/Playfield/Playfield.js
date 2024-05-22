@@ -1,6 +1,9 @@
 import React from "react";
 import styled from "styled-components";
 import { PLAYFIELD_SIZE, PLAYER_SIZE } from "../../constants";
+import { range } from "../../utils";
+
+const NUM_PELLETS = 10;
 
 /* nroyalty: instead of "consuming" like this maybe we can just
   embed a counter directly in our state that it increments when
@@ -19,6 +22,12 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
   const [direction, setDirection] = React.useState("center");
   const [mouthState, setMouthState] = React.useState("closed");
   const [videoCoordinates, setVideoCoordinates] = React.useState(null);
+
+  const pellets = range(NUM_PELLETS).flatMap((x) => {
+    return range(NUM_PELLETS).map((y) => {
+      return { x: 0.05 + x / NUM_PELLETS, y: 0.05 + y / NUM_PELLETS };
+    });
+  });
 
   // nroyalty: This could soon live in a separate pacman component
   // that we move around by subscribing to position (??)
@@ -132,6 +141,15 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
           height={PLAYFIELD_SIZE}
         />
       </Player>
+      {pellets.map((pellet) => (
+        <Pellet
+          key={`${pellet.x}-${pellet.y}`}
+          style={{
+            "--left": `${pellet.x * 100}%`,
+            "--top": `${pellet.y * 100}%`,
+          }}
+        />
+      ))}
     </Wrapper>
   );
 }
@@ -155,6 +173,18 @@ const Wrapper = styled.div`
   height: 100%;
   position: absolute;
   pointer-events: none;
+`;
+
+const Pellet = styled.span`
+  position: absolute;
+  display: inline-block;
+  left: var(--left);
+  top: var(--top);
+  width: 3%;
+  aspect-ratio: 1/1;
+  background-color: white;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
 `;
 
 export default Playfield;

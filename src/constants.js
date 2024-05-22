@@ -1,4 +1,4 @@
 export const PLAYFIELD_SIZE = 100;
-export const PLAYER_SIZE = 15;
+export const PLAYER_SIZE = 12;
 export const PLAYER_SPEED_PER_SECOND = PLAYFIELD_SIZE / 2;
 export const SECONDS_OF_MOVEMENT_PER_MOUTH_MOVE = 0.225;
