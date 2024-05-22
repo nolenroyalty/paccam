@@ -21,7 +21,7 @@ function App() {
     }
 
     pacmanChomp.current.src = "/pacman-onetime.mp3";
-    pacmanChomp.current.volume = 0.3;
+    pacmanChomp.current.volume = 0.2;
   }, [videoEnabled]);
 
   return (

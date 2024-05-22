@@ -55,7 +55,6 @@ class GameEngine {
 
   initAudio({ pacmanChomp }) {
     this.pacmanChomp = pacmanChomp;
-    this.pacmanChomp.volume = 0.3;
   }
 
   subscribeToFaceState(callback) {
