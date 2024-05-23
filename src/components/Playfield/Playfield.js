@@ -69,12 +69,14 @@ function Playfield({ videoEnabled, videoRef, gameRef, pacmanYellow }) {
     if (mouthState === "open") {
       xIdx += 4;
     }
-    if (direction === "down") {
+    if (direction === "right") {
       xIdx += 1;
-    } else if (direction === "left") {
+    } else if (direction === "down") {
       xIdx += 2;
-    } else if (direction === "up") {
+    } else if (direction === "left") {
       xIdx += 3;
+    } else if (direction === "up") {
+      xIdx += 4;
     }
 
     const pacman = pacmanYellow.current;
@@ -98,7 +100,6 @@ function Playfield({ videoEnabled, videoRef, gameRef, pacmanYellow }) {
         PLAYER_CANVAS_SIZE
       );
     };
-    drawCurrentSprite({ outline: true });
     drawCurrentSprite({ outline: false });
 
     if (videoCoordinates) {
@@ -135,9 +136,12 @@ function Playfield({ videoEnabled, videoRef, gameRef, pacmanYellow }) {
       ctx.scale(-1, 1);
       ctx.translate(-PLAYER_CANVAS_SIZE, 0);
       drawCurrentSprite({ outline: false });
-      ctx.globalCompositeOperation = "source-over";
-      drawCurrentSprite({ outline: true });
     }
+
+    ctx.globalCompositeOperation = "source-over";
+    // Make sure we draw this regardless of whether we have
+    // video coordinates.
+    drawCurrentSprite({ outline: true });
     ctx.restore();
   }, [
     direction,

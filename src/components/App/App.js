@@ -79,8 +79,8 @@ const GameHolderOverlapping = styled.div`
   /* max-width: var(--max-size); */
   /* max-height: var(--max-size); */
   /* width: 100%; */
-  width: 95vw;
-  height: 95vh;
+  width: 100vw;
+  height: 100vh;
   /* aspect-ratio: 1 / 1; */
   outline: 12px dashed black;
   border-radius: 4px;
