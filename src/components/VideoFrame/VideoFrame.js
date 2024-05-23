@@ -68,7 +68,7 @@ const Video = styled.video`
   pointer-events: none;
   transform: scaleX(-1);
   border-radius: 8px;
-  opacity: 0.2;
+  opacity: 0.8;
 `;
 
 export default VideoFrame;

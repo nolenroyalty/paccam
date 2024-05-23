@@ -2,14 +2,14 @@ import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import {
   PLAYFIELD_SIZE,
   PLAYER_SIZE,
-  SECONDS_OF_MOVEMENT_PER_MOUTH_MOVE,
+  SLOTS_MOVED_PER_MOUTH_MOVE,
   SLOT_WIDTH,
   NUM_PELLETS,
   SLOTS_MOVED_PER_SECOND,
 } from "./constants";
 import { range } from "./utils";
 
-const JAW_OPEN_THRESHOLD = 0.53;
+const JAW_OPEN_THRESHOLD = 0.48;
 const JAW_CLOSE_THRESHOLD = 0.3;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
@@ -49,7 +49,6 @@ class GameEngine {
     this.pelletConsumers = [];
     this.direction = "center";
     this.jawIsOpen = false;
-    this.movementPoints = 0;
     this.slotsToMove = 0;
     this.position = { x: SLOT_WIDTH * 3.25, y: SLOT_WIDTH * 4.25 };
     this.pellets = [];
@@ -75,9 +74,10 @@ class GameEngine {
     this.pelletConsumers.push(callback);
   }
 
-  addMovementPoints() {
-    this.movementPoints += SECONDS_OF_MOVEMENT_PER_MOUTH_MOVE;
-    this.slotsToMove += 1;
+  addMovement() {
+    if (this.slotsToMove < 2) {
+      this.slotsToMove += SLOTS_MOVED_PER_MOUTH_MOVE;
+    }
   }
 
   updatePelletConsumers() {
@@ -123,7 +123,7 @@ class GameEngine {
     }
     this.direction = direction;
     if (this.jawIsOpen !== jawIsOpen) {
-      this.addMovementPoints();
+      this.addMovement();
     }
     this.jawIsOpen = jawIsOpen;
     this.faceStateConsumers.forEach((callback) => {
@@ -262,6 +262,9 @@ class GameEngine {
           x: this.position.x,
           y: Math.max(this.position.y - movementAmount, 0),
         };
+        if (this.position.y === 0) {
+          this.slotsToMove = 0;
+        }
       } else if (this.direction === "down") {
         this.position = {
           x: this.position.x,
@@ -270,11 +273,17 @@ class GameEngine {
             PLAYFIELD_SIZE - PLAYER_SIZE
           ),
         };
+        if (this.position.y === PLAYFIELD_SIZE - PLAYER_SIZE) {
+          this.slotsToMove = 0;
+        }
       } else if (this.direction === "left") {
         this.position = {
           x: Math.max(this.position.x - movementAmount, 0),
           y: this.position.y,
         };
+        if (this.position.x === 0) {
+          this.slotsToMove = 0;
+        }
       } else if (this.direction === "right") {
         this.position = {
           x: Math.min(
@@ -283,6 +292,9 @@ class GameEngine {
           ),
           y: this.position.y,
         };
+        if (this.position.x === PLAYFIELD_SIZE - PLAYER_SIZE) {
+          this.slotsToMove = 0;
+        }
       }
       this.updatePelletsForPosition();
       this.updatePositionConsumers();
