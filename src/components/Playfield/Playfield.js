@@ -1,6 +1,7 @@
 import React from "react";
 import styled, { keyframes, css } from "styled-components";
 import { PLAYFIELD_SIZE, PLAYER_SIZE, SLOT_WIDTH } from "../../constants";
+const PLAYER_CANVAS_SIZE = 128;
 
 /* nroyalty: instead of "consuming" like this maybe we can just
   embed a counter directly in our state that it increments when
@@ -12,7 +13,7 @@ import { PLAYFIELD_SIZE, PLAYER_SIZE, SLOT_WIDTH } from "../../constants";
   points, so that movement always starts immediately.
 */
 
-function Playfield({ videoEnabled, videoRef, gameRef }) {
+function Playfield({ videoEnabled, videoRef, gameRef, pacmanYellow }) {
   const [coords, setCoords] = React.useState({ x: 0, y: 0 });
 
   const canvasRef = React.useRef();
@@ -63,31 +64,42 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
 
     const ctx = canvasRef.current.getContext("2d");
     ctx.save();
-    ctx.fillStyle = "yellow";
-    ctx.clearRect(0, 0, PLAYFIELD_SIZE, PLAYFIELD_SIZE);
-    ctx.beginPath();
-    ctx.moveTo(PLAYFIELD_SIZE / 2, PLAYFIELD_SIZE / 2);
 
-    let halfAngle = mouthState === "closed" ? Math.PI / 25 : Math.PI / 5;
-    let startAngle = halfAngle;
-    if (direction === "up") {
-      startAngle += 1.5 * Math.PI;
-    } else if (direction === "left") {
-      startAngle += Math.PI;
-    } else if (direction === "down") {
-      startAngle += Math.PI / 2;
+    let xIdx = 0;
+    if (mouthState === "open") {
+      xIdx += 4;
     }
-    const endAngle = startAngle - 2 * halfAngle;
+    if (direction === "down") {
+      xIdx += 1;
+    } else if (direction === "left") {
+      xIdx += 2;
+    } else if (direction === "up") {
+      xIdx += 3;
+    }
 
-    ctx.arc(
-      PLAYFIELD_SIZE / 2,
-      PLAYFIELD_SIZE / 2,
-      PLAYFIELD_SIZE / 2,
-      startAngle,
-      endAngle
-    );
-    ctx.moveTo(PLAYFIELD_SIZE / 2, PLAYFIELD_SIZE / 2);
-    ctx.fill();
+    const pacman = pacmanYellow.current;
+    const spriteWidth = 32;
+    const spriteHeight = 32;
+    const spriteX = xIdx * 32;
+
+    ctx.clearRect(0, 0, PLAYER_CANVAS_SIZE, PLAYER_CANVAS_SIZE);
+    ctx.imageSmoothingEnabled = false;
+    const drawCurrentSprite = ({ outline }) => {
+      const spriteY = outline ? 32 : 0;
+      ctx.drawImage(
+        pacman,
+        spriteX,
+        spriteY,
+        spriteWidth,
+        spriteHeight,
+        0,
+        0,
+        PLAYER_CANVAS_SIZE,
+        PLAYER_CANVAS_SIZE
+      );
+    };
+    drawCurrentSprite({ outline: true });
+    drawCurrentSprite({ outline: false });
 
     if (videoCoordinates) {
       ctx.globalCompositeOperation = "source-atop";
@@ -103,7 +115,7 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
       const videoHeight = videoRef.current.videoHeight;
 
       ctx.scale(-1, 1);
-      ctx.translate(-PLAYFIELD_SIZE, 0);
+      ctx.translate(-PLAYER_CANVAS_SIZE, 0);
       const sx = minX * videoWidth;
       const sy = minY * videoHeight;
       const sWidth = (maxX - minX) * videoWidth;
@@ -116,16 +128,25 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
         sHeight,
         0,
         0,
-        PLAYFIELD_SIZE,
-        PLAYFIELD_SIZE
+        PLAYER_CANVAS_SIZE,
+        PLAYER_CANVAS_SIZE
       );
-
-      ctx.fillStyle = "purple";
-      ctx.globalAlpha = 0.3;
-      ctx.fill();
+      ctx.globalCompositeOperation = "overlay";
+      ctx.scale(-1, 1);
+      ctx.translate(-PLAYER_CANVAS_SIZE, 0);
+      drawCurrentSprite({ outline: false });
+      ctx.globalCompositeOperation = "source-over";
+      drawCurrentSprite({ outline: true });
     }
     ctx.restore();
-  }, [videoEnabled, videoRef, direction, mouthState, videoCoordinates]);
+  }, [
+    direction,
+    mouthState,
+    pacmanYellow,
+    videoCoordinates,
+    videoEnabled,
+    videoRef,
+  ]);
 
   const score = pellets.filter((pellet) => !pellet.enabled).length;
 
@@ -144,8 +165,8 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
       >
         <InteriorCanvas
           ref={canvasRef}
-          width={PLAYFIELD_SIZE}
-          height={PLAYFIELD_SIZE}
+          width={PLAYER_CANVAS_SIZE}
+          height={PLAYER_CANVAS_SIZE}
         />
       </Player>
       {pellets.map((pellet) => {
