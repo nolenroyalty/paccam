@@ -28,16 +28,22 @@ function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
         disabled={buttonDisabled}
         onClick={onClick}
       >
-        <ButtonText>Enable Video</ButtonText>
+        <ButtonText>
+          {"Enable  Webcam"}
+          <br />
+          {"To   Start"}
+        </ButtonText>
       </EnableVideoButton>
       <Video autoPlay muted ref={videoRef} />
     </Wrapper>
   );
 }
 
-const ButtonText = styled.p`
-  font-size: 1.5rem;
+const ButtonText = styled.pre`
+  font-size: 3rem;
   color: white;
+  white-space: pre-wrap;
+  font-family: "Arcade Classic";
 `;
 
 const EnableVideoButton = styled(UnstyledButton)`
@@ -45,10 +51,9 @@ const EnableVideoButton = styled(UnstyledButton)`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 50%;
-  height: 25%;
+  padding: 24px;
   border-radius: 8px;
-  border: 2px solid slategrey;
+  border: 8px dashed black;
   pointer-events: ${(props) => (props.$disabled ? "none" : "auto")};
   opacity: ${(props) => (props.$disabled ? 0 : 1)};
   transition: opacity 1s;
@@ -67,7 +72,7 @@ const Video = styled.video`
   pointer-events: none;
   transform: scaleX(-1);
   border-radius: 8px;
-  opacity: 0.8;
+  opacity: 0.4;
 `;
 
 export default VideoFrame;

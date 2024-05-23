@@ -59,11 +59,13 @@ const Wrapper = styled.div`
 const GameHolderOverlapping = styled.div`
   position: relative;
   --max-size: min(95vh, 95vw);
-  max-width: var(--max-size);
-  max-height: var(--max-size);
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  outline: 4px solid grey;
+  /* max-width: var(--max-size); */
+  /* max-height: var(--max-size); */
+  /* width: 100%; */
+  width: 95vw;
+  height: 95vh;
+  /* aspect-ratio: 1 / 1; */
+  outline: 12px dashed black;
   border-radius: 4px;
   opacity: 0.7;
 `;

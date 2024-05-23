@@ -101,7 +101,7 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
       maxY += height * 0.1;
       const videoWidth = videoRef.current.videoWidth;
       const videoHeight = videoRef.current.videoHeight;
-      ctx.globalAlpha = 0.6;
+
       ctx.scale(-1, 1);
       ctx.translate(-PLAYFIELD_SIZE, 0);
       const sx = minX * videoWidth;
@@ -119,6 +119,10 @@ function Playfield({ videoEnabled, videoRef, gameRef }) {
         PLAYFIELD_SIZE,
         PLAYFIELD_SIZE
       );
+
+      ctx.fillStyle = "purple";
+      ctx.globalAlpha = 0.3;
+      ctx.fill();
     }
     ctx.restore();
   }, [videoEnabled, videoRef, direction, mouthState, videoCoordinates]);

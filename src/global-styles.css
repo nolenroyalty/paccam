@@ -19,6 +19,7 @@ body {
   -webkit-font-smoothing: antialiased;
   font-family: "Lato", sans-serif;
   background: linear-gradient(to right, #1a0315, #291e2d, #1a0315);
+  background: linear-gradient(45deg, #282972, #283061, #282972);
 }
 img,
 picture,
