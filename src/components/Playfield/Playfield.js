@@ -1,5 +1,5 @@
 import React from "react";
-import styled, { keyframes, css } from "styled-components";
+import styled, { keyframes } from "styled-components";
 import { PLAYFIELD_SIZE, PLAYER_SIZE, SLOT_WIDTH } from "../../constants";
 const PLAYER_CANVAS_SIZE = 128;
 
