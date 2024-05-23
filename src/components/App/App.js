@@ -9,6 +9,7 @@ function App() {
   const gameRef = React.useRef();
   const pacmanChomp = React.useRef();
   const pacmanYellow = React.useRef();
+  const pacmanPink = React.useRef();
 
   const [videoEnabled, setVideoEnabled] = React.useState(false);
 
@@ -38,6 +39,7 @@ function App() {
         src="/aseprite/pacman-yellow.png"
         alt=""
       />
+      <HiddenImage ref={pacmanPink} src="/aseprite/pacman-pink.png" alt="" />
       <GameHolderOverlapping>
         <VideoFrame
           videoRef={videoRef}
@@ -49,6 +51,7 @@ function App() {
           videoEnabled={videoEnabled}
           gameRef={gameRef}
           pacmanYellow={pacmanYellow}
+          pacmanPink={pacmanPink}
         />
         <audio ref={pacmanChomp} src="/pacman-onetime.mp3" />
       </GameHolderOverlapping>

@@ -3,7 +3,13 @@ import styled, { keyframes } from "styled-components";
 import { PLAYFIELD_SIZE, SLOT_WIDTH } from "../../constants";
 import Pacman from "../Pacman";
 
-function Playfield({ videoEnabled, videoRef, gameRef, pacmanYellow }) {
+function Playfield({
+  videoEnabled,
+  videoRef,
+  gameRef,
+  pacmanYellow,
+  pacmanPink,
+}) {
   const [pellets, setPellets] = React.useState([]);
 
   React.useEffect(() => {
@@ -32,7 +38,7 @@ function Playfield({ videoEnabled, videoRef, gameRef, pacmanYellow }) {
         gameRef={gameRef}
         videoRef={videoRef}
         enabled={videoEnabled}
-        spriteSheet={pacmanYellow}
+        spriteSheet={pacmanPink}
       />
       {pellets.map((pellet) => {
         return (
