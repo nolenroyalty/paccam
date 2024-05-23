@@ -41,11 +41,15 @@ function Playfield({ videoEnabled, videoRef, gameRef, pacmanYellow }) {
             style={{
               "--left": `${(pellet.x / PLAYFIELD_SIZE) * 100}%`,
               "--top": `${(pellet.y / PLAYFIELD_SIZE) * 100}%`,
-              "--opacity": pellet.enabled ? 0.7 : 0,
+              "--opacity": pellet.enabled ? 1 : 0,
               "--scale": pellet.enabled ? 1 : 0,
             }}
           >
-            <Pellet data-x={pellet.x} />
+            <Pellet
+              data-x={pellet.x}
+              alt=""
+              src="/aseprite/pellet.png"
+            ></Pellet>
           </PelletWrapper>
         );
       })}
@@ -94,13 +98,10 @@ const Wrapper = styled.div`
   pointer-events: none;
 `;
 
-const Pellet = styled.span`
+const Pellet = styled.img`
   display: inline-block;
   width: ${50}%;
 
-  aspect-ratio: 1/1;
-  background-color: white;
-  border-radius: 50%;
   opacity: var(--opacity);
   transform: scale(var(--scale));
   transition:
