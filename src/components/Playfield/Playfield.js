@@ -3,21 +3,9 @@ import styled, { keyframes } from "styled-components";
 import { PLAYFIELD_SIZE, SLOT_WIDTH } from "../../constants";
 import Pacman from "../Pacman";
 
-/* nroyalty: instead of "consuming" like this maybe we can just
-  embed a counter directly in our state that it increments when
-  we move, and every time that updates we add movement points.
-
-  On top of that, maybe we can just only add movement points like
-  0.1 seconds after they've been submitted if the mouth is still in the
-  same state? Maybe only doing something different if there are no movement
-  points, so that movement always starts immediately.
-*/
-
 function Playfield({ videoEnabled, videoRef, gameRef, pacmanYellow }) {
   const [pellets, setPellets] = React.useState([]);
 
-  // nroyalty: This could soon live in a separate pacman component
-  // that we move around by subscribing to position (??)
   React.useEffect(() => {
     if (!videoEnabled) {
       return;
@@ -54,6 +42,7 @@ function Playfield({ videoEnabled, videoRef, gameRef, pacmanYellow }) {
               "--left": `${(pellet.x / PLAYFIELD_SIZE) * 100}%`,
               "--top": `${(pellet.y / PLAYFIELD_SIZE) * 100}%`,
               "--opacity": pellet.enabled ? 0.7 : 0,
+              "--scale": pellet.enabled ? 1 : 0,
             }}
           >
             <Pellet data-x={pellet.x} />
@@ -113,6 +102,10 @@ const Pellet = styled.span`
   background-color: white;
   border-radius: 50%;
   opacity: var(--opacity);
+  transform: scale(var(--scale));
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out;
 `;
 
 const PelletWrapper = styled.div`
