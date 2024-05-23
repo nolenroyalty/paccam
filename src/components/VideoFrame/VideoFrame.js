@@ -1,7 +1,6 @@
 import React from "react";
 import styled from "styled-components";
 import UnstyledButton from "../UnstyledButton";
-import GameEngine from "../../CoreGame";
 
 function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
   const [buttonDisabled, setButtonDisabled] = React.useState(false);
