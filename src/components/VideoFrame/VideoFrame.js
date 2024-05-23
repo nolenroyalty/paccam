@@ -4,6 +4,7 @@ import UnstyledButton from "../UnstyledButton";
 
 function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
   const [buttonDisabled, setButtonDisabled] = React.useState(false);
+  const [enabled, setEnabled] = React.useState(false);
 
   const onClick = React.useCallback(() => {
     // hook video up to webcam
@@ -15,6 +16,7 @@ function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
         videoRef.current.srcObject = stream;
         gameRef.current.start();
         setVideoEnabled(true);
+        setEnabled(true);
       })
       .catch((err) => {
         console.error("Error accessing the camera.", err);
@@ -34,7 +36,12 @@ function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
           {"To   Start"}
         </ButtonText>
       </EnableVideoButton>
-      <Video autoPlay muted ref={videoRef} />
+      <Video
+        autoPlay
+        muted
+        ref={videoRef}
+        style={{ "--opacity": enabled ? 0.4 : 0 }}
+      />
     </Wrapper>
   );
 }
@@ -72,7 +79,8 @@ const Video = styled.video`
   pointer-events: none;
   transform: scaleX(-1);
   border-radius: 8px;
-  opacity: 0.4;
+  opacity: var(--opacity);
+  transition: opacity 1s;
 `;
 
 export default VideoFrame;
