@@ -1,10 +1,7 @@
 import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import {
-  PLAYFIELD_SIZE,
-  PLAYER_SIZE,
+  PLAYER_SIZE_IN_SLOTS,
   SLOTS_MOVED_PER_MOUTH_MOVE,
-  SLOT_WIDTH,
-  NUM_PELLETS,
   SLOTS_MOVED_PER_SECOND,
 } from "./constants";
 import { range } from "./utils";
@@ -50,8 +47,14 @@ class GameEngine {
     this.direction = "center";
     this.jawIsOpen = false;
     this.slotsToMove = 0;
-    this.position = { x: SLOT_WIDTH * 3.25, y: SLOT_WIDTH * 4.25 };
+    this.position = { x: 3, y: 2 };
     this.pellets = [];
+    this.numSlots = null;
+    this.stopped = false;
+  }
+
+  stop() {
+    this.stopped = true;
   }
 
   initVideo(video) {
@@ -60,6 +63,10 @@ class GameEngine {
 
   initAudio({ pacmanChomp }) {
     this.pacmanChomp = pacmanChomp;
+  }
+
+  initNumSlots(numSlots) {
+    this.numSlots = numSlots;
   }
 
   subscribeToFaceState(callback) {
@@ -87,17 +94,21 @@ class GameEngine {
   }
 
   generatePellets() {
-    const pellets = range(NUM_PELLETS).flatMap((x) => {
-      return range(NUM_PELLETS).map((y) => {
-        const xPad = (2 * x + 1) * SLOT_WIDTH;
-        const yPad = (2 * y + 1) * SLOT_WIDTH;
-        return {
-          x: xPad,
-          y: yPad,
-          enabled: true,
-        };
-      });
-    });
+    if (this.numSlots === null) {
+      throw new Error("BUG: numSlots is not set.");
+    }
+
+    let slotX = 1;
+    const pellets = [];
+    while (slotX < this.numSlots.horizontal) {
+      let slotY = 1;
+      while (slotY < this.numSlots.vertical) {
+        pellets.push({ x: slotX, y: slotY, enabled: true });
+        slotY += 2;
+      }
+      slotX += 2;
+    }
+
     this.pellets = pellets;
     this.updatePelletConsumers();
   }
@@ -147,7 +158,6 @@ class GameEngine {
     const height = maxY - minY;
     const width = maxX - minX;
 
-    // nroyalty: SOON - take this into account when calculating nose vertical position
     const jawOpenAmount = results.faceBlendshapes[0].categories[25].score;
     let jawIsOpen;
 
@@ -224,15 +234,15 @@ class GameEngine {
 
   updatePelletsForPosition() {
     let updated = false;
-    const myX = this.position.x + PLAYER_SIZE / 2;
-    const myY = this.position.y + PLAYER_SIZE / 2;
+    const myX = this.position.x + PLAYER_SIZE_IN_SLOTS / 2;
+    const myY = this.position.y + PLAYER_SIZE_IN_SLOTS / 2;
 
     this.pellets = this.pellets.map((pellet) => {
-      const pelletX = pellet.x + SLOT_WIDTH / 2;
-      const pelletY = pellet.y + SLOT_WIDTH / 2;
+      const pelletX = pellet.x + 0.5;
+      const pelletY = pellet.y + 0.5;
 
       const distance = Math.sqrt((myX - pelletX) ** 2 + (myY - pelletY) ** 2);
-      if (distance < PLAYER_SIZE / 2 && pellet.enabled) {
+      if (distance < PLAYER_SIZE_IN_SLOTS / 2 && pellet.enabled) {
         updated = true;
         return {
           ...pellet,
@@ -256,45 +266,39 @@ class GameEngine {
 
     if (isMoving) {
       this.slotsToMove -= slotsToConsume;
-      const movementAmount = slotsToConsume * SLOT_WIDTH;
+      const movementAmount = slotsToConsume;
+      let hitWall = false;
       if (this.direction === "up") {
+        const min = 0;
         this.position = {
           x: this.position.x,
-          y: Math.max(this.position.y - movementAmount, 0),
+          y: Math.max(this.position.y - movementAmount, min),
         };
-        if (this.position.y === 0) {
-          this.slotsToMove = 0;
-        }
+        hitWall = this.position.y === min;
       } else if (this.direction === "down") {
+        const max = this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS;
         this.position = {
           x: this.position.x,
-          y: Math.min(
-            this.position.y + movementAmount,
-            PLAYFIELD_SIZE - PLAYER_SIZE
-          ),
+          y: Math.min(this.position.y + movementAmount, max),
         };
-        if (this.position.y === PLAYFIELD_SIZE - PLAYER_SIZE) {
-          this.slotsToMove = 0;
-        }
+        hitWall = this.position.y === max;
       } else if (this.direction === "left") {
+        const min = 0;
         this.position = {
-          x: Math.max(this.position.x - movementAmount, 0),
+          x: Math.max(this.position.x - movementAmount, min),
           y: this.position.y,
         };
-        if (this.position.x === 0) {
-          this.slotsToMove = 0;
-        }
+        hitWall = this.position.x === min;
       } else if (this.direction === "right") {
+        const max = this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS;
         this.position = {
-          x: Math.min(
-            this.position.x + movementAmount,
-            PLAYFIELD_SIZE - PLAYER_SIZE
-          ),
+          x: Math.min(this.position.x + movementAmount, max),
           y: this.position.y,
         };
-        if (this.position.x === PLAYFIELD_SIZE - PLAYER_SIZE) {
-          this.slotsToMove = 0;
-        }
+        hitWall = this.position.x === max;
+      }
+      if (hitWall) {
+        this.slotsToMove = 0;
       }
       this.updatePelletsForPosition();
       this.updatePositionConsumers();
@@ -305,6 +309,9 @@ class GameEngine {
     this.landmarker = await createFaceLandmarker();
     let lastVideoTime = -1;
     function loop() {
+      if (this.stopped) {
+        return;
+      }
       if (this.video.currentTime !== lastVideoTime) {
         const startTime = performance.now();
         const results = this.landmarker.detectForVideo(this.video, startTime);
