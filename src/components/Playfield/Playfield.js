@@ -111,7 +111,6 @@ function Playfield({
                 key={playerNum}
                 gameRef={gameRef}
                 videoRef={videoRef}
-                enabled={videoEnabled}
                 spriteSheet={spriteSheet}
                 numSlots={numSlots}
                 playerNum={playerNum}

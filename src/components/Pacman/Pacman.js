@@ -3,14 +3,7 @@ import styled, { keyframes } from "styled-components";
 import { PLAYER_SIZE_PERCENT } from "../../constants";
 const PLAYER_CANVAS_SIZE = 128;
 
-function Pacman({
-  gameRef,
-  videoRef,
-  enabled,
-  spriteSheet,
-  numSlots,
-  playerNum,
-}) {
+function Pacman({ gameRef, videoRef, spriteSheet, numSlots, playerNum }) {
   const canvasRef = React.useRef();
   const [coords, setCoords] = React.useState(null);
   const [direction, setDirection] = React.useState("center");
@@ -18,11 +11,6 @@ function Pacman({
   const [videoCoordinates, setVideoCoordinates] = React.useState(null);
 
   React.useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-    console.log("here");
-
     const updateFaceState = ({
       jawIsOpen,
       direction,
@@ -45,10 +33,10 @@ function Pacman({
       playerNum,
     });
     gameRef.current.subscribeToPosition({ callback: setCoords, playerNum });
-  }, [enabled, gameRef, playerNum]);
+  }, [gameRef, playerNum]);
 
   React.useEffect(() => {
-    if (!enabled || !coords) {
+    if (!coords) {
       return;
     }
     const ctx = canvasRef.current.getContext("2d");
@@ -131,15 +119,7 @@ function Pacman({
     // video coordinates.
     drawCurrentSprite({ outline: true });
     ctx.restore();
-  }, [
-    coords,
-    direction,
-    enabled,
-    mouthState,
-    spriteSheet,
-    videoCoordinates,
-    videoRef,
-  ]);
+  }, [coords, direction, mouthState, spriteSheet, videoCoordinates, videoRef]);
 
   return coords ? (
     <Player
