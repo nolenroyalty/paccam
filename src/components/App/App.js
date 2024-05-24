@@ -3,6 +3,7 @@ import styled from "styled-components";
 import Playfield from "../Playfield";
 import VideoFrame from "../VideoFrame";
 import GameEngine from "../../CoreGame";
+import StartScreen from "../StartScreen";
 
 function App() {
   const videoRef = React.useRef();
@@ -12,6 +13,22 @@ function App() {
   const pacmanPink = React.useRef();
 
   const [videoEnabled, setVideoEnabled] = React.useState(false);
+
+  const [gameState, setGameState] = React.useState({
+    numPlayers: null,
+    scores: [0, 0, 0, 0],
+    running: false,
+  });
+
+  const setNumPlayers = React.useCallback((numPlayers) => {
+    setGameState((state) => ({ ...state, numPlayers }));
+  }, []);
+
+  const startGame = React.useCallback(() => {
+    setGameState((state) => ({ ...state, running: true }));
+    // can we make this wait for video to load?
+    gameRef.current.start();
+  }, []);
 
   React.useEffect(() => {
     const game = gameRef.current;
@@ -45,6 +62,13 @@ function App() {
           gameRef={gameRef}
           setVideoEnabled={setVideoEnabled}
         />
+        {videoEnabled ? (
+          <StartScreen
+            gameState={gameState}
+            startGame={startGame}
+            setNumPlayers={setNumPlayers}
+          />
+        ) : null}
         <Playfield
           videoRef={videoRef}
           videoEnabled={videoEnabled}
