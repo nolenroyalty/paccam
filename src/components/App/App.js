@@ -18,7 +18,6 @@ function App() {
     gameRef.current.initAudio({ pacmanChomp: pacmanChomp.current });
 
     return () => {
-      // delete gameref current
       delete gameRef.current;
     };
   }, []);
