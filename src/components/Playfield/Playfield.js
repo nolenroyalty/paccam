@@ -1,14 +1,15 @@
 import React from "react";
 import styled, { keyframes } from "styled-components";
 import { SLOT_WIDTH_PERCENTAGE } from "../../constants";
+import { range } from "../../utils";
 import Pacman from "../Pacman";
 
 function Playfield({
   videoEnabled,
   videoRef,
   gameRef,
-  pacmanYellow,
-  pacmanPink,
+  spriteSheets,
+  numPlayers,
 }) {
   const [pellets, setPellets] = React.useState([]);
   const [padding, setPadding] = React.useState({});
@@ -96,13 +97,26 @@ function Playfield({
           {score}
         </ScoreText>
       </ScoreContainer>
-      <Pacman
-        gameRef={gameRef}
-        videoRef={videoRef}
-        enabled={videoEnabled}
-        spriteSheet={pacmanPink}
-        numSlots={numSlots}
-      />
+      {numPlayers === null
+        ? null
+        : range(numPlayers).map((playerNum) => {
+            const spriteSheet =
+              playerNum % 2 === 0
+                ? spriteSheets.current["yellow"]
+                : spriteSheets.current["pink"];
+
+            return (
+              <Pacman
+                key={playerNum}
+                gameRef={gameRef}
+                videoRef={videoRef}
+                enabled={videoEnabled}
+                spriteSheet={spriteSheet}
+                numSlots={numSlots}
+                playerNum={playerNum}
+              />
+            );
+          })}
       {pellets.map((pellet) => {
         return (
           <PelletWrapper

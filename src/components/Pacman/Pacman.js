@@ -3,9 +3,16 @@ import styled from "styled-components";
 import { PLAYER_SIZE_PERCENT } from "../../constants";
 const PLAYER_CANVAS_SIZE = 128;
 
-function Pacman({ gameRef, videoRef, enabled, spriteSheet, numSlots }) {
+function Pacman({
+  gameRef,
+  videoRef,
+  enabled,
+  spriteSheet,
+  numSlots,
+  playerNum,
+}) {
   const canvasRef = React.useRef();
-  const [coords, setCoords] = React.useState({ x: 0, y: 0 });
+  const [coords, setCoords] = React.useState(null);
   const [direction, setDirection] = React.useState("center");
   const [mouthState, setMouthState] = React.useState("closed");
   const [videoCoordinates, setVideoCoordinates] = React.useState(null);
@@ -32,12 +39,15 @@ function Pacman({ gameRef, videoRef, enabled, spriteSheet, numSlots }) {
       throw new Error("BUG: gameRef.current is not set.");
     }
 
-    gameRef.current.subscribeToFaceState(updateFaceState);
-    gameRef.current.subscribeToPosition(setCoords);
-  }, [enabled, gameRef]);
+    gameRef.current.subscribeToFaceState({
+      callback: updateFaceState,
+      playerNum,
+    });
+    gameRef.current.subscribeToPosition({ callback: setCoords, playerNum });
+  }, [enabled, gameRef, playerNum]);
 
   React.useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !coords) {
       return;
     }
     const ctx = canvasRef.current.getContext("2d");
@@ -57,7 +67,6 @@ function Pacman({ gameRef, videoRef, enabled, spriteSheet, numSlots }) {
       xIdx += 4;
     }
 
-    const pacman = spriteSheet.current;
     const spriteWidth = 32;
     const spriteHeight = 32;
     const spriteX = xIdx * 32;
@@ -67,7 +76,7 @@ function Pacman({ gameRef, videoRef, enabled, spriteSheet, numSlots }) {
     const drawCurrentSprite = ({ outline }) => {
       const spriteY = outline ? 32 : 0;
       ctx.drawImage(
-        pacman,
+        spriteSheet,
         spriteX,
         spriteY,
         spriteWidth,
@@ -121,9 +130,17 @@ function Pacman({ gameRef, videoRef, enabled, spriteSheet, numSlots }) {
     // video coordinates.
     drawCurrentSprite({ outline: true });
     ctx.restore();
-  }, [direction, enabled, mouthState, spriteSheet, videoCoordinates, videoRef]);
+  }, [
+    coords,
+    direction,
+    enabled,
+    mouthState,
+    spriteSheet,
+    videoCoordinates,
+    videoRef,
+  ]);
 
-  return (
+  return coords ? (
     <Player
       data-player="player"
       style={{
@@ -137,7 +154,7 @@ function Pacman({ gameRef, videoRef, enabled, spriteSheet, numSlots }) {
         height={PLAYER_CANVAS_SIZE}
       />
     </Player>
-  );
+  ) : null;
 }
 
 const Player = styled.div`

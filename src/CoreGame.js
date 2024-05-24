@@ -11,7 +11,7 @@ const JAW_CLOSE_THRESHOLD = 0.3;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
 
-async function createFaceLandmarker() {
+async function createFaceLandmarker({ numFaces }) {
   const filesetResolver = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
   );
@@ -24,7 +24,7 @@ async function createFaceLandmarker() {
       },
       outputFaceBlendshapes: true,
       runningMode: "VIDEO",
-      numFaces: 1,
+      numFaces: numFaces,
     });
   }
   return getLandmarker();
@@ -44,13 +44,12 @@ class GameEngine {
     this.faceStateConsumers = [];
     this.positionConsumers = [];
     this.pelletConsumers = [];
-    this.direction = "center";
-    this.jawIsOpen = false;
-    this.slotsToMove = 0;
-    this.position = { x: 3, y: 2 };
+    this.scoreConsumers = [];
+    this.playerStates = [];
     this.pellets = [];
     this.numSlots = null;
     this.stopped = false;
+    this.numPlayers = null;
   }
 
   stop() {
@@ -69,16 +68,48 @@ class GameEngine {
     this.numSlots = numSlots;
   }
 
-  subscribeToFaceState(callback) {
-    this.faceStateConsumers.push(callback);
+  initNumPlayers(numPlayers) {
+    this.numPlayers = numPlayers;
+    this.playerStates = range(numPlayers).map((playerNum) => {
+      let x, y;
+      if (playerNum === 0) {
+        x = 0;
+        y = 0;
+      } else if (playerNum === 1) {
+        x = this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS;
+        y = 0;
+      } else if (playerNum === 2) {
+        x = 0;
+        y = this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS;
+      } else if (playerNum === 3) {
+        x = this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS;
+        y = this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS;
+      }
+      return {
+        position: { x, y },
+        direction: "center",
+        jawIsOpen: false,
+        slotsToMove: 0,
+        score: 0,
+        playerNum,
+      };
+    });
   }
 
-  subscribeToPosition(callback) {
-    this.positionConsumers.push(callback);
+  subscribeToFaceState({ playerNum, callback }) {
+    this.faceStateConsumers.push({ playerNum, callback });
+  }
+
+  subscribeToPosition({ playerNum, callback }) {
+    this.positionConsumers.push({ playerNum, callback });
   }
 
   subscribeToPellets(callback) {
     this.pelletConsumers.push(callback);
+  }
+
+  subscribeToScore(callback) {
+    this.scoreConsumers.push(callback);
   }
 
   addMovement() {
@@ -90,6 +121,17 @@ class GameEngine {
   updatePelletConsumers() {
     this.pelletConsumers.forEach((callback) => {
       callback(this.pellets);
+    });
+  }
+
+  updateScoreConsumers() {
+    const scores = this.playerStates.map((playerState) => ({
+      score: playerState.score,
+      playerNum: playerState.playerNum,
+    }));
+
+    this.scoreConsumers.forEach((callback) => {
+      callback(scores);
     });
   }
 
@@ -113,7 +155,14 @@ class GameEngine {
     this.updatePelletConsumers();
   }
 
-  updateFaceState({
+  addIndividualMovement({ currentState }) {
+    if (currentState.slotsToMove < 2) {
+      currentState.slotsToMove += SLOTS_MOVED_PER_MOUTH_MOVE;
+    }
+  }
+
+  updateIndividualFaceState({
+    playerNum,
     jawIsOpen,
     vertical,
     verticalStrength,
@@ -124,7 +173,8 @@ class GameEngine {
     minX,
     maxX,
   }) {
-    let direction = this.direction;
+    let currentState = this.playerStates[playerNum];
+    let direction = currentState.direction;
     if (vertical !== "center" && horizontal !== "center") {
       direction = verticalStrength > horizontalStrength ? vertical : horizontal;
     } else if (horizontal !== "center") {
@@ -132,23 +182,22 @@ class GameEngine {
     } else if (vertical !== "center") {
       direction = vertical;
     }
-    this.direction = direction;
-    if (this.jawIsOpen !== jawIsOpen) {
-      this.addMovement();
+    currentState.direction = direction;
+    if (currentState.jawIsOpen !== jawIsOpen) {
+      this.addIndividualMovement({ currentState });
     }
-    this.jawIsOpen = jawIsOpen;
-    this.faceStateConsumers.forEach((callback) => {
-      callback({ jawIsOpen, direction, minY, maxY, minX, maxX });
-    });
+    currentState.jawIsOpen = jawIsOpen;
+    this.faceStateConsumers.forEach(
+      ({ playerNum: consumerPlayerNum, callback }) => {
+        if (playerNum === consumerPlayerNum) {
+          callback({ jawIsOpen, direction, minY, maxY, minX, maxX });
+        }
+      }
+    );
   }
 
-  processResults(results) {
-    if (!results || !results.faceLandmarks || !results.faceLandmarks[0]) {
-      console.log("no landmarks; bailing");
-      return;
-    }
-
-    const landmarks = invertLandmarks(results.faceLandmarks[0]);
+  processIndividualResult({ playerNum, faceLandmarks, faceBlendshapes }) {
+    const landmarks = invertLandmarks(faceLandmarks);
     const minY = Math.min(...landmarks.map((landmark) => landmark.y));
     const maxY = Math.max(...landmarks.map((landmark) => landmark.y));
     const minX = Math.min(...landmarks.map((landmark) => landmark.x));
@@ -158,7 +207,7 @@ class GameEngine {
     const height = maxY - minY;
     const width = maxX - minX;
 
-    const jawOpenAmount = results.faceBlendshapes[0].categories[25].score;
+    const jawOpenAmount = faceBlendshapes.categories[25].score;
     let jawIsOpen;
 
     if (this.jawIsOpen) {
@@ -196,8 +245,8 @@ class GameEngine {
       verticalStrength =
         (noseHeight - verticalDownThreshold) / (1 - verticalDownThreshold);
     }
-
-    this.updateFaceState({
+    this.updateIndividualFaceState({
+      playerNum,
       jawIsOpen,
       vertical,
       verticalStrength,
@@ -210,11 +259,42 @@ class GameEngine {
     });
   }
 
+  processAllResults(results) {
+    if (!results || !results.faceLandmarks) {
+      console.error("NO FACE LANDMARK RESULTS? Bailing.");
+      return;
+    }
+    if (results.faceLandmarks.length !== this.numPlayers) {
+      console.error(
+        `INCORRECT NUMBER OF FACE LANDMARK RESULTS: ${results.faceLandmarks.length}. Expected num players: ${this.numPlayers} Bailing.`
+      );
+      return;
+    }
+
+    // Assume that players are ordered from left to right.
+    // (since we invert the webcam, this is right to left)
+    results.faceLandmarks
+      .map((faceLandmarks, index) => {
+        const faceBlendshapes = results.faceBlendshapes[index];
+        const maxX = Math.max(...faceLandmarks.map((landmark) => landmark.x));
+        return { faceLandmarks, faceBlendshapes, maxX };
+      })
+      .sort((a, b) => b.maxX - a.maxX)
+      .forEach(({ faceLandmarks, faceBlendshapes }, playerNum) => {
+        this.processIndividualResult({
+          playerNum,
+          faceLandmarks,
+          faceBlendshapes,
+        });
+      });
+  }
+
   updateState() {}
 
   updatePositionConsumers() {
-    this.positionConsumers.forEach((callback) => {
-      callback(this.position);
+    this.positionConsumers.forEach(({ playerNum, callback }) => {
+      const position = this.playerStates[playerNum].position;
+      callback(position);
     });
   }
 
@@ -234,79 +314,100 @@ class GameEngine {
 
   updatePelletsForPosition() {
     let updated = false;
-    const myX = this.position.x + PLAYER_SIZE_IN_SLOTS / 2;
-    const myY = this.position.y + PLAYER_SIZE_IN_SLOTS / 2;
 
-    this.pellets = this.pellets.map((pellet) => {
-      const pelletX = pellet.x + 0.5;
-      const pelletY = pellet.y + 0.5;
+    this.playerStates.forEach((playerState) => {
+      const myX = playerState.position.x + PLAYER_SIZE_IN_SLOTS / 2;
+      const myY = playerState.position.y + PLAYER_SIZE_IN_SLOTS / 2;
 
-      const distance = Math.sqrt((myX - pelletX) ** 2 + (myY - pelletY) ** 2);
-      if (distance < PLAYER_SIZE_IN_SLOTS / 2 && pellet.enabled) {
-        updated = true;
-        return {
-          ...pellet,
-          enabled: false,
-        };
-      }
-      return pellet;
+      this.pellets = this.pellets.map((pellet) => {
+        const pelletX = pellet.x + 0.5;
+        const pelletY = pellet.y + 0.5;
+
+        const distance = Math.sqrt((myX - pelletX) ** 2 + (myY - pelletY) ** 2);
+        if (distance < PLAYER_SIZE_IN_SLOTS / 2 && pellet.enabled) {
+          playerState.score += 1;
+          updated = true;
+          return {
+            ...pellet,
+            enabled: false,
+          };
+        }
+        return pellet;
+      });
     });
+
     if (updated) {
       this.updatePelletConsumers();
+      this.updateScoreConsumers();
     }
+  }
+
+  handleIndividualMove({ maxSlotsToConsume, playerState }) {
+    const slotsToConsume = Math.min(playerState.slotsToMove, maxSlotsToConsume);
+    const isMoving = slotsToConsume > 0;
+
+    if (isMoving) {
+      playerState.slotsToMove -= slotsToConsume;
+      const movementAmount = slotsToConsume;
+      let hitWall = false;
+      if (playerState.direction === "up") {
+        const min = 0;
+        playerState.position = {
+          x: playerState.position.x,
+          y: Math.max(playerState.position.y - movementAmount, min),
+        };
+        hitWall = playerState.position.y === min;
+      } else if (playerState.direction === "down") {
+        const max = this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS;
+        playerState.position = {
+          x: playerState.position.x,
+          y: Math.min(playerState.position.y + movementAmount, max),
+        };
+        hitWall = playerState.position.y === max;
+      } else if (playerState.direction === "left") {
+        const min = 0;
+        playerState.position = {
+          x: Math.max(playerState.position.x - movementAmount, min),
+          y: playerState.position.y,
+        };
+        hitWall = playerState.position.x === min;
+      } else if (playerState.direction === "right") {
+        const max = this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS;
+        playerState.position = {
+          x: Math.min(playerState.position.x + movementAmount, max),
+          y: playerState.position.y,
+        };
+        hitWall = playerState.position.x === max;
+      }
+      if (hitWall) {
+        playerState.slotsToMove = 0;
+      }
+    }
+    return isMoving;
   }
 
   maybeMove({ tickTimeMs }) {
     const secondsOfMovement = tickTimeMs / 1000;
     const maxSlotsToConsume = secondsOfMovement * SLOTS_MOVED_PER_SECOND;
-    const slotsToConsume = Math.min(this.slotsToMove, maxSlotsToConsume);
+    let isMoving = false;
+    this.playerStates.forEach((playerState) => {
+      isMoving =
+        isMoving ||
+        this.handleIndividualMove({
+          maxSlotsToConsume,
+          playerState,
+        });
+    });
 
-    const isMoving = slotsToConsume > 0;
     this.handleAudio({ isMoving });
-
     if (isMoving) {
-      this.slotsToMove -= slotsToConsume;
-      const movementAmount = slotsToConsume;
-      let hitWall = false;
-      if (this.direction === "up") {
-        const min = 0;
-        this.position = {
-          x: this.position.x,
-          y: Math.max(this.position.y - movementAmount, min),
-        };
-        hitWall = this.position.y === min;
-      } else if (this.direction === "down") {
-        const max = this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS;
-        this.position = {
-          x: this.position.x,
-          y: Math.min(this.position.y + movementAmount, max),
-        };
-        hitWall = this.position.y === max;
-      } else if (this.direction === "left") {
-        const min = 0;
-        this.position = {
-          x: Math.max(this.position.x - movementAmount, min),
-          y: this.position.y,
-        };
-        hitWall = this.position.x === min;
-      } else if (this.direction === "right") {
-        const max = this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS;
-        this.position = {
-          x: Math.min(this.position.x + movementAmount, max),
-          y: this.position.y,
-        };
-        hitWall = this.position.x === max;
-      }
-      if (hitWall) {
-        this.slotsToMove = 0;
-      }
       this.updatePelletsForPosition();
       this.updatePositionConsumers();
     }
   }
 
   async start() {
-    this.landmarker = await createFaceLandmarker();
+    this.landmarker = await createFaceLandmarker({ numFaces: this.numPlayers });
     let lastVideoTime = -1;
     function loop() {
       if (this.stopped) {
@@ -315,7 +416,7 @@ class GameEngine {
       if (this.video.currentTime !== lastVideoTime) {
         const startTime = performance.now();
         const results = this.landmarker.detectForVideo(this.video, startTime);
-        this.processResults(results);
+        this.processAllResults.bind(this)(results);
         const tickTimeMs = lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
         this.maybeMove({ tickTimeMs });
         lastVideoTime = startTime;
