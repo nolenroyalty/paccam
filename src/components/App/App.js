@@ -21,6 +21,7 @@ function App() {
 
   const setNumPlayers = React.useCallback((numPlayers) => {
     setGameState((state) => ({ ...state, numPlayers }));
+    gameRef.current.initNumPlayers(numPlayers);
   }, []);
 
   const startGame = React.useCallback(() => {
@@ -77,6 +78,7 @@ function App() {
           videoEnabled={videoEnabled}
           gameRef={gameRef}
           spriteSheets={spriteSheets}
+          numPlayers={gameState.numPlayers}
         />
         <audio ref={pacmanChomp} src="/pacman-onetime.mp3" />
       </GameHolderOverlapping>

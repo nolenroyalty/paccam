@@ -40,7 +40,7 @@ function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
         autoPlay
         muted
         ref={videoRef}
-        style={{ "--opacity": enabled ? 0.4 : 0 }}
+        style={{ "--opacity": enabled ? 0.8 : 0, "--brightness": 0.7 }}
       />
     </Wrapper>
   );
@@ -77,6 +77,7 @@ const Video = styled.video`
   border-radius: 8px;
   opacity: var(--opacity);
   transition: opacity 1s;
+  filter: brightness(var(--brightness));
 `;
 
 export default VideoFrame;

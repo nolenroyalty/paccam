@@ -1,9 +1,17 @@
 import React from "react";
 import styled, { keyframes } from "styled-components";
 import { SLOT_WIDTH_PERCENTAGE } from "../../constants";
+import { range } from "../../utils";
 import Pacman from "../Pacman";
 
-function Playfield({ videoEnabled, videoRef, gameRef, spriteSheets }) {
+function Playfield({
+  videoEnabled,
+  videoRef,
+  gameRef,
+  spriteSheets,
+  numPlayers,
+}) {
+  console.log("hi");
   const [pellets, setPellets] = React.useState([]);
   const [padding, setPadding] = React.useState({});
   const [numSlots, setNumSlots] = React.useState({});
@@ -90,13 +98,28 @@ function Playfield({ videoEnabled, videoRef, gameRef, spriteSheets }) {
           {score}
         </ScoreText>
       </ScoreContainer>
-      <Pacman
-        gameRef={gameRef}
-        videoRef={videoRef}
-        enabled={videoEnabled}
-        spriteSheet={spriteSheets.current["yellow"]}
-        numSlots={numSlots}
-      />
+      {numPlayers === null
+        ? null
+        : range(numPlayers).map((playerNum) => {
+            console.log(`playerNum is: ${playerNum}`);
+            const spriteSheet =
+              playerNum % 2 === 0
+                ? spriteSheets.current["yellow"]
+                : spriteSheets.current["pink"];
+
+            console.log(`spriteSheet should be ${spriteSheet}`);
+            return (
+              <Pacman
+                key={playerNum}
+                gameRef={gameRef}
+                videoRef={videoRef}
+                enabled={videoEnabled}
+                spriteSheet={spriteSheet}
+                numSlots={numSlots}
+                playerNum={playerNum}
+              />
+            );
+          })}
       {pellets.map((pellet) => {
         return (
           <PelletWrapper
