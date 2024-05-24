@@ -12,7 +12,6 @@ function Playfield({
 }) {
   const [pellets, setPellets] = React.useState([]);
   const [padding, setPadding] = React.useState({});
-  const [slotSize, setSlotSize] = React.useState(null);
   const [numSlots, setNumSlots] = React.useState({});
   const [initializedPlayfield, setInitializedPlayfield] = React.useState(false);
 
