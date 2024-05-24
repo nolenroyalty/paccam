@@ -65,9 +65,9 @@ const Wrapper = styled.div`
 const PlayerSelectWrapper = styled.div`
   display: flex;
   position: absolute;
-  top: 20%;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   flex-direction: column;
   gap: 2rem;
   opacity: ${(props) => (props.$disabled ? 0 : 1)};
