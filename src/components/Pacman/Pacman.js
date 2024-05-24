@@ -57,7 +57,6 @@ function Pacman({ gameRef, videoRef, enabled, spriteSheet, numSlots }) {
       xIdx += 4;
     }
 
-    const pacman = spriteSheet.current;
     const spriteWidth = 32;
     const spriteHeight = 32;
     const spriteX = xIdx * 32;
@@ -67,7 +66,7 @@ function Pacman({ gameRef, videoRef, enabled, spriteSheet, numSlots }) {
     const drawCurrentSprite = ({ outline }) => {
       const spriteY = outline ? 32 : 0;
       ctx.drawImage(
-        pacman,
+        spriteSheet,
         spriteX,
         spriteY,
         spriteWidth,

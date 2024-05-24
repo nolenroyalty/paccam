@@ -3,13 +3,7 @@ import styled, { keyframes } from "styled-components";
 import { SLOT_WIDTH_PERCENTAGE } from "../../constants";
 import Pacman from "../Pacman";
 
-function Playfield({
-  videoEnabled,
-  videoRef,
-  gameRef,
-  pacmanYellow,
-  pacmanPink,
-}) {
+function Playfield({ videoEnabled, videoRef, gameRef, spriteSheets }) {
   const [pellets, setPellets] = React.useState([]);
   const [padding, setPadding] = React.useState({});
   const [numSlots, setNumSlots] = React.useState({});
@@ -100,7 +94,7 @@ function Playfield({
         gameRef={gameRef}
         videoRef={videoRef}
         enabled={videoEnabled}
-        spriteSheet={pacmanPink}
+        spriteSheet={spriteSheets.current["yellow"]}
         numSlots={numSlots}
       />
       {pellets.map((pellet) => {
