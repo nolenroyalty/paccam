@@ -2,6 +2,10 @@ import React from "react";
 import styled from "styled-components";
 import Button from "../Button";
 import { zIndex1 } from "../../zindex";
+import {
+  WAITING_FOR_PLAYER_SELECT,
+  WAITING_TO_START_ROUND,
+} from "../../STATUS";
 
 function PlayerSelect({ disabled, setNumPlayers }) {
   const onClick = React.useCallback(
@@ -35,9 +39,17 @@ function PlayerSelect({ disabled, setNumPlayers }) {
 
 function StartScreen({ status, startGame, setNumPlayers }) {
   return (
-    <Wrapper>
+    <Wrapper
+      style={{
+        "--pointer-events":
+          status === WAITING_FOR_PLAYER_SELECT ||
+          status === WAITING_TO_START_ROUND
+            ? "auto"
+            : "none",
+      }}
+    >
       <PlayerSelect
-        disabled={status !== "waiting-for-player-select"}
+        disabled={status !== WAITING_FOR_PLAYER_SELECT}
         setNumPlayers={setNumPlayers}
       />
 
@@ -45,7 +57,7 @@ function StartScreen({ status, startGame, setNumPlayers }) {
         onClick={(e) => {
           startGame();
         }}
-        disabled={status !== "waiting-to-start-round"}
+        disabled={status !== WAITING_TO_START_ROUND}
         size="large"
       >
         Start Game
@@ -59,6 +71,7 @@ const Wrapper = styled.div`
   width: 100%;
   height: 100%;
   z-index: ${zIndex1};
+  pointer-events: var(--pointer-events);
 `;
 
 const PlayerSelectWrapper = styled.div`

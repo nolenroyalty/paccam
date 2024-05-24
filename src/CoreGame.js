@@ -5,6 +5,18 @@ import {
   SLOTS_MOVED_PER_SECOND,
 } from "./constants";
 import { range } from "./utils";
+import {
+  WAITING_FOR_VIDEO,
+  WAITING_FOR_PLAYER_SELECT,
+  WAITING_TO_START_ROUND,
+  COUNTING_IN_ROUND,
+  RUNNING_ROUND,
+  COMPLETED_ROUND,
+  SHOWING_RESULTS,
+  STOPPED,
+  validTransition,
+  shouldProcessGameLoop,
+} from "./STATUS";
 
 const JAW_OPEN_THRESHOLD = 0.48;
 const JAW_CLOSE_THRESHOLD = 0.3;
@@ -51,18 +63,18 @@ class GameEngine {
     this.playerStates = [];
     this.pellets = [];
     this.numSlots = null;
-    this.status = "waiting-for-video";
+    this.status = WAITING_FOR_VIDEO;
     this.numPlayers = null;
   }
 
   stopGame() {
     console.log("STOPPING FULL GAME?");
-    this.updateStatusAndConsumers("stopped");
+    this.updateStatusAndConsumers(STOPPED, "stopGame");
   }
 
   initVideo(video) {
     this.video = video;
-    this.updateStatusAndConsumers("waiting-for-player-select");
+    this.updateStatusAndConsumers(WAITING_FOR_PLAYER_SELECT, "initVideo");
   }
 
   initAudio({ pacmanChomp }) {
@@ -74,12 +86,7 @@ class GameEngine {
   }
 
   initNumPlayers(numPlayers) {
-    if (this.status !== "waiting-for-player-select") {
-      throw new Error(
-        `BUG: initNumPlayers called when not waiting for player select. state: ${this.status}`
-      );
-    }
-    this.updateStatusAndConsumers("waiting-to-start-round");
+    this.updateStatusAndConsumers(WAITING_TO_START_ROUND, "initNumPlayers");
     this.numPlayers = numPlayers;
     this.playerStates = range(numPlayers).map((playerNum) => {
       let x, y;
@@ -107,9 +114,15 @@ class GameEngine {
     });
   }
 
+  _updateStatusConsumers() {
+    this.statusConsumers.forEach((callback) => {
+      callback(this.status);
+    });
+  }
+
   subscribeToStatus(callback) {
     this.statusConsumers.push(callback);
-    this.updateStatusAndConsumers(this.status);
+    this._updateStatusConsumers();
   }
 
   subscribeToFaceState({ playerNum, callback }) {
@@ -138,11 +151,15 @@ class GameEngine {
     }
   }
 
-  updateStatusAndConsumers(status) {
+  updateStatusAndConsumers(status, tag = "no tag provided") {
+    const valid = validTransition(this.status, status);
+    if (!valid) {
+      throw new Error(
+        `Invalid transition: ${this.status} -> ${status} (${tag})`
+      );
+    }
     this.status = status;
-    this.statusConsumers.forEach((callback) => {
-      callback(this.status);
-    });
+    this._updateStatusConsumers();
   }
 
   updatePelletConsumers() {
@@ -445,7 +462,7 @@ class GameEngine {
       if (this.time === 0) {
         clearInterval(intervalId);
         this.time = "FINISH";
-        this.updateStatusAndConsumers("completed-round");
+        this.updateStatusAndConsumers(COMPLETED_ROUND, "countDownRound");
         this.handleAudio({ isMoving: false });
       }
       this.updateTimeConsumers();
@@ -453,12 +470,7 @@ class GameEngine {
   }
 
   countInRound() {
-    if (this.status !== "waiting-to-start-round") {
-      throw new Error(
-        `BUG: startRound called when not waiting to start round. state: ${this.status}`
-      );
-    }
-    this.updateStatusAndConsumers("counting-in-round");
+    this.updateStatusAndConsumers(COUNTING_IN_ROUND, "countInRound");
     this.time = "starting";
 
     const intervalId = setInterval(() => {
@@ -472,7 +484,7 @@ class GameEngine {
         clearInterval(intervalId);
         this.time = "GO!";
         this.updateTimeConsumers();
-        this.updateStatusAndConsumers("running-round");
+        this.updateStatusAndConsumers(RUNNING_ROUND, "countInRound");
         this.countDownRound();
       } else {
         this.updateTimeConsumers();
@@ -482,7 +494,7 @@ class GameEngine {
 
   async startGameLoop() {
     this.landmarker = await createFaceLandmarker({ numFaces: this.numPlayers });
-    if (this.status !== "waiting-to-start-round") {
+    if (this.status !== WAITING_TO_START_ROUND) {
       throw new Error(
         `BUG: startGameLoop called when not waiting for video - ${this.status}`
       );
@@ -490,11 +502,7 @@ class GameEngine {
     let lastVideoTime = -1;
     this.updatePositionConsumers();
     function loop() {
-      if (
-        this.status !== "running-round" &&
-        this.status !== "waiting-to-start-round" &&
-        this.status !== "counting-in-round"
-      ) {
+      if (!shouldProcessGameLoop(this.status)) {
         console.log(`bailing from game loop: ${this.status}`);
         return;
       }
@@ -502,7 +510,7 @@ class GameEngine {
         const startTime = performance.now();
         const results = this.landmarker.detectForVideo(this.video, startTime);
         this.processAllResults.bind(this)(results);
-        if (this.status === "running-round") {
+        if (this.status === RUNNING_ROUND) {
           const tickTimeMs =
             lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
           this.maybeMove({ tickTimeMs });

@@ -70,13 +70,11 @@ function App() {
       />
       <GameHolderOverlapping>
         <VideoFrame videoRef={videoRef} enableVideo={enableVideo} />
-        {videoEnabled ? (
-          <StartScreen
-            status={gameState.status}
-            startGame={startGame}
-            setNumPlayers={setNumPlayers}
-          />
-        ) : null}
+        <StartScreen
+          status={gameState.status}
+          startGame={startGame}
+          setNumPlayers={setNumPlayers}
+        />
         <Playfield
           videoRef={videoRef}
           gameRef={gameRef}
