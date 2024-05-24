@@ -10,7 +10,7 @@ function TimerDisplay({ gameRef }) {
     game.subscribeToTime(setTime);
   }, [gameRef]);
 
-  const text = time === 0 ? "GO!" : String(time);
+  const text = String(time);
   const firstBit = text.slice(0, -1);
   const lastBit = text.slice(-1);
 

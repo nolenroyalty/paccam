@@ -10,7 +10,6 @@ function Playfield({ videoRef, gameRef, spriteSheets, numPlayers }) {
   const [padding, setPadding] = React.useState({});
   const [numSlots, setNumSlots] = React.useState({});
   const [initializedPlayfield, setInitializedPlayfield] = React.useState(false);
-  console.log(`num players is: ${numPlayers}`);
 
   React.useEffect(() => {
     if (initializedPlayfield) {

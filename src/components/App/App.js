@@ -21,11 +21,9 @@ function App() {
     gameRef.current.initVideo(videoRef.current);
   }, []);
 
-  // I think we should remove scores and maybe running from this...
   const [gameState, setGameState] = React.useState({
     numPlayers: null,
-    scores: [0, 0, 0, 0],
-    running: false,
+    status: null,
   });
 
   const setNumPlayers = React.useCallback((numPlayers) => {
@@ -43,6 +41,9 @@ function App() {
   React.useEffect(() => {
     const game = gameRef.current;
     game.initAudio({ pacmanChomp: pacmanChomp.current });
+    game.subscribeToStatus((status) => {
+      setGameState((state) => ({ ...state, status }));
+    });
   }, []);
 
   React.useEffect(() => {
@@ -71,7 +72,7 @@ function App() {
         <VideoFrame videoRef={videoRef} enableVideo={enableVideo} />
         {videoEnabled ? (
           <StartScreen
-            gameState={gameState}
+            status={gameState.status}
             startGame={startGame}
             setNumPlayers={setNumPlayers}
           />

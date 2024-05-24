@@ -33,12 +33,11 @@ function PlayerSelect({ disabled, setNumPlayers }) {
   );
 }
 
-function StartScreen({ gameState, startGame, setNumPlayers }) {
-  const startGameEnabled = !gameState.running && gameState.numPlayers !== null;
+function StartScreen({ status, startGame, setNumPlayers }) {
   return (
     <Wrapper>
       <PlayerSelect
-        disabled={gameState.numPlayers !== null}
+        disabled={status !== "waiting-for-player-select"}
         setNumPlayers={setNumPlayers}
       />
 
@@ -46,7 +45,7 @@ function StartScreen({ gameState, startGame, setNumPlayers }) {
         onClick={(e) => {
           startGame();
         }}
-        disabled={!startGameEnabled}
+        disabled={status !== "waiting-to-start-round"}
         size="large"
       >
         Start Game
