@@ -13,6 +13,12 @@ function App() {
 
   const [videoEnabled, setVideoEnabled] = React.useState(false);
 
+  const [gameState, setGameState] = React.useState({
+    numPlayers: 1,
+    scores: [0, 0, 0, 0],
+    running: false,
+  });
+
   React.useEffect(() => {
     const game = gameRef.current;
     game.initAudio({ pacmanChomp: pacmanChomp.current });
