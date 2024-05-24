@@ -11,7 +11,6 @@ function Pacman({
   numSlots,
   playerNum,
 }) {
-  console.log(`spritesheet is ${spriteSheet}`);
   const canvasRef = React.useRef();
   const [coords, setCoords] = React.useState(null);
   const [direction, setDirection] = React.useState("center");

@@ -11,7 +11,6 @@ function Playfield({
   spriteSheets,
   numPlayers,
 }) {
-  console.log("hi");
   const [pellets, setPellets] = React.useState([]);
   const [padding, setPadding] = React.useState({});
   const [numSlots, setNumSlots] = React.useState({});
@@ -101,13 +100,11 @@ function Playfield({
       {numPlayers === null
         ? null
         : range(numPlayers).map((playerNum) => {
-            console.log(`playerNum is: ${playerNum}`);
             const spriteSheet =
               playerNum % 2 === 0
                 ? spriteSheets.current["yellow"]
                 : spriteSheets.current["pink"];
 
-            console.log(`spriteSheet should be ${spriteSheet}`);
             return (
               <Pacman
                 key={playerNum}

@@ -266,7 +266,7 @@ class GameEngine {
     }
     if (results.faceLandmarks.length !== this.numPlayers) {
       console.error(
-        `INCORRECT NUMBER OF FACE LANDMARK RESULTS? Expected num players: ${this.numPlayers} Bailing.`
+        `INCORRECT NUMBER OF FACE LANDMARK RESULTS: ${results.faceLandmarks.length}. Expected num players: ${this.numPlayers} Bailing.`
       );
       return;
     }
