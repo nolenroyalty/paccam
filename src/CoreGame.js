@@ -111,7 +111,7 @@ class GameEngine {
     this.pelletConsumers.push(callback);
   }
 
-  subscribeToScore(callback) {
+  subscribeToScores(callback) {
     this.scoreConsumers.push(callback);
   }
 

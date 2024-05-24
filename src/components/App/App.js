@@ -5,6 +5,7 @@ import VideoFrame from "../VideoFrame";
 import GameEngine from "../../CoreGame";
 import StartScreen from "../StartScreen";
 import TimerDisplay from "../TimerDisplay";
+import ScoreDisplay from "../ScoreDisplay";
 
 function App() {
   const videoRef = React.useRef();
@@ -20,6 +21,7 @@ function App() {
     gameRef.current.initVideo(videoRef.current);
   }, []);
 
+  // I think we should remove scores and maybe running from this...
   const [gameState, setGameState] = React.useState({
     numPlayers: null,
     scores: [0, 0, 0, 0],
@@ -76,13 +78,13 @@ function App() {
         ) : null}
         <Playfield
           videoRef={videoRef}
-          videoEnabled={videoEnabled}
           gameRef={gameRef}
           spriteSheets={spriteSheets}
           numPlayers={gameState.numPlayers}
         />
         <audio ref={pacmanChomp} src="/pacman-onetime.mp3" />
       </GameHolderOverlapping>
+      <ScoreDisplay numPlayers={gameState.numPlayers} gameRef={gameRef} />
     </Wrapper>
   );
 }

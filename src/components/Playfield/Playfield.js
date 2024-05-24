@@ -3,14 +3,9 @@ import styled, { keyframes } from "styled-components";
 import { SLOT_WIDTH_PERCENTAGE } from "../../constants";
 import { range } from "../../utils";
 import Pacman from "../Pacman";
+import { zIndex2 } from "../../zindex";
 
-function Playfield({
-  videoEnabled,
-  videoRef,
-  gameRef,
-  spriteSheets,
-  numPlayers,
-}) {
+function Playfield({ videoRef, gameRef, spriteSheets, numPlayers }) {
   const [pellets, setPellets] = React.useState([]);
   const [padding, setPadding] = React.useState({});
   const [numSlots, setNumSlots] = React.useState({});
@@ -83,15 +78,8 @@ function Playfield({
     gameRef.current.subscribeToPellets(setPellets);
   }, [gameRef, initializedPlayfield, numSlots]);
 
-  const score = pellets.filter((pellet) => !pellet.enabled).length;
-
   return (
     <Wrapper $padding={padding}>
-      <ScoreContainer>
-        <ScoreText key={score} $noAnimation={score === 0}>
-          {score}
-        </ScoreText>
-      </ScoreContainer>
       {numPlayers === null
         ? null
         : range(numPlayers).map((playerNum) => {
@@ -135,40 +123,6 @@ function Playfield({
   );
 }
 
-const ScoreContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  margin: 0;
-`;
-
-const ScorePulse = keyframes`
-  0% {
-    transform: revert;
-  }
-
-  10% {
-    transform: translateY(calc(var(--jump-amount) * -0.5));
-  }
-
-  60% {
-    transform: translateY(var(--jump-amount));
-  }
-
-  100% {
-    transform: revert;
-  }
-`;
-
-const ScoreText = styled.h2`
-  color: white;
-  font-size: 3.5rem;
-  font-family: "Arcade Classic";
-  margin: 0;
-
-  --jump-amount: ${(p) => (p.$noAnimation ? "0" : "-10%")};
-  animation: ${ScorePulse} 0.3s ease-out;
-`;
-
 const Wrapper = styled.div`
   width: 100%;
   height: 100%;
@@ -176,7 +130,7 @@ const Wrapper = styled.div`
   pointer-events: none;
   padding: ${(p) =>
     `${p.$padding.top}px ${p.$padding.right}px ${p.$padding.bottom}px ${p.$padding.left}px`};
-  z-index: 1000000;
+  z-index: ${zIndex2};
 `;
 
 const PopIn = keyframes`
