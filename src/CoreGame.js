@@ -152,7 +152,7 @@ class GameEngine {
   }
 
   updateStatusAndConsumers(status, tag = "no tag provided") {
-    const valid = validTransition(this.status, status);
+    const valid = validTransition({ from: this.status, to: status });
     if (!valid) {
       throw new Error(
         `Invalid transition: ${this.status} -> ${status} (${tag})`
