@@ -4,6 +4,7 @@ import Playfield from "../Playfield";
 import VideoFrame from "../VideoFrame";
 import GameEngine from "../../CoreGame";
 import StartScreen from "../StartScreen";
+import TimerDisplay from "../TimerDisplay";
 
 function App() {
   const videoRef = React.useRef();
@@ -34,7 +35,7 @@ function App() {
   const startGame = React.useCallback(() => {
     setGameState((state) => ({ ...state, running: true }));
     // can we make this wait for video to load?
-    gameRef.current.startRound();
+    gameRef.current.countInRound();
   }, []);
 
   React.useEffect(() => {
@@ -53,6 +54,7 @@ function App() {
 
   return (
     <Wrapper>
+      <TimerDisplay gameRef={gameRef} />
       <HiddenImage
         ref={(node) => (spriteSheets.current["yellow"] = node)}
         src="/aseprite/pacman-yellow.png"

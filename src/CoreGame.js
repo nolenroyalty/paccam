@@ -10,6 +10,7 @@ const JAW_OPEN_THRESHOLD = 0.48;
 const JAW_CLOSE_THRESHOLD = 0.3;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
+const SECONDS_IN_ROUND = 30;
 
 async function createFaceLandmarker({ numFaces }) {
   const filesetResolver = await FilesetResolver.forVisionTasks(
@@ -45,6 +46,7 @@ class GameEngine {
     this.positionConsumers = [];
     this.pelletConsumers = [];
     this.scoreConsumers = [];
+    this.timeConsumers = [];
     this.playerStates = [];
     this.pellets = [];
     this.numSlots = null;
@@ -113,6 +115,10 @@ class GameEngine {
     this.scoreConsumers.push(callback);
   }
 
+  subscribeToTime(callback) {
+    this.timeConsumers.push(callback);
+  }
+
   addMovement() {
     if (this.slotsToMove < 2) {
       this.slotsToMove += SLOTS_MOVED_PER_MOUTH_MOVE;
@@ -136,6 +142,12 @@ class GameEngine {
     });
   }
 
+  updateTimeConsumers() {
+    this.timeConsumers.forEach((callback) => {
+      callback(this.time);
+    });
+  }
+
   generatePellets() {
     if (this.numSlots === null) {
       throw new Error("BUG: numSlots is not set.");
@@ -146,7 +158,8 @@ class GameEngine {
     while (slotX < this.numSlots.horizontal) {
       let slotY = 1;
       while (slotY < this.numSlots.vertical) {
-        pellets.push({ x: slotX, y: slotY, enabled: true });
+        const delay = Math.random() * 1.75;
+        pellets.push({ x: slotX, y: slotY, enabled: true, delay });
         slotY += 2;
       }
       slotX += 2;
@@ -405,13 +418,28 @@ class GameEngine {
     }
   }
 
-  startRound() {
+  countInRound() {
     if (this.state !== "waiting-to-start-round") {
       throw new Error(
         `BUG: startRound called when not waiting to start round. state: ${this.state}`
       );
     }
-    this.state = "running-round";
+    this.state = "counting-in-round";
+    this.time = "starting";
+
+    const intervalId = setInterval(() => {
+      if (this.time === "starting") {
+        this.generatePellets();
+        this.time = 3;
+      } else {
+        this.time -= 1;
+      }
+      this.updateTimeConsumers();
+      if (this.time === 0) {
+        clearInterval(intervalId);
+        this.state = "running-round";
+      }
+    }, 1000);
   }
 
   async startGameLoop() {

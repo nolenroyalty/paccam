@@ -71,7 +71,7 @@ const PlayerSelectWrapper = styled.div`
   flex-direction: column;
   gap: 2rem;
   opacity: ${(props) => (props.$disabled ? 0 : 1)};
-  transition: opacity 0.5s ease-out;
+  transition: opacity 0.2s ease-out;
 `;
 
 const ButtonWrapper = styled(Button)`
@@ -85,7 +85,7 @@ const StartGameButton = styled(Button)`
   transform: translate(-50%, -50%);
   opacity: ${(props) => (props.disabled ? 0 : 1)};
   pointer-events: ${(props) => (props.disabled ? "none" : "auto")};
-  transition: opacity 0.5s ease-out 0.5s;
+  transition: opacity 0.5s ease-out;
 `;
 
 export default StartScreen;

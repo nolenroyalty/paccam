@@ -83,12 +83,6 @@ function Playfield({
     gameRef.current.subscribeToPellets(setPellets);
   }, [gameRef, initializedPlayfield, numSlots]);
 
-  React.useEffect(() => {
-    if (!videoEnabled) {
-      return;
-    }
-    gameRef.current.generatePellets();
-  }, [videoEnabled, gameRef]);
   const score = pellets.filter((pellet) => !pellet.enabled).length;
 
   return (
@@ -125,13 +119,14 @@ function Playfield({
               "--left": `${(pellet.x / numSlots.horizontal) * 100}%`,
               "--top": `${(pellet.y / numSlots.vertical) * 100}%`,
               "--opacity": pellet.enabled ? 1 : 0,
-              "--scale": pellet.enabled ? 1 : 0,
+              "--scale": pellet.enabled ? null : 0,
             }}
           >
             <Pellet
               data-x={pellet.x}
               alt=""
               src="/aseprite/pellet.png"
+              style={{ "--delay": pellet.delay + "s" }}
             ></Pellet>
           </PelletWrapper>
         );
@@ -181,6 +176,21 @@ const Wrapper = styled.div`
   pointer-events: none;
   padding: ${(p) =>
     `${p.$padding.top}px ${p.$padding.right}px ${p.$padding.bottom}px ${p.$padding.left}px`};
+  z-index: 1000000;
+`;
+
+const PopIn = keyframes`
+  0% {
+    transform: scale(0) translateY(200%);
+  }
+
+  60% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 `;
 
 const Pellet = styled.img`
@@ -188,10 +198,12 @@ const Pellet = styled.img`
   width: ${50}%;
 
   opacity: var(--opacity);
-  transform: scale(var(--scale));
   transition:
-    opacity 0.2s ease-out,
-    transform 0.2s ease-out;
+    opacity 0.5s ease-out,
+    transform 0.3s ease-out;
+
+  animation: ${PopIn} 0.75s backwards var(--delay);
+  transform: scale(var(--scale));
 `;
 
 const PelletWrapper = styled.div`
