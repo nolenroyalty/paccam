@@ -1,9 +1,9 @@
 import React from "react";
 import styled from "styled-components";
-import { PLAYFIELD_SIZE, PLAYER_SIZE } from "../../constants";
+import { PLAYER_SIZE_PERCENT } from "../../constants";
 const PLAYER_CANVAS_SIZE = 128;
 
-function Pacman({ gameRef, videoRef, enabled, spriteSheet }) {
+function Pacman({ gameRef, videoRef, enabled, spriteSheet, numSlots }) {
   const canvasRef = React.useRef();
   const [coords, setCoords] = React.useState({ x: 0, y: 0 });
   const [direction, setDirection] = React.useState("center");
@@ -40,7 +40,6 @@ function Pacman({ gameRef, videoRef, enabled, spriteSheet }) {
     if (!enabled) {
       return;
     }
-
     const ctx = canvasRef.current.getContext("2d");
     ctx.save();
 
@@ -126,9 +125,10 @@ function Pacman({ gameRef, videoRef, enabled, spriteSheet }) {
 
   return (
     <Player
+      data-player="player"
       style={{
-        "--left": `${(coords.x / PLAYFIELD_SIZE) * 100}%`,
-        "--top": `${(coords.y / PLAYFIELD_SIZE) * 100}%`,
+        "--left": `${(coords.x / numSlots.horizontal) * 100}%`,
+        "--top": `${(coords.y / numSlots.vertical) * 100}%`,
       }}
     >
       <InteriorCanvas
@@ -142,7 +142,7 @@ function Pacman({ gameRef, videoRef, enabled, spriteSheet }) {
 
 const Player = styled.div`
   position: absolute;
-  width: ${(PLAYER_SIZE * 100) / PLAYFIELD_SIZE}%;
+  width: ${PLAYER_SIZE_PERCENT}%;
   aspect-ratio: 1/1;
   left: var(--left);
   top: var(--top);
