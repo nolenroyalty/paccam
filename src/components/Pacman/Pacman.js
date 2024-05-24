@@ -55,7 +55,7 @@ function Pacman({
 
     let xIdx = 0;
     if (mouthState === "open") {
-      xIdx += 4;
+      xIdx += 5; // 5 states - 1 for center, 4 for directions
     }
     if (direction === "right") {
       xIdx += 1;
