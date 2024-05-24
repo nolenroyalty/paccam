@@ -1,6 +1,6 @@
 import React from "react";
 import styled from "styled-components";
-import UnstyledButton from "../UnstyledButton";
+import Button from "../Button";
 
 function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
   const [buttonDisabled, setButtonDisabled] = React.useState(false);
@@ -14,7 +14,6 @@ function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
       .then((stream) => {
         gameRef.current.initVideo(videoRef.current);
         videoRef.current.srcObject = stream;
-        gameRef.current.start();
         setVideoEnabled(true);
         setEnabled(true);
       })
@@ -29,6 +28,7 @@ function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
         $disabled={buttonDisabled}
         disabled={buttonDisabled}
         onClick={onClick}
+        size="large"
       >
         <ButtonText>
           {"Enable  Webcam"}
@@ -47,20 +47,16 @@ function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
 }
 
 const ButtonText = styled.pre`
-  font-size: 3rem;
-  color: white;
   white-space: pre-wrap;
-  font-family: "Arcade Classic";
+  font-family: inherit;
 `;
 
-const EnableVideoButton = styled(UnstyledButton)`
+const EnableVideoButton = styled(Button)`
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 24px;
-  border-radius: 8px;
-  border: 8px dashed black;
+
   pointer-events: ${(props) => (props.$disabled ? "none" : "auto")};
   opacity: ${(props) => (props.$disabled ? 0 : 1)};
   transition: opacity 1s;
