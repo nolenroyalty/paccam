@@ -48,12 +48,13 @@ class GameEngine {
     this.playerStates = [];
     this.pellets = [];
     this.numSlots = null;
-    this.stopped = false;
+    this.state = "waiting-for-video";
     this.numPlayers = null;
   }
 
-  stop() {
-    this.stopped = true;
+  stopGame() {
+    console.log("STOPPING FULL GAME?");
+    this.state = "stopped";
   }
 
   initVideo(video) {
@@ -289,8 +290,6 @@ class GameEngine {
       });
   }
 
-  updateState() {}
-
   updatePositionConsumers() {
     this.positionConsumers.forEach(({ playerNum, callback }) => {
       const position = this.playerStates[playerNum].position;
@@ -406,19 +405,38 @@ class GameEngine {
     }
   }
 
-  async start() {
+  startRound() {
+    if (this.state !== "waiting-to-start-round") {
+      throw new Error(
+        `BUG: startRound called when not waiting to start round. state: ${this.state}`
+      );
+    }
+    this.state = "running-round";
+  }
+
+  async startGameLoop() {
     this.landmarker = await createFaceLandmarker({ numFaces: this.numPlayers });
+    if (this.state !== "waiting-for-video") {
+      throw new Error("BUG: startGameLoop called when not waiting for video.");
+    }
+    this.state = "waiting-to-start-round";
     let lastVideoTime = -1;
+    this.updatePositionConsumers();
+    console.log("heyo");
     function loop() {
-      if (this.stopped) {
+      if (this.state === "stopped") {
         return;
       }
       if (this.video.currentTime !== lastVideoTime) {
         const startTime = performance.now();
         const results = this.landmarker.detectForVideo(this.video, startTime);
         this.processAllResults.bind(this)(results);
-        const tickTimeMs = lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
-        this.maybeMove({ tickTimeMs });
+        if (this.state === "running-round") {
+          const tickTimeMs =
+            lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
+          this.maybeMove({ tickTimeMs });
+        }
+
         lastVideoTime = startTime;
       }
       requestAnimationFrame(loop.bind(this));

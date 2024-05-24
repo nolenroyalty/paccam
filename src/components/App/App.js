@@ -13,6 +13,12 @@ function App() {
 
   const [videoEnabled, setVideoEnabled] = React.useState(false);
 
+  const enableVideo = React.useCallback(() => {
+    // There's a bug here if we actually ever stop the game.
+    setVideoEnabled(true);
+    gameRef.current.initVideo(videoRef.current);
+  }, []);
+
   const [gameState, setGameState] = React.useState({
     numPlayers: null,
     scores: [0, 0, 0, 0],
@@ -22,21 +28,18 @@ function App() {
   const setNumPlayers = React.useCallback((numPlayers) => {
     setGameState((state) => ({ ...state, numPlayers }));
     gameRef.current.initNumPlayers(numPlayers);
+    gameRef.current.startGameLoop();
   }, []);
 
   const startGame = React.useCallback(() => {
     setGameState((state) => ({ ...state, running: true }));
     // can we make this wait for video to load?
-    gameRef.current.start();
+    gameRef.current.startRound();
   }, []);
 
   React.useEffect(() => {
     const game = gameRef.current;
     game.initAudio({ pacmanChomp: pacmanChomp.current });
-
-    return () => {
-      game.stop();
-    };
   }, []);
 
   React.useEffect(() => {
@@ -61,11 +64,7 @@ function App() {
         alt=""
       />
       <GameHolderOverlapping>
-        <VideoFrame
-          videoRef={videoRef}
-          gameRef={gameRef}
-          setVideoEnabled={setVideoEnabled}
-        />
+        <VideoFrame videoRef={videoRef} enableVideo={enableVideo} />
         {videoEnabled ? (
           <StartScreen
             gameState={gameState}

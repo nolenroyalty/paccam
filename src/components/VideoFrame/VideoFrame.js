@@ -2,7 +2,7 @@ import React from "react";
 import styled from "styled-components";
 import Button from "../Button";
 
-function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
+function VideoFrame({ videoRef, enableVideo }) {
   const [buttonDisabled, setButtonDisabled] = React.useState(false);
   const [enabled, setEnabled] = React.useState(false);
 
@@ -12,15 +12,14 @@ function VideoFrame({ videoRef, gameRef, setVideoEnabled }) {
     navigator.mediaDevices
       .getUserMedia({ video: true })
       .then((stream) => {
-        gameRef.current.initVideo(videoRef.current);
         videoRef.current.srcObject = stream;
-        setVideoEnabled(true);
+        enableVideo(true);
         setEnabled(true);
       })
       .catch((err) => {
         console.error("Error accessing the camera.", err);
       });
-  }, [gameRef, setVideoEnabled, videoRef]);
+  }, [enableVideo, videoRef]);
 
   return (
     <Wrapper>

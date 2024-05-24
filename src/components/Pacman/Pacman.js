@@ -1,5 +1,5 @@
 import React from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import { PLAYER_SIZE_PERCENT } from "../../constants";
 const PLAYER_CANVAS_SIZE = 128;
 
@@ -21,6 +21,7 @@ function Pacman({
     if (!enabled) {
       return;
     }
+    console.log("here");
 
     const updateFaceState = ({
       jawIsOpen,
@@ -142,10 +143,11 @@ function Pacman({
 
   return coords ? (
     <Player
-      data-player="player"
+      data-player={`player-${playerNum}`}
       style={{
         "--left": `${(coords.x / numSlots.horizontal) * 100}%`,
         "--top": `${(coords.y / numSlots.vertical) * 100}%`,
+        "--opacity": coords ? 1 : 0,
       }}
     >
       <InteriorCanvas
@@ -157,12 +159,22 @@ function Pacman({
   ) : null;
 }
 
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+`;
+
 const Player = styled.div`
   position: absolute;
   width: ${PLAYER_SIZE_PERCENT}%;
   aspect-ratio: 1/1;
   left: var(--left);
   top: var(--top);
+  animation: ${fadeIn} 0.5s forwards;
 `;
 
 const InteriorCanvas = styled.canvas`
@@ -170,4 +182,4 @@ const InteriorCanvas = styled.canvas`
   height: 100%;
 `;
 
-export default Pacman;
+export default React.memo(Pacman);
