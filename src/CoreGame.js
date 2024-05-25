@@ -521,14 +521,19 @@ class GameEngine {
       0.35 * this.numSlots.horizontal * this.numSlots.vertical;
     const diff = targetEnabledCount - enabledCount;
 
+    const spawnX = () =>
+      1 + Math.floor(Math.random() * this.numSlots.horizontal - 2);
+    const spawnY = () =>
+      1 + Math.floor(Math.random() * this.numSlots.vertical - 2);
+
     if (diff > targetEnabledCount * 0.5) {
       let maxSpawn = Math.floor(targetEnabledCount * 0.2);
       while (maxSpawn > 0) {
-        let x = Math.floor(Math.random() * this.numSlots.horizontal);
-        let y = Math.floor(Math.random() * this.numSlots.vertical);
+        let x = spawnX();
+        let y = spawnY();
         while (this.pelletsByPosition[[x, y]]?.enabled) {
-          x = Math.floor(Math.random() * this.numSlots.horizontal);
-          y = Math.floor(Math.random() * this.numSlots.vertical);
+          x = spawnX();
+          y = spawnY();
         }
         const enable = Math.random() < 0.5;
         if (enable) {
