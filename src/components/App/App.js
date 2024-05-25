@@ -12,8 +12,23 @@ function App() {
   const gameRef = React.useRef(new GameEngine());
   const pacmanChomp = React.useRef();
   const spriteSheets = React.useRef({});
+  const [playfieldPadding, setPlayfieldPadding] = React.useState({});
 
   const [videoEnabled, setVideoEnabled] = React.useState(false);
+  const [slotSizePx, setSlotSizePx] = React.useState(null);
+  const [pacmanResultScreenState, setPacmanResultScreenState] = React.useState(
+    {}
+  );
+
+  const addPacmanResultScreenState = React.useCallback(
+    ({ playerNum, position, faceCapture }) => {
+      setPacmanResultScreenState((state) => ({
+        ...state,
+        ["player" + playerNum]: { position, faceCapture },
+      }));
+    },
+    []
+  );
 
   const enableVideo = React.useCallback(() => {
     // There's a bug here if we actually ever stop the game.
@@ -76,14 +91,24 @@ function App() {
           setNumPlayers={setNumPlayers}
         />
         <Playfield
+          playfieldPadding={playfieldPadding}
+          setPlayfieldPadding={setPlayfieldPadding}
           videoRef={videoRef}
           gameRef={gameRef}
           spriteSheets={spriteSheets}
           numPlayers={gameState.numPlayers}
+          status={gameState.status}
+          addPacmanResultScreenState={addPacmanResultScreenState}
+          setSlotSizePx={setSlotSizePx}
         />
         <audio ref={pacmanChomp} src="/pacman-onetime.mp3" />
       </GameHolderOverlapping>
-      <ScoreDisplay numPlayers={gameState.numPlayers} gameRef={gameRef} />
+      <ScoreDisplay
+        numPlayers={gameState.numPlayers}
+        gameRef={gameRef}
+        pacmanResultScreenState={pacmanResultScreenState}
+        slotSizePx={slotSizePx}
+      />
     </Wrapper>
   );
 }

@@ -1,10 +1,20 @@
 import React from "react";
 import styled, { keyframes } from "styled-components";
 import { PLAYER_SIZE_PERCENT } from "../../constants";
+import { COMPLETED_ROUND, SHOWING_RESULTS } from "../../STATUS";
 const PLAYER_CANVAS_SIZE = 128;
 
-function Pacman({ gameRef, videoRef, spriteSheet, numSlots, playerNum }) {
+function Pacman({
+  gameRef,
+  videoRef,
+  spriteSheet,
+  numSlots,
+  playerNum,
+  status,
+  addPacmanResultScreenState,
+}) {
   const canvasRef = React.useRef();
+  const myRef = React.useRef();
   const [coords, setCoords] = React.useState(null);
   const [direction, setDirection] = React.useState("center");
   const [mouthState, setMouthState] = React.useState("closed");
@@ -34,6 +44,63 @@ function Pacman({ gameRef, videoRef, spriteSheet, numSlots, playerNum }) {
     });
     gameRef.current.subscribeToPosition({ callback: setCoords, playerNum });
   }, [gameRef, playerNum]);
+
+  // const drawCurrentSprite = React.useCallback(
+  //   ({ ctx, outline, spriteX }) => {
+  //     const spriteY = outline ? 32 : 0;
+  //     ctx.drawImage(
+  //       spriteSheet,
+  //       spriteX,
+  //       spriteY,
+  //       32,
+  //       32,
+  //       0,
+  //       0,
+  //       PLAYER_CANVAS_SIZE,
+  //       PLAYER_CANVAS_SIZE
+  //     );
+  //   },
+  //   [spriteSheet]
+  // );
+
+  // const drawPlayerFaceWithOverlay = React.useCallback(
+  //   ({ ctx, videoCoords, spriteX }) => {
+  //     ctx.globalCompositeOperation = "source-atop";
+  //     let { minX, minY, maxX, maxY } = videoCoords;
+  //     const tempMaxX = 1 - minX;
+  //     minX = 1 - maxX;
+  //     maxX = tempMaxX;
+
+  //     const height = maxY - minY;
+  //     minY -= height * 0.05;
+  //     maxY += height * 0.1;
+  //     const videoWidth = videoRef.current.videoWidth;
+  //     const videoHeight = videoRef.current.videoHeight;
+
+  //     ctx.scale(-1, 1);
+  //     ctx.translate(-PLAYER_CANVAS_SIZE, 0);
+  //     const sx = minX * videoWidth;
+  //     const sy = minY * videoHeight;
+  //     const sWidth = (maxX - minX) * videoWidth;
+  //     const sHeight = (maxY - minY) * videoHeight;
+  //     ctx.drawImage(
+  //       videoRef.current,
+  //       sx,
+  //       sy,
+  //       sWidth,
+  //       sHeight,
+  //       0,
+  //       0,
+  //       PLAYER_CANVAS_SIZE,
+  //       PLAYER_CANVAS_SIZE
+  //     );
+  //     ctx.globalCompositeOperation = "overlay";
+  //     ctx.scale(-1, 1);
+  //     ctx.translate(-PLAYER_CANVAS_SIZE, 0);
+  //     drawCurrentSprite({ ctx, outline: false, spriteX });
+  //   },
+  //   [drawCurrentSprite, videoRef]
+  // );
 
   React.useEffect(() => {
     if (!coords) {
@@ -121,13 +188,28 @@ function Pacman({ gameRef, videoRef, spriteSheet, numSlots, playerNum }) {
     ctx.restore();
   }, [coords, direction, mouthState, spriteSheet, videoCoordinates, videoRef]);
 
+  React.useEffect(() => {
+    if (status !== COMPLETED_ROUND) {
+      return;
+    }
+    const boundingRect = myRef.current.getBoundingClientRect();
+    console.log(`Bounding rect is: ${JSON.stringify(boundingRect)}`);
+    const faceCapture = canvasRef.current.toDataURL("image/png");
+    console.log(`SCREENSHOTTED PLAYER ${playerNum}`);
+    const position = {
+      x: boundingRect.left,
+      y: boundingRect.top,
+    };
+    addPacmanResultScreenState({ playerNum, faceCapture, position });
+  }, [addPacmanResultScreenState, playerNum, status]);
+
   return coords ? (
     <Player
+      ref={myRef}
       data-player={`player-${playerNum}`}
       style={{
         "--left": `${(coords.x / numSlots.horizontal) * 100}%`,
         "--top": `${(coords.y / numSlots.vertical) * 100}%`,
-        "--opacity": coords ? 1 : 0,
       }}
     >
       <InteriorCanvas

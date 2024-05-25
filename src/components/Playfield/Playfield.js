@@ -4,10 +4,20 @@ import { SLOT_WIDTH_PERCENTAGE } from "../../constants";
 import { range } from "../../utils";
 import Pacman from "../Pacman";
 import { zIndex2 } from "../../zindex";
+import { SHOWING_RESULTS, COMPLETED_ROUND } from "../../STATUS";
 
-function Playfield({ videoRef, gameRef, spriteSheets, numPlayers }) {
+function Playfield({
+  videoRef,
+  gameRef,
+  spriteSheets,
+  numPlayers,
+  status,
+  addPacmanResultScreenState,
+  setSlotSizePx,
+  playfieldPadding,
+  setPlayfieldPadding,
+}) {
   const [pellets, setPellets] = React.useState([]);
-  const [padding, setPadding] = React.useState({});
   const [numSlots, setNumSlots] = React.useState({});
   const [initializedPlayfield, setInitializedPlayfield] = React.useState(false);
 
@@ -48,18 +58,20 @@ function Playfield({ videoRef, gameRef, spriteSheets, numPlayers }) {
         horizontal: numSlotsSmall,
         vertical: NUM_SLOTS_IN_LARGER_DIMENSION,
       };
-      setPadding({
+      setSlotSizePx(height / NUM_SLOTS_IN_LARGER_DIMENSION);
+      setPlayfieldPadding({
         left: paddingBySize.small.roundedDown,
         right: paddingBySize.small.roundedUp,
         top: paddingBySize.large.roundedDown,
         bottom: paddingBySize.large.roundedUp,
       });
     } else {
+      setSlotSizePx(width / NUM_SLOTS_IN_LARGER_DIMENSION);
       _numSlots = {
         horizontal: NUM_SLOTS_IN_LARGER_DIMENSION,
         vertical: numSlotsSmall,
       };
-      setPadding({
+      setPlayfieldPadding({
         left: paddingBySize.large.roundedDown,
         right: paddingBySize.large.roundedUp,
         top: paddingBySize.small.roundedDown,
@@ -75,10 +87,19 @@ function Playfield({ videoRef, gameRef, spriteSheets, numPlayers }) {
     }
     gameRef.current.initNumSlots(_numSlots);
     gameRef.current.subscribeToPellets(setPellets);
-  }, [gameRef, initializedPlayfield, numSlots]);
+  }, [
+    gameRef,
+    initializedPlayfield,
+    numSlots,
+    setSlotSizePx,
+    setPlayfieldPadding,
+  ]);
+
+  const opacity =
+    status !== SHOWING_RESULTS && status !== COMPLETED_ROUND ? 1 : 0;
 
   return (
-    <Wrapper $padding={padding}>
+    <Wrapper $padding={playfieldPadding} style={{ "--opacity": opacity }}>
       {numPlayers === null
         ? null
         : range(numPlayers).map((playerNum) => {
@@ -95,6 +116,8 @@ function Playfield({ videoRef, gameRef, spriteSheets, numPlayers }) {
                 spriteSheet={spriteSheet}
                 numSlots={numSlots}
                 playerNum={playerNum}
+                addPacmanResultScreenState={addPacmanResultScreenState}
+                status={status}
               />
             );
           })}
@@ -122,6 +145,7 @@ function Playfield({ videoRef, gameRef, spriteSheets, numPlayers }) {
   );
 }
 
+/* PADDING DOES NOT WORK RIGHT NOW */
 const Wrapper = styled.div`
   width: 100%;
   height: 100%;
@@ -130,6 +154,8 @@ const Wrapper = styled.div`
   padding: ${(p) =>
     `${p.$padding.top}px ${p.$padding.right}px ${p.$padding.bottom}px ${p.$padding.left}px`};
   z-index: ${zIndex2};
+  opacity: var(--opacity);
+  transition: opacity 0.5s ease-out;
 `;
 
 const PopIn = keyframes`

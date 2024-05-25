@@ -23,6 +23,8 @@ const JAW_CLOSE_THRESHOLD = 0.3;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
 const SECONDS_IN_ROUND = 5;
+const COUNT_IN_TIME = 1;
+const IGNORE_MISSING_RESULTS = true;
 
 async function createFaceLandmarker({ numFaces }) {
   const filesetResolver = await FilesetResolver.forVisionTasks(
@@ -157,6 +159,8 @@ class GameEngine {
       throw new Error(
         `Invalid transition: ${this.status} -> ${status} (${tag})`
       );
+    } else {
+      console.log(`Transition: ${this.status} -> ${status} (${tag})`);
     }
     this.status = status;
     this._updateStatusConsumers();
@@ -315,18 +319,31 @@ class GameEngine {
       console.error("NO FACE LANDMARK RESULTS? Bailing.");
       return;
     }
-    if (results.faceLandmarks.length !== this.numPlayers) {
+    if (
+      results.faceLandmarks.length !== this.numPlayers &&
+      !IGNORE_MISSING_RESULTS
+    ) {
       console.error(
         `INCORRECT NUMBER OF FACE LANDMARK RESULTS: ${results.faceLandmarks.length}. Expected num players: ${this.numPlayers} Bailing.`
       );
       return;
     }
 
-    // Assume that players are ordered from left to right.
-    // (since we invert the webcam, this is right to left)
-    results.faceLandmarks
-      .map((faceLandmarks, index) => {
-        const faceBlendshapes = results.faceBlendshapes[index];
+    range(this.numPlayers)
+      .map((playerNum) => {
+        let idx = playerNum;
+        if (!results.faceLandmarks[playerNum]) {
+          if (IGNORE_MISSING_RESULTS) {
+            idx = 0;
+          } else {
+            console.error(`No face landmarks for player ${playerNum}`);
+            throw new Error("SHOULD NOT BE HERE????");
+          }
+        }
+        const faceLandmarks = results.faceLandmarks[idx];
+        const faceBlendshapes = results.faceBlendshapes[idx];
+        // Assume that players are ordered from left to right.
+        // (since we invert the webcam, this is right to left)
         const maxX = Math.max(...faceLandmarks.map((landmark) => landmark.x));
         return { faceLandmarks, faceBlendshapes, maxX };
       })
@@ -338,6 +355,21 @@ class GameEngine {
           faceBlendshapes,
         });
       });
+
+    // results.faceLandmarks
+    //   .map((faceLandmarks, index) => {
+    //     const faceBlendshapes = results.faceBlendshapes[index];
+    //     const maxX = Math.max(...faceLandmarks.map((landmark) => landmark.x));
+    //     return { faceLandmarks, faceBlendshapes, maxX };
+    //   })
+    //   .sort((a, b) => b.maxX - a.maxX)
+    //   .forEach(({ faceLandmarks, faceBlendshapes }, playerNum) => {
+    //     this.processIndividualResult({
+    //       playerNum,
+    //       faceLandmarks,
+    //       faceBlendshapes,
+    //     });
+    //   });
   }
 
   updatePositionConsumers() {
@@ -463,6 +495,9 @@ class GameEngine {
         clearInterval(intervalId);
         this.time = "FINISH";
         this.updateStatusAndConsumers(COMPLETED_ROUND, "countDownRound");
+        setTimeout(() => {
+          this.updateStatusAndConsumers(SHOWING_RESULTS, "countDownRound");
+        }, 1250);
         this.handleAudio({ isMoving: false });
       }
       this.updateTimeConsumers();
@@ -476,7 +511,7 @@ class GameEngine {
     const intervalId = setInterval(() => {
       if (this.time === "starting") {
         this.generatePellets();
-        this.time = 3;
+        this.time = COUNT_IN_TIME;
       } else {
         this.time -= 1;
       }

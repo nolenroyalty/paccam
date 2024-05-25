@@ -1,13 +1,22 @@
 import React from "react";
 import styled, { keyframes } from "styled-components";
+import { SHOWING_RESULTS, COMPLETED_ROUND } from "../../STATUS";
+import { PLAYER_SIZE_IN_SLOTS } from "../../constants";
 
-function ScoreDisplay({ numPlayers, gameRef }) {
-  const [scores, setScores] = React.useState(null);
-
-  React.useEffect(() => {
-    gameRef.current.subscribeToScores(setScores);
-  }, [gameRef]);
-
+function PlayerResultsBlob({
+  pacmanResultScreenState,
+  x,
+  y,
+  playerNum,
+  color,
+  justifySelf,
+  alignSelf,
+  slotSizePx,
+  scores,
+}) {
+  const playerState = pacmanResultScreenState[`player${playerNum}`];
+  const haveState = Boolean(playerState);
+  const faceCapture = haveState ? playerState.faceCapture : null;
   const scoreForPlayer = React.useCallback(
     (index) => {
       return scores
@@ -16,33 +25,109 @@ function ScoreDisplay({ numPlayers, gameRef }) {
     },
     [scores]
   );
+  const score = scoreForPlayer(playerNum);
 
-  const p1Score = scoreForPlayer(0);
-  const p2Score = scoreForPlayer(1);
-  const p3Score = scoreForPlayer(2);
-  const p4Score = scoreForPlayer(3);
+  return (
+    <>
+      {haveState && (
+        <PlayerResultsDisplay
+          style={{
+            "--grid-area": `result${playerNum + 1}`,
+            "--x": x,
+            "--y": y,
+          }}
+        >
+          <PlayerFace
+            style={{ "--width": slotSizePx * PLAYER_SIZE_IN_SLOTS + "px" }}
+            src={faceCapture}
+          />
+          <ScoreText style={{ "--color": color }}>{score}</ScoreText>
+        </PlayerResultsDisplay>
+      )}
+      <PlayerScoreDisplay
+        style={{
+          "--opacity": haveState ? 0 : 1,
+          "--justify-self": justifySelf,
+          "--align-self": alignSelf,
+        }}
+        position={"both"}
+      >
+        <ScoreText
+          $noAnimation={score === 0 || haveState}
+          style={{ "--color": color }}
+        >
+          {score}
+        </ScoreText>
+      </PlayerScoreDisplay>
+    </>
+  );
+}
+
+function ScoreDisplay({
+  numPlayers,
+  gameRef,
+  pacmanResultScreenState,
+  slotSizePx,
+}) {
+  const [scores, setScores] = React.useState(null);
+
+  React.useEffect(() => {
+    gameRef.current.subscribeToScores(setScores);
+  }, [gameRef]);
 
   return (
     <Wrapper>
       {numPlayers >= 1 && (
-        <Player1 $noAnimation={p1Score === 0} key={p1Score}>
-          {p1Score}
-        </Player1>
+        <PlayerResultsBlob
+          pacmanResultScreenState={pacmanResultScreenState}
+          x={"0"}
+          y={"-100%"}
+          playerNum={0}
+          color={"yellow"}
+          justifySelf={"flex-start"}
+          alignSelf={"flex-start"}
+          slotSizePx={slotSizePx}
+          scores={scores}
+        />
       )}
       {numPlayers >= 2 && (
-        <Player2 $noAnimation={p2Score === 0} key={p2Score}>
-          {p2Score}
-        </Player2>
+        <PlayerResultsBlob
+          pacmanResultScreenState={pacmanResultScreenState}
+          x={"-100%"}
+          y={"0"}
+          playerNum={1}
+          color={"pink"}
+          justifySelf={"flex-end"}
+          alignSelf={"flex-start"}
+          slotSizePx={slotSizePx}
+          scores={scores}
+        />
       )}
       {numPlayers >= 3 && (
-        <Player3 $noAnimation={p3Score === 0} key={p3Score}>
-          {p3Score}
-        </Player3>
+        <PlayerResultsBlob
+          pacmanResultScreenState={pacmanResultScreenState}
+          x={"100%"}
+          y={"0"}
+          playerNum={2}
+          color={"green"}
+          justifySelf={"flex-start"}
+          alignSelf={"flex-end"}
+          slotSizePx={slotSizePx}
+          scores={scores}
+        />
       )}
       {numPlayers >= 4 && (
-        <Player4 $noAnimation={p4Score === 0} key={p4Score}>
-          {p4Score}
-        </Player4>
+        <PlayerResultsBlob
+          pacmanResultScreenState={pacmanResultScreenState}
+          x={"-100%"}
+          y={"0"}
+          playerNum={3}
+          color={"red"}
+          justifySelf={"flex-end"}
+          alignSelf={"flex-end"}
+          slotSizePx={slotSizePx}
+          scores={scores}
+        />
       )}
     </Wrapper>
   );
@@ -50,11 +135,13 @@ function ScoreDisplay({ numPlayers, gameRef }) {
 
 const Wrapper = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 1fr);
   grid-template-areas:
-    "p1 p2"
-    "p3 p4";
+    "p1 result1 p2"
+    "p1 result2 p2"
+    "p3 result3 p4"
+    "p3 result4 p4";
 
   position: absolute;
   top: 0;
@@ -84,7 +171,6 @@ const ScorePulse = keyframes`
 `;
 
 const ScoreText = styled.p`
-  color: white;
   font-size: 8rem;
   line-height: 0;
   font-family: "Arcade Classic";
@@ -92,34 +178,44 @@ const ScoreText = styled.p`
 
   --jump-amount: ${(p) => (p.$noAnimation ? "0" : "1rem")};
   animation: ${ScorePulse} 0.4s ease-out;
+  color: var(--color);
 `;
 
-const Player1 = styled(ScoreText)`
-  color: yellow;
-  justify-self: flex-start;
-  align-self: flex-start;
-  grid-area: p1;
+const PlayerFace = styled.img`
+  width: var(--width);
+  aspect-ratio: 1/1;
 `;
 
-const Player2 = styled(ScoreText)`
-  color: pink;
-  justify-self: flex-end;
-  align-self: flex-start;
-  grid-area: p2;
+const PlayerScoreDisplay = styled.div`
+  display: flex;
+  width: 100%;
+
+  opacity: var(--opacity);
+  transition: opacity 0.5s ease-out;
+  justify-self: var(--justify-self);
+  align-self: var(--align-self);
+  grid-area: var(--grid-area);
 `;
 
-const Player3 = styled(ScoreText)`
-  color: green;
-  justify-self: flex-start;
-  align-self: flex-end;
-  grid-area: p3;
+const FadeAndDropIn = keyframes`
+  0% {
+    opacity: 0;
+    transform: translate(var(--x), var(--y));
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
 `;
 
-const Player4 = styled(ScoreText)`
-  color: red;
-  align-self: flex-end;
-  justify-self: flex-end;
-  grid-area: p4;
+const PlayerResultsDisplay = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-self: center;
+  grid-area: var(--grid-area);
+  animation: ${FadeAndDropIn} 1s ease-out both 1s;
 `;
 
 export default ScoreDisplay;
