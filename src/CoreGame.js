@@ -27,6 +27,8 @@ const SECONDS_IN_ROUND = 30;
 const COUNT_IN_TIME = 4;
 const IGNORE_MISSING_RESULTS = true;
 const RANDOM_PELLETS = true;
+const SPAWN_STRAWBERRIES = true;
+const STRAWBERRY_CHANCE = 0.05;
 
 async function createFaceLandmarker({ numFaces }) {
   const filesetResolver = await FilesetResolver.forVisionTasks(
@@ -69,6 +71,7 @@ class GameEngine {
     this.numSlots = null;
     this.status = WAITING_FOR_VIDEO;
     this.numPlayers = null;
+    this.time = null;
   }
 
   stopGame() {
@@ -126,27 +129,104 @@ class GameEngine {
 
   subscribeToStatus(callback) {
     this.statusConsumers.push(callback);
-    this._updateStatusConsumers();
+    callback(this.status);
+  }
+
+  updateRelevantFaceStateConsumers({
+    playerNum,
+    jawIsOpen,
+    direction,
+    minY,
+    maxY,
+    minX,
+    maxX,
+  }) {
+    this.faceStateConsumers.forEach(
+      ({ playerNum: consumerPlayerNum, callback }) => {
+        if (playerNum === consumerPlayerNum) {
+          callback({ jawIsOpen, direction, minY, maxY, minX, maxX });
+        }
+      }
+    );
   }
 
   subscribeToFaceState({ playerNum, callback }) {
     this.faceStateConsumers.push({ playerNum, callback });
+    // We don't store maxY, etc in state so we can't push them a snapshot.
+    // seems...fine?
+  }
+
+  updatePositionConsumers({
+    singleCalback = null,
+    singlePlayerNum = null,
+  } = {}) {
+    if (singleCalback && singlePlayerNum !== null) {
+      const pos = this.playerStates[singlePlayerNum].position;
+      singleCalback(pos);
+    } else {
+      this.positionConsumers.forEach(({ playerNum, callback }) => {
+        const position = this.playerStates[playerNum].position;
+        callback(position);
+      });
+    }
   }
 
   subscribeToPosition({ playerNum, callback }) {
     this.positionConsumers.push({ playerNum, callback });
+    this.updatePositionConsumers({
+      singleCalback: callback,
+      singlePlayerNum: playerNum,
+    });
+  }
+
+  updatePelletConsumers({ singleCallback = null } = {}) {
+    const pos = Object.values(this.pelletsByPosition);
+    if (singleCallback) {
+      singleCallback(pos);
+    } else {
+      this.pelletConsumers.forEach((callback) => {
+        callback(Object.values(pos));
+      });
+    }
   }
 
   subscribeToPellets(callback) {
     this.pelletConsumers.push(callback);
+    this.updatePelletConsumers({ singleCallback: callback });
+  }
+
+  updateScoreConsumers({ singleCallback = null } = {}) {
+    const scores = this.playerStates.map((playerState) => ({
+      score: playerState.score,
+      playerNum: playerState.playerNum,
+    }));
+
+    if (singleCallback) {
+      singleCallback(scores);
+    }
+
+    this.scoreConsumers.forEach((callback) => {
+      callback(scores);
+    });
   }
 
   subscribeToScores(callback) {
     this.scoreConsumers.push(callback);
+    this.updateScoreConsumers({ singleCallback: callback });
   }
 
+  updateTimeConsumers({ singleCallback = null } = {}) {
+    if (singleCallback) {
+      singleCallback(this.time);
+    } else {
+      this.timeConsumers.forEach((callback) => {
+        callback(this.time);
+      });
+    }
+  }
   subscribeToTime(callback) {
     this.timeConsumers.push(callback);
+    this.updateTimeConsumers({ singleCallback: callback });
   }
 
   addMovement() {
@@ -166,29 +246,6 @@ class GameEngine {
     }
     this.status = status;
     this._updateStatusConsumers();
-  }
-
-  updatePelletConsumers() {
-    this.pelletConsumers.forEach((callback) => {
-      callback(Object.values(this.pelletsByPosition));
-    });
-  }
-
-  updateScoreConsumers() {
-    const scores = this.playerStates.map((playerState) => ({
-      score: playerState.score,
-      playerNum: playerState.playerNum,
-    }));
-
-    this.scoreConsumers.forEach((callback) => {
-      callback(scores);
-    });
-  }
-
-  updateTimeConsumers() {
-    this.timeConsumers.forEach((callback) => {
-      callback(this.time);
-    });
   }
 
   generatePellets() {
@@ -214,7 +271,13 @@ class GameEngine {
           const chance = baseChance - neighborCount * 0.1;
           const makeIt = Math.random() < chance;
           const delay = Math.random() * 1.75;
-          const p = { x, y, enabled: makeIt, delay };
+          let kind;
+          if (SPAWN_STRAWBERRIES) {
+            kind = Math.random() < STRAWBERRY_CHANCE ? "strawberry" : "pellet";
+          } else {
+            kind = "pellet";
+          }
+          const p = { x, y, enabled: makeIt, delay, kind: kind };
           if (makeIt) {
             generatedPelletCount += 1;
           }
@@ -280,13 +343,15 @@ class GameEngine {
       this.addIndividualMovement({ playerNum, currentState });
     }
     currentState.jawIsOpen = jawIsOpen;
-    this.faceStateConsumers.forEach(
-      ({ playerNum: consumerPlayerNum, callback }) => {
-        if (playerNum === consumerPlayerNum) {
-          callback({ jawIsOpen, direction, minY, maxY, minX, maxX });
-        }
-      }
-    );
+    this.updateRelevantFaceStateConsumers({
+      playerNum,
+      jawIsOpen,
+      direction,
+      minY,
+      maxY,
+      minX,
+      maxX,
+    });
   }
 
   processIndividualResult({ playerNum, faceLandmarks, faceBlendshapes }) {
@@ -403,13 +468,6 @@ class GameEngine {
     }
   }
 
-  updatePositionConsumers() {
-    this.positionConsumers.forEach(({ playerNum, callback }) => {
-      const position = this.playerStates[playerNum].position;
-      callback(position);
-    });
-  }
-
   handleAudio({ isMoving }) {
     if (isMoving) {
       // play audio if it's not playing
@@ -522,9 +580,9 @@ class GameEngine {
     const diff = targetEnabledCount - enabledCount;
 
     const spawnX = () =>
-      1 + Math.floor(Math.random() * this.numSlots.horizontal - 2);
+      1 + Math.floor(Math.random() * Math.max(0, this.numSlots.horizontal - 2));
     const spawnY = () =>
-      1 + Math.floor(Math.random() * this.numSlots.vertical - 2);
+      1 + Math.floor(Math.random() * Math.max(0, this.numSlots.vertical - 2));
 
     if (diff > targetEnabledCount * 0.5) {
       let maxSpawn = Math.floor(targetEnabledCount * 0.2);
@@ -537,7 +595,10 @@ class GameEngine {
         }
         const enable = Math.random() < 0.5;
         if (enable) {
-          this.pelletsByPosition[[x, y]] = { x, y, enabled: true };
+          console.log(`enabling ${x}, ${y}`);
+          console.log(JSON.stringify(this.pelletsByPosition));
+          console.log([x, y]);
+          this.pelletsByPosition[[x, y]].enabled = true;
         }
         maxSpawn -= 1;
       }

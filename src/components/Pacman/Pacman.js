@@ -2,6 +2,7 @@ import React from "react";
 import styled, { keyframes } from "styled-components";
 import { PLAYER_SIZE_PERCENT } from "../../constants";
 import { COMPLETED_ROUND, SHOWING_RESULTS } from "../../STATUS";
+import { zIndex1 } from "../../zindex";
 const PLAYER_CANVAS_SIZE = 128;
 const SPRITE_WIDTH = 32;
 const SPRITE_HEIGHT = 32;
@@ -214,6 +215,7 @@ const fadeIn = keyframes`
 
 const Player = styled.div`
   position: absolute;
+  z-index: ${zIndex1}
   width: ${PLAYER_SIZE_PERCENT}%;
   aspect-ratio: 1/1;
   left: var(--left);

@@ -144,8 +144,15 @@ function Playfield({
             <Pellet
               data-x={pellet.x}
               alt=""
-              src="/aseprite/pellet.png"
-              style={{ "--delay": pellet.delay + "s" }}
+              src={
+                pellet.kind === "pellet"
+                  ? "/aseprite/pellet.png"
+                  : "/aseprite/strawberry2.png"
+              }
+              style={{
+                "--delay": pellet.delay + "s",
+                "--size-mult": pellet.kind === "pellet" ? 1 : 1.5,
+              }}
             ></Pellet>
           </PelletWrapper>
         );
@@ -191,7 +198,7 @@ const PopIn = keyframes`
 
 const Pellet = styled.img`
   display: inline-block;
-  width: ${50}%;
+  width: calc(50% * var(--size-mult));
 
   opacity: var(--opacity);
   transition:

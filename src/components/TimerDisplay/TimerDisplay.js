@@ -14,7 +14,7 @@ function TimerDisplay({ gameRef }) {
   const firstBit = text.slice(0, -1);
   const lastBit = text.slice(-1);
 
-  return time === null ? null : (
+  return time === null || time === undefined ? null : (
     <Text key={text}>
       <span>{firstBit}</span>
       <NoSpacing>{lastBit}</NoSpacing>
