@@ -108,6 +108,7 @@ function App() {
         gameRef={gameRef}
         pacmanResultScreenState={pacmanResultScreenState}
         slotSizePx={slotSizePx}
+        status={gameState.status}
       />
     </Wrapper>
   );

@@ -50,7 +50,8 @@ const NoSpacing = styled.span`
 
 const Text = styled.p`
   font-family: "Arcade Classic";
-  font-size: 30rem;
+  /* figure out how to scale this to display size... */
+  font-size: 20rem;
   color: white;
   position: absolute;
   top: 50%;

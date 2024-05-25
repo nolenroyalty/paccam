@@ -3,6 +3,11 @@ import styled, { keyframes } from "styled-components";
 import { SHOWING_RESULTS, COMPLETED_ROUND } from "../../STATUS";
 import { PLAYER_SIZE_IN_SLOTS } from "../../constants";
 
+/* The original intention here was to animate the score text and pacman faces
+so that they go directly from their location on the playfield to their
+location on the results screen. I couldn't figure out how to do it;
+framer motion defeated me. Eventually I will tho. */
+
 function PlayerResultsBlob({
   pacmanResultScreenState,
   x,
@@ -13,9 +18,12 @@ function PlayerResultsBlob({
   alignSelf,
   slotSizePx,
   scores,
+  status,
 }) {
   const playerState = pacmanResultScreenState[`player${playerNum}`];
   const haveState = Boolean(playerState);
+  const roundOver = status === SHOWING_RESULTS || status === COMPLETED_ROUND;
+  const showResults = roundOver && haveState;
   const faceCapture = haveState ? playerState.faceCapture : null;
   const scoreForPlayer = React.useCallback(
     (index) => {
@@ -29,7 +37,7 @@ function PlayerResultsBlob({
 
   return (
     <>
-      {haveState ? (
+      {showResults ? (
         <PlayerResultsDisplay
           style={{
             "--grid-area": `result${playerNum + 1}`,
@@ -46,14 +54,14 @@ function PlayerResultsBlob({
       ) : null}
       <PlayerScoreDisplay
         style={{
-          "--opacity": haveState ? 0 : 1,
+          "--opacity": showResults ? 0 : 1,
           "--justify-content": justifyContent,
           "--align-self": alignSelf,
           "--grid-area": `p${playerNum + 1}`,
         }}
       >
         <ScoreText
-          $noAnimation={score === 0 || haveState}
+          $noAnimation={score === 0 || showResults}
           style={{ "--color": color }}
         >
           {score}
@@ -68,6 +76,7 @@ function ScoreDisplay({
   gameRef,
   pacmanResultScreenState,
   slotSizePx,
+  status,
 }) {
   const [scores, setScores] = React.useState(null);
 
@@ -88,6 +97,7 @@ function ScoreDisplay({
           alignSelf={"flex-start"}
           slotSizePx={slotSizePx}
           scores={scores}
+          status={status}
         />
       )}
       {numPlayers >= 2 && (
@@ -101,6 +111,7 @@ function ScoreDisplay({
           alignSelf={"flex-start"}
           slotSizePx={slotSizePx}
           scores={scores}
+          status={status}
         />
       )}
       {numPlayers >= 3 && (
@@ -114,6 +125,7 @@ function ScoreDisplay({
           alignSelf={"flex-end"}
           slotSizePx={slotSizePx}
           scores={scores}
+          status={status}
         />
       )}
       {numPlayers >= 4 && (
@@ -127,6 +139,7 @@ function ScoreDisplay({
           alignSelf={"flex-end"}
           slotSizePx={slotSizePx}
           scores={scores}
+          status={status}
         />
       )}
     </Wrapper>
