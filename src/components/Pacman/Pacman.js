@@ -45,63 +45,6 @@ function Pacman({
     gameRef.current.subscribeToPosition({ callback: setCoords, playerNum });
   }, [gameRef, playerNum]);
 
-  // const drawCurrentSprite = React.useCallback(
-  //   ({ ctx, outline, spriteX }) => {
-  //     const spriteY = outline ? 32 : 0;
-  //     ctx.drawImage(
-  //       spriteSheet,
-  //       spriteX,
-  //       spriteY,
-  //       32,
-  //       32,
-  //       0,
-  //       0,
-  //       PLAYER_CANVAS_SIZE,
-  //       PLAYER_CANVAS_SIZE
-  //     );
-  //   },
-  //   [spriteSheet]
-  // );
-
-  // const drawPlayerFaceWithOverlay = React.useCallback(
-  //   ({ ctx, videoCoords, spriteX }) => {
-  //     ctx.globalCompositeOperation = "source-atop";
-  //     let { minX, minY, maxX, maxY } = videoCoords;
-  //     const tempMaxX = 1 - minX;
-  //     minX = 1 - maxX;
-  //     maxX = tempMaxX;
-
-  //     const height = maxY - minY;
-  //     minY -= height * 0.05;
-  //     maxY += height * 0.1;
-  //     const videoWidth = videoRef.current.videoWidth;
-  //     const videoHeight = videoRef.current.videoHeight;
-
-  //     ctx.scale(-1, 1);
-  //     ctx.translate(-PLAYER_CANVAS_SIZE, 0);
-  //     const sx = minX * videoWidth;
-  //     const sy = minY * videoHeight;
-  //     const sWidth = (maxX - minX) * videoWidth;
-  //     const sHeight = (maxY - minY) * videoHeight;
-  //     ctx.drawImage(
-  //       videoRef.current,
-  //       sx,
-  //       sy,
-  //       sWidth,
-  //       sHeight,
-  //       0,
-  //       0,
-  //       PLAYER_CANVAS_SIZE,
-  //       PLAYER_CANVAS_SIZE
-  //     );
-  //     ctx.globalCompositeOperation = "overlay";
-  //     ctx.scale(-1, 1);
-  //     ctx.translate(-PLAYER_CANVAS_SIZE, 0);
-  //     drawCurrentSprite({ ctx, outline: false, spriteX });
-  //   },
-  //   [drawCurrentSprite, videoRef]
-  // );
-
   React.useEffect(() => {
     if (!coords) {
       return;
