@@ -36,6 +36,18 @@ function PlayerResultsBlob({
   );
   const score = scoreForPlayer(playerNum);
 
+  let finalOffset;
+  if (showResults) {
+    const scoresGreaterThanMine = scores.filter((score) => {
+      const isMe = score.playerNum === playerNum;
+      const isGreater = score.score > scoreForPlayer(playerNum);
+      const isEqual = score.score === scoreForPlayer(playerNum);
+      const isEqualAndBefore = score.playerNum < playerNum && isEqual;
+      return !isMe && (isGreater || isEqualAndBefore);
+    }).length;
+    finalOffset = (scoresGreaterThanMine - playerNum) * 100 + "%";
+  }
+
   return (
     <>
       {showResults ? (
@@ -44,6 +56,7 @@ function PlayerResultsBlob({
             "--grid-area": `result${playerNum + 1}`,
             "--x": x,
             "--y": y,
+            "--final-offset": finalOffset,
           }}
         >
           <PlayerFace
@@ -196,7 +209,7 @@ const ScoreText = styled.p`
 `;
 
 const PlayerFace = styled.img`
-  width: var(--width);
+  width: min(min(20vh, 20vw), var(--width));
   aspect-ratio: 1/1;
 `;
 
@@ -217,9 +230,19 @@ const FadeAndDropIn = keyframes`
     transform: translate(var(--x), var(--y));
   }
 
-  100% {
+  40% {
     opacity: 1;
     transform: translate(0, 0);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(0, var(--final-offset));
   }
 `;
 
@@ -229,7 +252,9 @@ const PlayerResultsDisplay = styled.div`
   align-items: center;
   align-self: center;
   grid-area: var(--grid-area);
-  animation: ${FadeAndDropIn} 1s ease-out both 1s;
+  /* height 100% makes the finalOffset trick work */
+  height: 100%;
+  animation: ${FadeAndDropIn} 2s ease-out both 1s;
 `;
 
 export default ScoreDisplay;
