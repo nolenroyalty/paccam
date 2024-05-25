@@ -24,7 +24,7 @@ const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
 const SECONDS_IN_ROUND = 5;
 const COUNT_IN_TIME = 1;
-const IGNORE_MISSING_RESULTS = true;
+const IGNORE_MISSING_RESULTS = false;
 
 async function createFaceLandmarker({ numFaces }) {
   const filesetResolver = await FilesetResolver.forVisionTasks(
