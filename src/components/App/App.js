@@ -10,7 +10,7 @@ import ScoreDisplay from "../ScoreDisplay";
 function App() {
   const videoRef = React.useRef();
   const gameRef = React.useRef(new GameEngine());
-  const pacmanChomp = React.useRef();
+  const sounds = React.useRef({});
   const spriteSheets = React.useRef({});
   const [playfieldPadding, setPlayfieldPadding] = React.useState({});
 
@@ -55,7 +55,6 @@ function App() {
 
   React.useEffect(() => {
     const game = gameRef.current;
-    game.initAudio({ pacmanChomp: pacmanChomp.current });
     game.subscribeToStatus((status) => {
       setGameState((state) => ({ ...state, status }));
     });
@@ -66,8 +65,14 @@ function App() {
       return;
     }
 
-    pacmanChomp.current.src = "/pacman-onetime.mp3";
-    pacmanChomp.current.volume = 0.2;
+    const s = sounds.current;
+    s.chomp.src = "/sounds/pacman-chomp.mp3";
+    s.chomp.volume = 0.2;
+    s.fruit.src = "/sounds/pacman-fruit.mp3";
+    s.fruit.volume = 0.5;
+    s.start.src = "/sounds/pacman-start.mp3";
+    s.start.volume = 0.5;
+    gameRef.current.initAudio({ sounds });
   }, [videoEnabled]);
 
   return (
@@ -111,7 +116,21 @@ function App() {
           addPacmanResultScreenState={addPacmanResultScreenState}
           setSlotSizePx={setSlotSizePx}
         />
-        <audio ref={pacmanChomp} src="/pacman-onetime.mp3" />
+        <audio
+          ref={(node) => {
+            sounds.current["chomp"] = node;
+          }}
+        />
+        <audio
+          ref={(node) => {
+            sounds.current["fruit"] = node;
+          }}
+        />
+        <audio
+          ref={(node) => {
+            sounds.current["start"] = node;
+          }}
+        />
       </GameHolderOverlapping>
       <ScoreDisplay
         numPlayers={gameState.numPlayers}

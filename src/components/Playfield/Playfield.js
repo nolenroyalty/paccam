@@ -95,8 +95,6 @@ function Playfield({
     setPlayfieldPadding,
   ]);
 
-  console.log(`playfield padding is ${JSON.stringify(playfieldPadding)}`);
-
   const opacity =
     status !== SHOWING_RESULTS && status !== COMPLETED_ROUND ? 1 : 0;
 
@@ -129,6 +127,16 @@ function Playfield({
             );
           })}
       {pellets.map((pellet) => {
+        let src;
+        let sizeMult = 1;
+        if (pellet.kind === "pellet") {
+          src = "/aseprite/pellet.png";
+        } else if (pellet.kind === "fruit") {
+          src = "/aseprite/strawberry2.png";
+          sizeMult = 1.5;
+        } else {
+          throw new Error(`Unknown pellet kind: ${pellet.kind}`);
+        }
         return (
           <PelletWrapper
             key={`${pellet.x}-${pellet.y}`}
@@ -144,14 +152,10 @@ function Playfield({
             <Pellet
               data-x={pellet.x}
               alt=""
-              src={
-                pellet.kind === "pellet"
-                  ? "/aseprite/pellet.png"
-                  : "/aseprite/strawberry2.png"
-              }
+              src={src}
               style={{
                 "--delay": pellet.delay + "s",
-                "--size-mult": pellet.kind === "pellet" ? 1 : 1.5,
+                "--size-mult": sizeMult,
               }}
             ></Pellet>
           </PelletWrapper>

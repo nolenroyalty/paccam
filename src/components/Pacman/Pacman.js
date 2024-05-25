@@ -215,7 +215,7 @@ const fadeIn = keyframes`
 
 const Player = styled.div`
   position: absolute;
-  z-index: ${zIndex1}
+  z-index: ${zIndex1};
   width: ${PLAYER_SIZE_PERCENT}%;
   aspect-ratio: 1/1;
   left: var(--left);

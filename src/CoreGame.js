@@ -23,12 +23,13 @@ const JAW_OPEN_THRESHOLD = 0.35;
 const JAW_CLOSE_THRESHOLD = 0.25;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
-const SECONDS_IN_ROUND = 2;
-const COUNT_IN_TIME = 2;
+const SECONDS_IN_ROUND = 10;
+const COUNT_IN_TIME = 4;
 const IGNORE_MISSING_RESULTS = true;
 const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
 const STRAWBERRY_CHANCE = 0.05;
+const STRAWBERRY_POINTS = 3;
 
 async function createFaceLandmarker({ numFaces }) {
   const filesetResolver = await FilesetResolver.forVisionTasks(
@@ -84,8 +85,8 @@ class GameEngine {
     this.updateStatusAndConsumers(WAITING_FOR_PLAYER_SELECT, "initVideo");
   }
 
-  initAudio({ pacmanChomp }) {
-    this.pacmanChomp = pacmanChomp;
+  initAudio({ sounds }) {
+    this.sounds = sounds.current;
   }
 
   initNumSlots(numSlots) {
@@ -284,7 +285,7 @@ class GameEngine {
           const delay = Math.random() * 1.75;
           let kind;
           if (SPAWN_STRAWBERRIES) {
-            kind = Math.random() < STRAWBERRY_CHANCE ? "strawberry" : "pellet";
+            kind = Math.random() < STRAWBERRY_CHANCE ? "fruit" : "pellet";
           } else {
             kind = "pellet";
           }
@@ -314,7 +315,6 @@ class GameEngine {
       }
     }
     console.log(`should have made ${generatedPelletCount} pellets`);
-    console.log(JSON.stringify(pelletsByPosition));
     this.pelletsByPosition = pelletsByPosition;
 
     this.updatePelletConsumers();
@@ -485,14 +485,14 @@ class GameEngine {
   handleAudio({ isMoving }) {
     if (isMoving) {
       // play audio if it's not playing
-      if (this.pacmanChomp.paused) {
-        this.pacmanChomp.currentTime = 0;
-        this.pacmanChomp.play();
+      if (this.sounds.chomp.paused) {
+        this.sounds.chomp.currentTime = 0;
+        this.sounds.chomp.play();
       }
-      this.pacmanChomp.loop = true;
+      this.sounds.chomp.loop = true;
     } else {
       // pause audio if it's playing
-      this.pacmanChomp.loop = false;
+      this.sounds.chomp.loop = false;
     }
   }
 
@@ -509,7 +509,17 @@ class GameEngine {
 
         const distance = Math.sqrt((myX - pelletX) ** 2 + (myY - pelletY) ** 2);
         if (distance < PLAYER_SIZE_IN_SLOTS / 2 && pellet.enabled) {
-          playerState.score += 1;
+          let scoreAmount;
+          if (pellet.kind === "fruit") {
+            this.sounds.fruit.currentTime = 0;
+            this.sounds.fruit.play();
+            scoreAmount = STRAWBERRY_POINTS;
+          } else if (pellet.kind === "pellet") {
+            scoreAmount = 1;
+          } else {
+            throw new Error(`Unknown pellet kind: ${pellet.kind}`);
+          }
+          playerState.score += scoreAmount;
           updated = true;
           pellet.enabled = false;
         }
@@ -614,8 +624,9 @@ class GameEngine {
           console.log([x, y]);
           const isAStrawberry = Math.random() < STRAWBERRY_CHANCE;
           this.pelletsByPosition[[x, y]].enabled = true;
+          this.pelletsByPosition[[x, y]].delay = Math.random() * 0.25;
           this.pelletsByPosition[[x, y]].kind = isAStrawberry
-            ? "strawberry"
+            ? "fruit"
             : "pellet";
         }
         maxSpawn -= 1;
@@ -643,6 +654,8 @@ class GameEngine {
   countInRound() {
     this.updateStatusAndConsumers(COUNTING_IN_ROUND, "countInRound");
     this.time = "starting";
+    this.sounds.start.currentTime = 0;
+    this.sounds.start.play();
 
     const intervalId = setInterval(() => {
       if (this.time === "starting") {
