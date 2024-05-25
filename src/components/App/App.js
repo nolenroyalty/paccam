@@ -71,7 +71,9 @@ function App() {
     s.fruit.src = "/sounds/pacman-fruit.mp3";
     s.fruit.volume = 0.5;
     s.start.src = "/sounds/pacman-start.mp3";
-    s.start.volume = 0.5;
+    s.start.volume = 0.4;
+    s.super.src = "/sounds/pacman-super.mp3";
+    s.super.volume = 0.2;
     gameRef.current.initAudio({ sounds });
   }, [videoEnabled]);
 
@@ -129,6 +131,11 @@ function App() {
         <audio
           ref={(node) => {
             sounds.current["start"] = node;
+          }}
+        />
+        <audio
+          ref={(node) => {
+            sounds.current["super"] = node;
           }}
         />
       </GameHolderOverlapping>

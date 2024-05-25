@@ -4,7 +4,6 @@ import { zIndex1 } from "../../zindex";
 
 function TimerDisplay({ gameRef }) {
   const [time, setTime] = React.useState(null);
-  console.log(`time is ${time}`);
   React.useEffect(() => {
     const game = gameRef.current;
     game.subscribeToTime(setTime);

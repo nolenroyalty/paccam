@@ -30,6 +30,7 @@ const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
 const STRAWBERRY_CHANCE = 0.05;
 const STRAWBERRY_POINTS = 3;
+const DEFAULT_SUPER_DURATION = 5.3;
 
 async function createFaceLandmarker({ numFaces }) {
   const filesetResolver = await FilesetResolver.forVisionTasks(
