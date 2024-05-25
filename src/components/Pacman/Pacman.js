@@ -3,6 +3,8 @@ import styled, { keyframes } from "styled-components";
 import { PLAYER_SIZE_PERCENT } from "../../constants";
 import { COMPLETED_ROUND, SHOWING_RESULTS } from "../../STATUS";
 const PLAYER_CANVAS_SIZE = 128;
+const SPRITE_WIDTH = 32;
+const SPRITE_HEIGHT = 32;
 
 function Pacman({
   gameRef,
@@ -45,50 +47,26 @@ function Pacman({
     gameRef.current.subscribeToPosition({ callback: setCoords, playerNum });
   }, [gameRef, playerNum]);
 
-  React.useEffect(() => {
-    if (!coords) {
-      return;
-    }
-    const ctx = canvasRef.current.getContext("2d");
-    ctx.save();
-
-    let xIdx = 0;
-    if (mouthState === "open") {
-      xIdx += 5; // 5 states - 1 for center, 4 for directions
-    }
-    if (direction === "right") {
-      xIdx += 1;
-    } else if (direction === "down") {
-      xIdx += 2;
-    } else if (direction === "left") {
-      xIdx += 3;
-    } else if (direction === "up") {
-      xIdx += 4;
-    }
-
-    const spriteWidth = 32;
-    const spriteHeight = 32;
-    const spriteX = xIdx * 32;
-
-    ctx.clearRect(0, 0, PLAYER_CANVAS_SIZE, PLAYER_CANVAS_SIZE);
-    ctx.imageSmoothingEnabled = false;
-    const drawCurrentSprite = ({ outline }) => {
+  const drawCurrentSprite = React.useCallback(
+    ({ outline, ctx, spriteX }) => {
       const spriteY = outline ? 32 : 0;
       ctx.drawImage(
         spriteSheet,
         spriteX,
         spriteY,
-        spriteWidth,
-        spriteHeight,
+        SPRITE_WIDTH,
+        SPRITE_HEIGHT,
         0,
         0,
         PLAYER_CANVAS_SIZE,
         PLAYER_CANVAS_SIZE
       );
-    };
-    drawCurrentSprite({ outline: false });
+    },
+    [spriteSheet]
+  );
 
-    if (videoCoordinates) {
+  const drawVideoSnapshot = React.useCallback(
+    ({ ctx, videoCoordinates }) => {
       ctx.globalCompositeOperation = "source-atop";
       let { minX, minY, maxX, maxY } = videoCoordinates;
       const tempMaxX = 1 - minX;
@@ -118,33 +96,94 @@ function Pacman({
         PLAYER_CANVAS_SIZE,
         PLAYER_CANVAS_SIZE
       );
-      ctx.globalCompositeOperation = "overlay";
-      ctx.scale(-1, 1);
-      ctx.translate(-PLAYER_CANVAS_SIZE, 0);
-      drawCurrentSprite({ outline: false });
+      ctx.resetTransform();
+    },
+    [videoRef]
+  );
+
+  const drawPlayerToCanvas = React.useCallback(
+    ({ ctx, spriteX, videoCoordinates }) => {
+      ctx.save();
+      ctx.clearRect(0, 0, PLAYER_CANVAS_SIZE, PLAYER_CANVAS_SIZE);
+      ctx.imageSmoothingEnabled = false;
+      drawCurrentSprite({ outline: false, ctx, spriteX });
+
+      if (videoCoordinates) {
+        drawVideoSnapshot({ ctx, videoCoordinates });
+        ctx.globalCompositeOperation = "overlay";
+        drawCurrentSprite({ spriteX, ctx, outline: false });
+      }
+
+      ctx.globalCompositeOperation = "source-over";
+      // Make sure we draw this regardless of whether we have
+      // video coordinates.
+      drawCurrentSprite({ spriteX, ctx, outline: true });
+      ctx.restore();
+    },
+    [drawCurrentSprite, drawVideoSnapshot]
+  );
+
+  React.useEffect(() => {
+    if (!coords) {
+      return;
+    }
+    const ctx = canvasRef.current.getContext("2d");
+    ctx.save();
+
+    let xIdx = 0;
+    if (mouthState === "open") {
+      xIdx += 5; // 5 states - 1 for center, 4 for directions
+    }
+    if (direction === "right") {
+      xIdx += 1;
+    } else if (direction === "down") {
+      xIdx += 2;
+    } else if (direction === "left") {
+      xIdx += 3;
+    } else if (direction === "up") {
+      xIdx += 4;
     }
 
-    ctx.globalCompositeOperation = "source-over";
-    // Make sure we draw this regardless of whether we have
-    // video coordinates.
-    drawCurrentSprite({ outline: true });
+    const spriteX = xIdx * 32;
+
+    drawPlayerToCanvas({ ctx, spriteX, videoCoordinates });
     ctx.restore();
-  }, [coords, direction, mouthState, spriteSheet, videoCoordinates, videoRef]);
+  }, [
+    coords,
+    direction,
+    drawPlayerToCanvas,
+    mouthState,
+    spriteSheet,
+    videoCoordinates,
+    videoRef,
+  ]);
 
   React.useEffect(() => {
     if (status !== COMPLETED_ROUND) {
       return;
     }
+
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = PLAYER_CANVAS_SIZE;
+    tempCanvas.height = PLAYER_CANVAS_SIZE;
+    const ctx = tempCanvas.getContext("2d");
+    drawPlayerToCanvas({ ctx, spriteX: 0, videoCoordinates });
+    const faceCapture = tempCanvas.toDataURL("image/png");
+
     const boundingRect = myRef.current.getBoundingClientRect();
-    console.log(`Bounding rect is: ${JSON.stringify(boundingRect)}`);
-    const faceCapture = canvasRef.current.toDataURL("image/png");
     console.log(`SCREENSHOTTED PLAYER ${playerNum}`);
     const position = {
       x: boundingRect.left,
       y: boundingRect.top,
     };
     addPacmanResultScreenState({ playerNum, faceCapture, position });
-  }, [addPacmanResultScreenState, playerNum, status]);
+  }, [
+    addPacmanResultScreenState,
+    drawPlayerToCanvas,
+    playerNum,
+    status,
+    videoCoordinates,
+  ]);
 
   return coords ? (
     <Player
