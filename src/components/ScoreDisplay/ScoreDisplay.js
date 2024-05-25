@@ -98,12 +98,7 @@ function ScoreDisplay({
   const [scores, setScores] = React.useState(null);
 
   React.useEffect(() => {
-    const f = (scores) => {
-      console.log(`RECEIVED SCORES: ${JSON.stringify(scores)}`);
-      setScores(scores);
-    };
-
-    gameRef.current.subscribeToScores(f);
+    gameRef.current.subscribeToScores(setScores);
   }, [gameRef]);
 
   return (
