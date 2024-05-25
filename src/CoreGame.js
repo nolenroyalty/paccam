@@ -30,12 +30,12 @@ const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
 const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
 const SPECIAL_RESPAWN_CHANCE = 0.2; // 0.2
-const SPECIAL_IS_A_FRUIT_CHANCE = 0.7; // 0.7
+const SPECIAL_IS_A_FRUIT_CHANCE = 0.85; // 0.7
 const SPECIAL_IS_A_POWER_PELLET_CHANCE = 1.0;
 const STRAWBERRY_POINTS = 3;
 const DEFAULT_SUPER_DURATION = 5.3;
 const EAT_RECOVERY_TIME = 2;
-const IMMEDIATELY_EAT = true;
+const IMMEDIATELY_EAT = false;
 let didImmediatelyEat = false;
 
 async function createFaceLandmarker({ numFaces }) {
@@ -88,6 +88,7 @@ class GameEngine {
     const endSuperAt = now + DEFAULT_SUPER_DURATION * 1000;
     const x = this.playerStates[playerNum];
     x.endSuperAt = endSuperAt;
+    this.sounds.super.currentTime = 0;
     this.sounds.super.play();
   }
 
@@ -688,9 +689,8 @@ class GameEngine {
             playerNum: ghostPlayerState,
           });
 
-          // Pick a better sound
-          this.sounds.fruit.currentTime = 0;
-          this.sounds.fruit.play();
+          this.sounds.die.currentTime = 0;
+          this.sounds.die.play();
         }
       });
     });
