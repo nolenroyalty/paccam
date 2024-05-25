@@ -598,7 +598,11 @@ class GameEngine {
           console.log(`enabling ${x}, ${y}`);
           console.log(JSON.stringify(this.pelletsByPosition));
           console.log([x, y]);
+          const isAStrawberry = Math.random() < STRAWBERRY_CHANCE;
           this.pelletsByPosition[[x, y]].enabled = true;
+          this.pelletsByPosition[[x, y]].kind = isAStrawberry
+            ? "strawberry"
+            : "pellet";
         }
         maxSpawn -= 1;
       }
