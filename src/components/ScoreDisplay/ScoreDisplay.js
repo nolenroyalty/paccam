@@ -9,7 +9,7 @@ function PlayerResultsBlob({
   y,
   playerNum,
   color,
-  justifySelf,
+  justifyContent,
   alignSelf,
   slotSizePx,
   scores,
@@ -29,7 +29,7 @@ function PlayerResultsBlob({
 
   return (
     <>
-      {haveState && (
+      {haveState ? (
         <PlayerResultsDisplay
           style={{
             "--grid-area": `result${playerNum + 1}`,
@@ -43,14 +43,14 @@ function PlayerResultsBlob({
           />
           <ScoreText style={{ "--color": color }}>{score}</ScoreText>
         </PlayerResultsDisplay>
-      )}
+      ) : null}
       <PlayerScoreDisplay
         style={{
           "--opacity": haveState ? 0 : 1,
-          "--justify-self": justifySelf,
+          "--justify-content": justifyContent,
           "--align-self": alignSelf,
+          "--grid-area": `p${playerNum + 1}`,
         }}
-        position={"both"}
       >
         <ScoreText
           $noAnimation={score === 0 || haveState}
@@ -84,7 +84,7 @@ function ScoreDisplay({
           y={"-100%"}
           playerNum={0}
           color={"yellow"}
-          justifySelf={"flex-start"}
+          justifyContent={"flex-start"}
           alignSelf={"flex-start"}
           slotSizePx={slotSizePx}
           scores={scores}
@@ -97,7 +97,7 @@ function ScoreDisplay({
           y={"0"}
           playerNum={1}
           color={"pink"}
-          justifySelf={"flex-end"}
+          justifyContent={"flex-end"}
           alignSelf={"flex-start"}
           slotSizePx={slotSizePx}
           scores={scores}
@@ -110,7 +110,7 @@ function ScoreDisplay({
           y={"0"}
           playerNum={2}
           color={"green"}
-          justifySelf={"flex-start"}
+          justifyContent={"flex-start"}
           alignSelf={"flex-end"}
           slotSizePx={slotSizePx}
           scores={scores}
@@ -123,7 +123,7 @@ function ScoreDisplay({
           y={"0"}
           playerNum={3}
           color={"red"}
-          justifySelf={"flex-end"}
+          justifyContent={"flex-end"}
           alignSelf={"flex-end"}
           slotSizePx={slotSizePx}
           scores={scores}
@@ -192,7 +192,7 @@ const PlayerScoreDisplay = styled.div`
 
   opacity: var(--opacity);
   transition: opacity 0.5s ease-out;
-  justify-self: var(--justify-self);
+  justify-content: var(--justify-content);
   align-self: var(--align-self);
   grid-area: var(--grid-area);
 `;
