@@ -200,6 +200,10 @@ const Pellet = styled.img`
 
   animation: ${PopIn} 0.75s backwards var(--delay);
   transform: scale(var(--scale));
+  image-rendering: pixelated; /* Chrome, Firefox */
+  image-rendering: -moz-crisp-edges; /* Firefox */
+  image-rendering: crisp-edges; /* Safari */
+  -ms-interpolation-mode: nearest-neighbor; /* IE */
 `;
 
 const PelletWrapper = styled.div`
