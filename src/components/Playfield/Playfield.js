@@ -105,10 +105,14 @@ function Playfield({
       {numPlayers === null
         ? null
         : range(numPlayers).map((playerNum) => {
-            const spriteSheet =
-              playerNum % 2 === 0
-                ? spriteSheets.current["yellow"]
-                : spriteSheets.current["pink"];
+            let spriteSheet = spriteSheets.current["yellow"];
+            if (playerNum === 1) {
+              spriteSheet = spriteSheets.current["pink"];
+            } else if (playerNum === 2) {
+              spriteSheet = spriteSheets.current["green"];
+            } else if (playerNum === 3) {
+              spriteSheet = spriteSheets.current["orange"];
+            }
 
             return (
               <Pacman

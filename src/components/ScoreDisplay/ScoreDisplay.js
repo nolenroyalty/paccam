@@ -2,6 +2,7 @@ import React from "react";
 import styled, { keyframes } from "styled-components";
 import { SHOWING_RESULTS, COMPLETED_ROUND } from "../../STATUS";
 import { PLAYER_SIZE_IN_SLOTS } from "../../constants";
+import { COLORS } from "../../COLORS";
 
 /* The original intention here was to animate the score text and pacman faces
 so that they go directly from their location on the playfield to their
@@ -92,7 +93,7 @@ function ScoreDisplay({
           x={"0"}
           y={"-100%"}
           playerNum={0}
-          color={"yellow"}
+          color={COLORS.pacmanYellow}
           justifyContent={"flex-start"}
           alignSelf={"flex-start"}
           slotSizePx={slotSizePx}
@@ -106,7 +107,7 @@ function ScoreDisplay({
           x={"-100%"}
           y={"0"}
           playerNum={1}
-          color={"pink"}
+          color={COLORS.pacmanPink}
           justifyContent={"flex-end"}
           alignSelf={"flex-start"}
           slotSizePx={slotSizePx}
@@ -120,7 +121,7 @@ function ScoreDisplay({
           x={"100%"}
           y={"0"}
           playerNum={2}
-          color={"green"}
+          color={COLORS.pacmanGreen}
           justifyContent={"flex-start"}
           alignSelf={"flex-end"}
           slotSizePx={slotSizePx}
@@ -134,7 +135,7 @@ function ScoreDisplay({
           x={"-100%"}
           y={"0"}
           playerNum={3}
-          color={"red"}
+          color={COLORS.pacmanOrange}
           justifyContent={"flex-end"}
           alignSelf={"flex-end"}
           slotSizePx={slotSizePx}

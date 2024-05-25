@@ -83,6 +83,16 @@ function App() {
         src="/aseprite/pacman-pink.png"
         alt=""
       />
+      <HiddenImage
+        ref={(node) => (spriteSheets.current["green"] = node)}
+        src="/aseprite/pacman-green.png"
+        alt=""
+      />
+      <HiddenImage
+        ref={(node) => (spriteSheets.current["orange"] = node)}
+        src="/aseprite/pacman-orange.png"
+        alt=""
+      />
       <GameHolderOverlapping>
         <VideoFrame videoRef={videoRef} enableVideo={enableVideo} />
         <StartScreen
