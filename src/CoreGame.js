@@ -23,15 +23,18 @@ const JAW_OPEN_THRESHOLD = 0.35;
 const JAW_CLOSE_THRESHOLD = 0.25;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
-const SECONDS_IN_ROUND = 10;
-const COUNT_IN_TIME = 4;
+const SECONDS_IN_ROUND = 30;
+const COUNT_IN_TIME = 3;
 const IGNORE_MISSING_RESULTS = true;
 const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
-const STRAWBERRY_CHANCE = 0.05;
+const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
+const SPECIAL_RESPAWN_CHANCE = 0.2; // 0.2
+const SPECIAL_IS_A_FRUIT_CHANCE = 0.7; // 0.7
+const SPECIAL_IS_A_POWER_PELLET_CHANCE = 1.0;
 const STRAWBERRY_POINTS = 3;
 const DEFAULT_SUPER_DURATION = 5.3;
-const EAT_RECOVERY_TIME = 4;
+const EAT_RECOVERY_TIME = 2;
 const IMMEDIATELY_EAT = true;
 let didImmediatelyEat = false;
 
@@ -80,10 +83,10 @@ class GameEngine {
     this.time = null;
   }
 
-  enableSuper() {
+  enableSuper({ playerNum }) {
     const now = performance.now();
     const endSuperAt = now + DEFAULT_SUPER_DURATION * 1000;
-    const x = this.playerStates[0];
+    const x = this.playerStates[playerNum];
     x.endSuperAt = endSuperAt;
     this.sounds.super.play();
   }
@@ -101,7 +104,7 @@ class GameEngine {
     document.addEventListener("keydown", (e) => {
       if (e.key === " ") {
         this.enableSuper = this.enableSuper.bind(this);
-        this.enableSuper();
+        this.enableSuper({ playerNum: 0 });
       }
     });
   }
@@ -206,13 +209,10 @@ class GameEngine {
           // nroyalty: this is ugly and might cause a bug :(
           let eatenAmount = 0;
           if (eatRecoveryTime > startTime) {
-            console.log(`EAT RECOVERY TIME: ${eatRecoveryTime}`);
-            console.log(`START TIME: ${startTime}`);
             const eatPercent =
               (eatRecoveryTime - startTime) / (EAT_RECOVERY_TIME * 1000);
             eatenAmount = 0.5 + eatPercent * 0.5;
           }
-          console.log(`EATEN AMOUNT: ${eatenAmount}`);
           const result = { state, eatenAmount };
           // const eatenAmount = this.playerStates[playerNum].ghostState.eatRecoveryTime;
           callback(result);
@@ -344,8 +344,13 @@ class GameEngine {
           const makeIt = Math.random() < chance;
           const delay = Math.random() * 1.75;
           let kind;
+          // we always spawn berries at the start
           if (SPAWN_STRAWBERRIES) {
-            kind = Math.random() < STRAWBERRY_CHANCE ? "fruit" : "pellet";
+            const forceThisKind = "fruit";
+            kind =
+              Math.random() < SPECIAL_STARTING_SPAWN_CHANCE
+                ? forceThisKind
+                : "pellet";
           } else {
             kind = "pellet";
           }
@@ -576,6 +581,9 @@ class GameEngine {
             scoreAmount = STRAWBERRY_POINTS;
           } else if (pellet.kind === "pellet") {
             scoreAmount = 1;
+          } else if (pellet.kind === "power-pellet") {
+            this.enableSuper({ playerNum: playerState.playerNum });
+            scoreAmount = 1;
           } else {
             throw new Error(`Unknown pellet kind: ${pellet.kind}`);
           }
@@ -644,7 +652,6 @@ class GameEngine {
     const superThatIsTheFurthestOut = this.superThatIsTheFurthestOut();
     const isSuperActive = superThatIsTheFurthestOut > startTime;
     if (!isSuperActive) {
-      console.log("Super not active, bailing");
       return;
     }
     const superActivePlayers = this.playerStates.filter(
@@ -653,15 +660,8 @@ class GameEngine {
     const eatableCandidates = this.playerStates.filter((x) => {
       const superNotActive = x.endSuperAt <= startTime;
       const notEaten = x.ghostState.eatRecoveryTime <= startTime;
-      // console.log(`Player ${x.playerNum} super not active: ${superNotActive}`);
-      // console.log(`Player ${x.playerNum} not eaten: ${notEaten}`);
       return superNotActive && notEaten;
     });
-
-    // console.log(`Super active players: ${JSON.stringify(superActivePlayers)}`);
-    // console.log(
-    //   `Super not active players: ${JSON.stringify(eatableCandidates)}`
-    // );
 
     eatableCandidates.forEach((ghostPlayerState) => {
       const ghostX = ghostPlayerState.position.x + PLAYER_SIZE_IN_SLOTS / 2;
@@ -679,10 +679,6 @@ class GameEngine {
           didImmediatelyEat = true;
           console.log("EAT EAT EAT");
           superPlayerState.score += 5;
-          console.log(
-            `SETTING EAT RECOVERY TIME to ${startTime + EAT_RECOVERY_TIME * 1000}`
-          );
-
           ghostPlayerState.ghostState.eatRecoveryTime =
             startTime + EAT_RECOVERY_TIME * 1000;
 
@@ -744,12 +740,19 @@ class GameEngine {
         }
         const enable = Math.random() < 0.5;
         if (enable) {
-          const isAStrawberry = Math.random() < STRAWBERRY_CHANCE;
+          const isSpecial = Math.random() < SPECIAL_RESPAWN_CHANCE;
+          let kind = "pellet";
+          if (isSpecial) {
+            const rand = Math.random();
+            if (rand < SPECIAL_IS_A_FRUIT_CHANCE) {
+              kind = "fruit";
+            } else if (rand < SPECIAL_IS_A_POWER_PELLET_CHANCE) {
+              kind = "power-pellet";
+            }
+          }
           this.pelletsByPosition[[x, y]].enabled = true;
           this.pelletsByPosition[[x, y]].delay = Math.random() * 0.25;
-          this.pelletsByPosition[[x, y]].kind = isAStrawberry
-            ? "fruit"
-            : "pellet";
+          this.pelletsByPosition[[x, y]].kind = kind;
         }
         maxSpawn -= 1;
       }

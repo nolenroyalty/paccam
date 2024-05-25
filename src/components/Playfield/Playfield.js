@@ -135,6 +135,9 @@ function Playfield({
         } else if (pellet.kind === "fruit") {
           src = "/aseprite/strawberry2.png";
           sizeMult = 1.5;
+        } else if (pellet.kind === "power-pellet") {
+          src = "/aseprite/powerpellet.png";
+          sizeMult = 1.5;
         } else {
           throw new Error(`Unknown pellet kind: ${pellet.kind}`);
         }

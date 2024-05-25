@@ -98,6 +98,7 @@ function Pacman({
       const sy = minY * videoHeight;
       const sWidth = (maxX - minX) * videoWidth;
       const sHeight = (maxY - minY) * videoHeight;
+
       ctx.drawImage(
         videoRef.current,
         sx,
@@ -115,7 +116,7 @@ function Pacman({
   );
 
   const drawPlayerToCanvas = React.useCallback(
-    ({ ctx, spriteX, videoCoordinates, ghost }) => {
+    ({ ctx, spriteX, videoCoordinates, ghost, spriteGhostAlpha }) => {
       ctx.save();
       ctx.clearRect(0, 0, PLAYER_CANVAS_SIZE, PLAYER_CANVAS_SIZE);
       ctx.imageSmoothingEnabled = false;
@@ -124,8 +125,10 @@ function Pacman({
       if (videoCoordinates) {
         drawVideoSnapshot({ ctx, videoCoordinates });
         ctx.globalCompositeOperation = "overlay";
+        ctx.globalAlpha = spriteGhostAlpha;
         drawCurrentSprite({ spriteX, ctx, outline: false, ghost });
       }
+      ctx.globalAlpha = 1;
 
       ctx.globalCompositeOperation = "source-over";
       // Make sure we draw this regardless of whether we have
@@ -159,8 +162,15 @@ function Pacman({
 
     const spriteX = xIdx * 32;
     const ghost = ghostState.state === "ghost";
+    const spriteGhostAlpha = 0.5 + (1 - ghostState.eatenAmount) / 2;
 
-    drawPlayerToCanvas({ ctx, spriteX, videoCoordinates, ghost });
+    drawPlayerToCanvas({
+      ctx,
+      spriteX,
+      videoCoordinates,
+      spriteGhostAlpha,
+      ghost,
+    });
     ctx.restore();
   }, [
     coords,
@@ -184,7 +194,12 @@ function Pacman({
     tempCanvas.width = PLAYER_CANVAS_SIZE;
     tempCanvas.height = PLAYER_CANVAS_SIZE;
     const ctx = tempCanvas.getContext("2d");
-    drawPlayerToCanvas({ ctx, spriteX: 0, videoCoordinates });
+    drawPlayerToCanvas({
+      ctx,
+      spriteX: 0,
+      videoCoordinates,
+      spriteGhostAlpha: 1,
+    });
     const faceCapture = tempCanvas.toDataURL("image/png");
     addPacmanResultScreenState({ playerNum, faceCapture });
     largestMouthSaved.current = maxJawState;
@@ -209,10 +224,6 @@ function Pacman({
           ghostState.eatenAmount === 0
             ? null
             : Math.floor(ghostState.eatenAmount * 1000) / 10 + "%",
-        "--brightness":
-          ghostState.eatenAmount === 0
-            ? null
-            : Math.floor(4 * ghostState.eatenAmount * 100) / 100,
       }}
     >
       <InteriorCanvas
@@ -241,7 +252,7 @@ const Player = styled.div`
   left: var(--left);
   top: var(--top);
   animation: ${fadeIn} 0.5s forwards;
-  filter: grayscale(var(--grayscale)) brightness(var(--brightness));
+  filter: grayscale(var(--grayscale));
 `;
 
 const InteriorCanvas = styled.canvas`
