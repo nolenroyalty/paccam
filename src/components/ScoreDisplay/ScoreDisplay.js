@@ -9,6 +9,9 @@ so that they go directly from their location on the playfield to their
 location on the results screen. I couldn't figure out how to do it;
 framer motion defeated me. Eventually I will tho. */
 
+/* We should totaly move away from the "havestate" check here and should simply
+   display things based on the round being over. */
+
 function PlayerResultsBlob({
   pacmanResultScreenState,
   x,
@@ -95,7 +98,12 @@ function ScoreDisplay({
   const [scores, setScores] = React.useState(null);
 
   React.useEffect(() => {
-    gameRef.current.subscribeToScores(setScores);
+    const f = (scores) => {
+      console.log(`RECEIVED SCORES: ${JSON.stringify(scores)}`);
+      setScores(scores);
+    };
+
+    gameRef.current.subscribeToScores(f);
   }, [gameRef]);
 
   return (

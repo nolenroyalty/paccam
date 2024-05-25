@@ -23,8 +23,8 @@ const JAW_OPEN_THRESHOLD = 0.35;
 const JAW_CLOSE_THRESHOLD = 0.25;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
-const SECONDS_IN_ROUND = 30;
-const COUNT_IN_TIME = 4;
+const SECONDS_IN_ROUND = 2;
+const COUNT_IN_TIME = 2;
 const IGNORE_MISSING_RESULTS = true;
 const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
@@ -119,6 +119,8 @@ class GameEngine {
         playerNum,
       };
     });
+    this.updatePositionConsumers();
+    this.updateScoreConsumers();
   }
 
   _updateStatusConsumers() {
@@ -136,6 +138,7 @@ class GameEngine {
     playerNum,
     jawIsOpen,
     direction,
+    jawOpenAmount,
     minY,
     maxY,
     minX,
@@ -144,7 +147,15 @@ class GameEngine {
     this.faceStateConsumers.forEach(
       ({ playerNum: consumerPlayerNum, callback }) => {
         if (playerNum === consumerPlayerNum) {
-          callback({ jawIsOpen, direction, minY, maxY, minX, maxX });
+          callback({
+            jawIsOpen,
+            direction,
+            jawOpenAmount,
+            minY,
+            maxY,
+            minX,
+            maxX,
+          });
         }
       }
     );
@@ -203,11 +214,11 @@ class GameEngine {
 
     if (singleCallback) {
       singleCallback(scores);
+    } else {
+      this.scoreConsumers.forEach((callback) => {
+        callback(scores);
+      });
     }
-
-    this.scoreConsumers.forEach((callback) => {
-      callback(scores);
-    });
   }
 
   subscribeToScores(callback) {
@@ -320,6 +331,7 @@ class GameEngine {
   updateIndividualFaceState({
     playerNum,
     jawIsOpen,
+    jawOpenAmount,
     vertical,
     verticalStrength,
     horizontal,
@@ -346,6 +358,7 @@ class GameEngine {
     this.updateRelevantFaceStateConsumers({
       playerNum,
       jawIsOpen,
+      jawOpenAmount,
       direction,
       minY,
       maxY,
@@ -406,6 +419,7 @@ class GameEngine {
     this.updateIndividualFaceState({
       playerNum,
       jawIsOpen,
+      jawOpenAmount,
       vertical,
       verticalStrength,
       horizontal,

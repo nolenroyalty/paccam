@@ -1,7 +1,6 @@
 import React from "react";
 import styled, { keyframes } from "styled-components";
 import { PLAYER_SIZE_PERCENT } from "../../constants";
-import { COMPLETED_ROUND, SHOWING_RESULTS } from "../../STATUS";
 import { zIndex1 } from "../../zindex";
 const PLAYER_CANVAS_SIZE = 128;
 const SPRITE_WIDTH = 32;
@@ -21,11 +20,13 @@ function Pacman({
   const [coords, setCoords] = React.useState(null);
   const [direction, setDirection] = React.useState("center");
   const [mouthState, setMouthState] = React.useState("closed");
+  const [maxJawState, setMaxJawState] = React.useState(0);
   const [videoCoordinates, setVideoCoordinates] = React.useState(null);
 
   React.useEffect(() => {
     const updateFaceState = ({
       jawIsOpen,
+      jawOpenAmount,
       direction,
       minY,
       maxY,
@@ -35,6 +36,7 @@ function Pacman({
       setDirection(direction);
       setMouthState(jawIsOpen ? "open" : "closed");
       setVideoCoordinates({ minY, maxY, minX, maxX });
+      setMaxJawState((prev) => Math.max(prev, jawOpenAmount));
     };
 
     if (!gameRef.current) {
@@ -159,8 +161,10 @@ function Pacman({
     videoRef,
   ]);
 
+  // good proxy for "funniest image" is "the time you opened your mouth the most"
+  const largestMouthSaved = React.useRef(-1);
   React.useEffect(() => {
-    if (status !== COMPLETED_ROUND) {
+    if (maxJawState <= largestMouthSaved.current) {
       return;
     }
 
@@ -170,19 +174,15 @@ function Pacman({
     const ctx = tempCanvas.getContext("2d");
     drawPlayerToCanvas({ ctx, spriteX: 0, videoCoordinates });
     const faceCapture = tempCanvas.toDataURL("image/png");
+    addPacmanResultScreenState({ playerNum, faceCapture });
+    largestMouthSaved.current = maxJawState;
 
-    const boundingRect = myRef.current.getBoundingClientRect();
-    console.log(`SCREENSHOTTED PLAYER ${playerNum}`);
-    const position = {
-      x: boundingRect.left,
-      y: boundingRect.top,
-    };
-    addPacmanResultScreenState({ playerNum, faceCapture, position });
+    console.log(`SCREENSHOTTED PLAYER ${playerNum}: ${maxJawState}`);
   }, [
     addPacmanResultScreenState,
     drawPlayerToCanvas,
+    maxJawState,
     playerNum,
-    status,
     videoCoordinates,
   ]);
 
