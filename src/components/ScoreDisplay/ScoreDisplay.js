@@ -37,7 +37,7 @@ function PlayerResultsBlob({
   const score = scoreForPlayer(playerNum);
 
   let finalOffset;
-  if (showResults) {
+  if (showResults && scores) {
     const scoresGreaterThanMine = scores.filter((score) => {
       const isMe = score.playerNum === playerNum;
       const isGreater = score.score > scoreForPlayer(playerNum);

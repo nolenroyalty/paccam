@@ -23,9 +23,10 @@ const JAW_OPEN_THRESHOLD = 0.35;
 const JAW_CLOSE_THRESHOLD = 0.25;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
-const SECONDS_IN_ROUND = 5;
+const SECONDS_IN_ROUND = 30;
 const COUNT_IN_TIME = 4;
 const IGNORE_MISSING_RESULTS = true;
+const RANDOM_PELLETS = true;
 
 async function createFaceLandmarker({ numFaces }) {
   const filesetResolver = await FilesetResolver.forVisionTasks(
@@ -64,7 +65,7 @@ class GameEngine {
     this.timeConsumers = [];
     this.statusConsumers = [];
     this.playerStates = [];
-    this.pellets = [];
+    this.pelletsByPosition = {};
     this.numSlots = null;
     this.status = WAITING_FOR_VIDEO;
     this.numPlayers = null;
@@ -169,7 +170,7 @@ class GameEngine {
 
   updatePelletConsumers() {
     this.pelletConsumers.forEach((callback) => {
-      callback(this.pellets);
+      callback(Object.values(this.pelletsByPosition));
     });
   }
 
@@ -195,19 +196,53 @@ class GameEngine {
       throw new Error("BUG: numSlots is not set.");
     }
 
-    let slotX = 1;
-    const pellets = [];
-    while (slotX < this.numSlots.horizontal) {
-      let slotY = 1;
-      while (slotY < this.numSlots.vertical) {
-        const delay = Math.random() * 1.75;
-        pellets.push({ x: slotX, y: slotY, enabled: true, delay });
-        slotY += 2;
-      }
-      slotX += 2;
-    }
+    const pelletsByPosition = {};
+    let generatedPelletCount = 0;
 
-    this.pellets = pellets;
+    if (RANDOM_PELLETS) {
+      for (let x = 1; x < this.numSlots.horizontal - 1; x += 1) {
+        for (let y = 1; y < this.numSlots.vertical - 1; y += 1) {
+          let neighborCount = 0;
+          for (let dx = -1; dx <= 1; dx += 2) {
+            for (let dy = -1; dy <= 1; dy += 2) {
+              if (pelletsByPosition[[x + dx, y + dy]]?.enabled) {
+                neighborCount += 1;
+              }
+            }
+          }
+          const baseChance = 0.4;
+          const chance = baseChance - neighborCount * 0.1;
+          const makeIt = Math.random() < chance;
+          const delay = Math.random() * 1.75;
+          const p = { x, y, enabled: makeIt, delay };
+          if (makeIt) {
+            generatedPelletCount += 1;
+          }
+          pelletsByPosition[[x, y]] = p;
+        }
+      }
+    } else {
+      let slotX = 1;
+      const pellets = [];
+      while (slotX < this.numSlots.horizontal) {
+        let slotY = 1;
+        while (slotY < this.numSlots.vertical) {
+          const delay = Math.random() * 1.75;
+          pellets.push({
+            x: slotX,
+            y: slotY,
+            enabled: slotX % 2 === 1 && slotY % 2 === 1,
+            delay,
+          });
+          slotY += 2;
+        }
+        slotX += 2;
+      }
+    }
+    console.log(`should have made ${generatedPelletCount} pellets`);
+    console.log(JSON.stringify(pelletsByPosition));
+    this.pelletsByPosition = pelletsByPosition;
+
     this.updatePelletConsumers();
   }
 
@@ -396,7 +431,7 @@ class GameEngine {
       const myX = playerState.position.x + PLAYER_SIZE_IN_SLOTS / 2;
       const myY = playerState.position.y + PLAYER_SIZE_IN_SLOTS / 2;
 
-      this.pellets = this.pellets.map((pellet) => {
+      Object.values(this.pelletsByPosition).forEach((pellet) => {
         const pelletX = pellet.x + 0.5;
         const pelletY = pellet.y + 0.5;
 
@@ -404,12 +439,8 @@ class GameEngine {
         if (distance < PLAYER_SIZE_IN_SLOTS / 2 && pellet.enabled) {
           playerState.score += 1;
           updated = true;
-          return {
-            ...pellet,
-            enabled: false,
-          };
+          pellet.enabled = false;
         }
-        return pellet;
       });
     });
 
@@ -482,6 +513,32 @@ class GameEngine {
     }
   }
 
+  maybeSpawnMorePellets() {
+    const enabledCount = Object.values(this.pelletsByPosition).filter(
+      (pellet) => pellet.enabled
+    ).length;
+    const targetEnabledCount =
+      0.35 * this.numSlots.horizontal * this.numSlots.vertical;
+    const diff = targetEnabledCount - enabledCount;
+
+    if (diff > targetEnabledCount * 0.5) {
+      let maxSpawn = Math.floor(targetEnabledCount * 0.2);
+      while (maxSpawn > 0) {
+        let x = Math.floor(Math.random() * this.numSlots.horizontal);
+        let y = Math.floor(Math.random() * this.numSlots.vertical);
+        while (this.pelletsByPosition[[x, y]]?.enabled) {
+          x = Math.floor(Math.random() * this.numSlots.horizontal);
+          y = Math.floor(Math.random() * this.numSlots.vertical);
+        }
+        const enable = Math.random() < 0.5;
+        if (enable) {
+          this.pelletsByPosition[[x, y]] = { x, y, enabled: true };
+        }
+        maxSpawn -= 1;
+      }
+    }
+  }
+
   countDownRound() {
     this.time = SECONDS_IN_ROUND + 1;
     const intervalId = setInterval(() => {
@@ -544,6 +601,7 @@ class GameEngine {
           const tickTimeMs =
             lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
           this.maybeMove({ tickTimeMs });
+          this.maybeSpawnMorePellets();
         }
 
         lastVideoTime = startTime;
