@@ -118,6 +118,7 @@ function Playfield({
                 gameRef={gameRef}
                 videoRef={videoRef}
                 spriteSheet={spriteSheet}
+                ghostSpriteSheet={spriteSheets.current["blue"]}
                 numSlots={numSlots}
                 playerNum={playerNum}
                 addPacmanResultScreenState={addPacmanResultScreenState}

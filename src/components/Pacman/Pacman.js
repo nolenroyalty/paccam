@@ -13,6 +13,7 @@ function Pacman({
   numSlots,
   playerNum,
   status,
+  ghostSpriteSheet,
   addPacmanResultScreenState,
 }) {
   const canvasRef = React.useRef();
@@ -20,6 +21,10 @@ function Pacman({
   const [coords, setCoords] = React.useState(null);
   const [direction, setDirection] = React.useState("center");
   const [mouthState, setMouthState] = React.useState("closed");
+  const [ghostState, setGhostState] = React.useState({
+    state: "normal",
+    eatenAmount: 0,
+  });
   const [maxJawState, setMaxJawState] = React.useState(0);
   const [videoCoordinates, setVideoCoordinates] = React.useState(null);
 
@@ -48,13 +53,18 @@ function Pacman({
       playerNum,
     });
     gameRef.current.subscribeToPosition({ callback: setCoords, playerNum });
+    gameRef.current.subscribeToGhostState({
+      callback: setGhostState,
+      playerNum,
+    });
   }, [gameRef, playerNum]);
 
   const drawCurrentSprite = React.useCallback(
-    ({ outline, ctx, spriteX }) => {
+    ({ outline, ctx, spriteX, ghost }) => {
+      const sheet = ghost ? ghostSpriteSheet : spriteSheet;
       const spriteY = outline ? 32 : 0;
       ctx.drawImage(
-        spriteSheet,
+        sheet,
         spriteX,
         spriteY,
         SPRITE_WIDTH,
@@ -65,7 +75,7 @@ function Pacman({
         PLAYER_CANVAS_SIZE
       );
     },
-    [spriteSheet]
+    [ghostSpriteSheet, spriteSheet]
   );
 
   const drawVideoSnapshot = React.useCallback(
@@ -105,16 +115,16 @@ function Pacman({
   );
 
   const drawPlayerToCanvas = React.useCallback(
-    ({ ctx, spriteX, videoCoordinates }) => {
+    ({ ctx, spriteX, videoCoordinates, ghost }) => {
       ctx.save();
       ctx.clearRect(0, 0, PLAYER_CANVAS_SIZE, PLAYER_CANVAS_SIZE);
       ctx.imageSmoothingEnabled = false;
-      drawCurrentSprite({ outline: false, ctx, spriteX });
+      drawCurrentSprite({ outline: false, ctx, spriteX, ghost });
 
       if (videoCoordinates) {
         drawVideoSnapshot({ ctx, videoCoordinates });
         ctx.globalCompositeOperation = "overlay";
-        drawCurrentSprite({ spriteX, ctx, outline: false });
+        drawCurrentSprite({ spriteX, ctx, outline: false, ghost });
       }
 
       ctx.globalCompositeOperation = "source-over";
@@ -148,8 +158,9 @@ function Pacman({
     }
 
     const spriteX = xIdx * 32;
+    const ghost = ghostState.state === "ghost";
 
-    drawPlayerToCanvas({ ctx, spriteX, videoCoordinates });
+    drawPlayerToCanvas({ ctx, spriteX, videoCoordinates, ghost });
     ctx.restore();
   }, [
     coords,
@@ -159,6 +170,7 @@ function Pacman({
     spriteSheet,
     videoCoordinates,
     videoRef,
+    ghostState,
   ]);
 
   // good proxy for "funniest image" is "the time you opened your mouth the most"
@@ -193,6 +205,14 @@ function Pacman({
       style={{
         "--left": `${(coords.x / numSlots.horizontal) * 100}%`,
         "--top": `${(coords.y / numSlots.vertical) * 100}%`,
+        "--grayscale":
+          ghostState.eatenAmount === 0
+            ? null
+            : Math.floor(ghostState.eatenAmount * 1000) / 10 + "%",
+        "--brightness":
+          ghostState.eatenAmount === 0
+            ? null
+            : Math.floor(4 * ghostState.eatenAmount * 100) / 100,
       }}
     >
       <InteriorCanvas
@@ -221,6 +241,7 @@ const Player = styled.div`
   left: var(--left);
   top: var(--top);
   animation: ${fadeIn} 0.5s forwards;
+  filter: grayscale(var(--grayscale)) brightness(var(--brightness));
 `;
 
 const InteriorCanvas = styled.canvas`
