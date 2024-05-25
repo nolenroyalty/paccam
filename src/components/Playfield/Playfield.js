@@ -95,6 +95,8 @@ function Playfield({
     setPlayfieldPadding,
   ]);
 
+  console.log(`playfield padding is ${JSON.stringify(playfieldPadding)}`);
+
   const opacity =
     status !== SHOWING_RESULTS && status !== COMPLETED_ROUND ? 1 : 0;
 
@@ -118,6 +120,7 @@ function Playfield({
                 playerNum={playerNum}
                 addPacmanResultScreenState={addPacmanResultScreenState}
                 status={status}
+                padding={playfieldPadding}
               />
             );
           })}
@@ -128,6 +131,8 @@ function Playfield({
             style={{
               "--left": `${(pellet.x / numSlots.horizontal) * 100}%`,
               "--top": `${(pellet.y / numSlots.vertical) * 100}%`,
+              "--padding-left": `${playfieldPadding.left}px`,
+              "--padding-top": `${playfieldPadding.top}px`,
               "--opacity": pellet.enabled ? 1 : 0,
               "--scale": pellet.enabled ? null : 0,
             }}
@@ -141,6 +146,14 @@ function Playfield({
           </PelletWrapper>
         );
       })}
+      {/* <div
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "relative",
+          backgroundColor: "green",
+        }}
+      ></div> */}
     </Wrapper>
   );
 }
@@ -187,8 +200,8 @@ const Pellet = styled.img`
 
 const PelletWrapper = styled.div`
   position: absolute;
-  left: var(--left);
-  top: var(--top);
+  left: calc(var(--left) + var(--padding-left));
+  top: calc(var(--top) + var(--padding-top));
   width: ${SLOT_WIDTH_PERCENTAGE}%;
   aspect-ratio: 1/1;
   display: grid;
