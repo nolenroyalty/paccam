@@ -18,19 +18,30 @@ import {
   shouldProcessGameLoop,
 } from "./STATUS";
 
+const MIN_DETECTION_CONFIDENCE = 0.4;
+const MIN_SUPPRESSION_THRESHOLD = 0.1;
+
 // this is normally 0.48
 const JAW_OPEN_THRESHOLD = 0.35;
-const JAW_CLOSE_THRESHOLD = 0.25;
+const JAW_CLOSE_THRESHOLD = 0.15;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
-const SECONDS_IN_ROUND = 10;
-const COUNT_IN_TIME = 4;
+const MINIMUM_NOSE_UPNESS = 0.32;
+const MAXIMUM_NOSE_DOWNNESS = 0.65;
+const SECONDS_IN_ROUND = 30;
+const COUNT_IN_TIME = 3;
 const IGNORE_MISSING_RESULTS = true;
 const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
-const STRAWBERRY_CHANCE = 0.05;
+const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
+const SPECIAL_RESPAWN_CHANCE = 0.3; // 0.2
+const SPECIAL_IS_A_FRUIT_CHANCE = 0.85; // 0.7
+const SPECIAL_IS_A_POWER_PELLET_CHANCE = 1.0;
 const STRAWBERRY_POINTS = 3;
 const DEFAULT_SUPER_DURATION = 5.3;
+const EAT_RECOVERY_TIME = 2;
+const IMMEDIATELY_EAT = false;
+let didImmediatelyEat = false;
 
 async function createFaceLandmarker({ numFaces }) {
   const filesetResolver = await FilesetResolver.forVisionTasks(
@@ -46,6 +57,8 @@ async function createFaceLandmarker({ numFaces }) {
       outputFaceBlendshapes: true,
       runningMode: "VIDEO",
       numFaces: numFaces,
+      minFaceDetectionConfidence: MIN_DETECTION_CONFIDENCE,
+      minSuppressionThreshold: MIN_SUPPRESSION_THRESHOLD,
     });
   }
   return getLandmarker();
@@ -68,12 +81,24 @@ class GameEngine {
     this.scoreConsumers = [];
     this.timeConsumers = [];
     this.statusConsumers = [];
+    this.debugConsumers = [];
+    this.stagedDebugUpdate = [];
     this.playerStates = [];
+    this.ghostStateConsumers = [];
     this.pelletsByPosition = {};
     this.numSlots = null;
     this.status = WAITING_FOR_VIDEO;
     this.numPlayers = null;
     this.time = null;
+  }
+
+  enableSuper({ playerNum }) {
+    const now = performance.now();
+    const endSuperAt = now + DEFAULT_SUPER_DURATION * 1000;
+    const x = this.playerStates[playerNum];
+    x.endSuperAt = endSuperAt;
+    this.sounds.super.currentTime = 0;
+    this.sounds.super.play();
   }
 
   stopGame() {
@@ -84,6 +109,14 @@ class GameEngine {
   initVideo(video) {
     this.video = video;
     this.updateStatusAndConsumers(WAITING_FOR_PLAYER_SELECT, "initVideo");
+
+    // enable super on space
+    document.addEventListener("keydown", (e) => {
+      if (e.key === " ") {
+        this.enableSuper = this.enableSuper.bind(this);
+        this.enableSuper({ playerNum: 0 });
+      }
+    });
   }
 
   initAudio({ sounds }) {
@@ -119,8 +152,15 @@ class GameEngine {
         slotsToMove: 0,
         score: 0,
         playerNum,
+        endSuperAt: 0,
+        ghostState: {
+          stateTransitionStartTime: 0,
+          state: "normal",
+          eatRecoveryTime: 0,
+        },
       };
     });
+    console.log(`INITIALIZED PLAYERS: ${JSON.stringify(this.playerStates)}`);
     this.updatePositionConsumers();
     this.updateScoreConsumers();
   }
@@ -134,6 +174,28 @@ class GameEngine {
   subscribeToStatus(callback) {
     this.statusConsumers.push(callback);
     callback(this.status);
+  }
+
+  subscribeToDebugInfo(callback) {
+    this.debugConsumers.push(callback);
+  }
+
+  maybeUpdateDebugState({ playerNum, messages }) {
+    if (!this.debugConsumers.length > 0) {
+      return;
+    }
+    const stagedUpdate = [];
+    stagedUpdate.push(`playerNum: ${playerNum}`);
+    messages.forEach(([label, value]) => {
+      if (typeof value === "number") {
+        stagedUpdate.push(`${label}: ${value.toFixed(2)}`);
+      } else {
+        stagedUpdate.push(`${label}: ${value}`);
+      }
+    });
+    this.debugConsumers.forEach((callback) => {
+      callback({ playerNum, debugState: stagedUpdate });
+    });
   }
 
   updateRelevantFaceStateConsumers({
@@ -167,6 +229,35 @@ class GameEngine {
     this.faceStateConsumers.push({ playerNum, callback });
     // We don't store maxY, etc in state so we can't push them a snapshot.
     // seems...fine?
+  }
+
+  updateRelevantGhostStateConsumers({ playerNum, startTime }) {
+    this.ghostStateConsumers.forEach(
+      ({ playerNum: consumerPlayerNum, callback }) => {
+        if (playerNum === consumerPlayerNum) {
+          const state = this.playerStates[playerNum].ghostState.state;
+          const eatRecoveryTime =
+            this.playerStates[playerNum].ghostState.eatRecoveryTime;
+          // nroyalty: this is ugly and might cause a bug :(
+          let eatenAmount = 0;
+          if (eatRecoveryTime > startTime) {
+            const eatPercent =
+              (eatRecoveryTime - startTime) / (EAT_RECOVERY_TIME * 1000);
+            eatenAmount = 0.5 + eatPercent * 0.5;
+          }
+          const result = { state, eatenAmount };
+          // const eatenAmount = this.playerStates[playerNum].ghostState.eatRecoveryTime;
+          callback(result);
+        }
+      }
+    );
+  }
+
+  subscribeToGhostState({ playerNum, callback }) {
+    this.ghostStateConsumers.push({ playerNum, callback });
+    this.updateRelevantGhostStateConsumers({
+      playerNum,
+    });
   }
 
   updatePositionConsumers({
@@ -285,8 +376,13 @@ class GameEngine {
           const makeIt = Math.random() < chance;
           const delay = Math.random() * 1.75;
           let kind;
+          // we always spawn berries at the start
           if (SPAWN_STRAWBERRIES) {
-            kind = Math.random() < STRAWBERRY_CHANCE ? "fruit" : "pellet";
+            const forceThisKind = "fruit";
+            kind =
+              Math.random() < SPECIAL_STARTING_SPAWN_CHANCE
+                ? forceThisKind
+                : "pellet";
           } else {
             kind = "pellet";
           }
@@ -379,13 +475,19 @@ class GameEngine {
     const height = maxY - minY;
     const width = maxX - minX;
 
-    const jawOpenAmount = faceBlendshapes.categories[25].score;
+    const jawOpenBlend = faceBlendshapes.categories[25].score;
+    const topLipCenter = landmarks[12];
+    const bottomLipCenter = landmarks[14];
+    const jawOpenDiff = (bottomLipCenter.y - topLipCenter.y) * 9.5;
+    const jawOpenMax = Math.max(jawOpenBlend, jawOpenDiff);
+    const jawOpenMin = Math.min(jawOpenBlend, jawOpenDiff);
+
     let jawIsOpen;
 
     if (this.playerStates[playerNum].jawIsOpen) {
-      jawIsOpen = jawOpenAmount > JAW_CLOSE_THRESHOLD;
+      jawIsOpen = jawOpenMax > JAW_CLOSE_THRESHOLD;
     } else {
-      jawIsOpen = jawOpenAmount > JAW_OPEN_THRESHOLD;
+      jawIsOpen = jawOpenMax > JAW_OPEN_THRESHOLD;
     }
 
     const noseRelativeHeight = nose.y - minY;
@@ -403,24 +505,31 @@ class GameEngine {
       horizontalStrength = (noseWidth - 0.75) / 0.25;
     }
 
-    const verticalOffset = (jawOpenAmount / JAW_OPEN_THRESHOLD) * 0.05;
+    // If 0.05 > NOSE_BASE_LOOK_UP_THRESHOLD - MINIMUM_NOSE_UPNESS,
+    // we could end up with a negative verticalStrength.
+    // We purposely use jawOpenBlend instead of min or max here because
+    // it's a better proxy for what we're measuring.
+    const verticalOffset = (jawOpenBlend / JAW_OPEN_THRESHOLD) * 0.05;
 
     let vertical = "center";
     let verticalStrength = 0;
     let verticalUpThreshold = NOSE_BASE_LOOK_UP_THRESHOLD - verticalOffset;
-    let verticalDownThreshold = NOSE_BASE_LOOK_DOWN_THRSEHOLD + verticalOffset;
+    let verticalDownThreshold = NOSE_BASE_LOOK_DOWN_THRSEHOLD - verticalOffset;
     if (noseHeight < verticalUpThreshold) {
       vertical = "up";
-      verticalStrength = 1 - noseHeight / verticalUpThreshold;
+      const amountPastThreshold = verticalUpThreshold - noseHeight;
+      const thresholdSize = verticalUpThreshold - MINIMUM_NOSE_UPNESS;
+      verticalStrength = amountPastThreshold / thresholdSize;
     } else if (noseHeight > verticalDownThreshold) {
       vertical = "down";
-      verticalStrength =
-        (noseHeight - verticalDownThreshold) / (1 - verticalDownThreshold);
+      const amountPastThreshold = noseHeight - verticalDownThreshold;
+      const thresholdSize = MAXIMUM_NOSE_DOWNNESS - verticalDownThreshold;
+      verticalStrength = amountPastThreshold / thresholdSize;
     }
     this.updateIndividualFaceState({
       playerNum,
       jawIsOpen,
-      jawOpenAmount,
+      jawOpenAmount: jawOpenMax,
       vertical,
       verticalStrength,
       horizontal,
@@ -429,6 +538,22 @@ class GameEngine {
       maxY,
       minX,
       maxX,
+    });
+
+    this.maybeUpdateDebugState({
+      playerNum,
+      messages: [
+        ["jawOpenBlend", jawOpenBlend],
+        ["jawOpenDiff", jawOpenDiff],
+        ["jawOpenMax", jawOpenMax],
+        ["horizontal", horizontal],
+        ["horizontalStrength", horizontalStrength],
+        ["vertical", vertical],
+        ["verticalStrength", verticalStrength],
+        ["verticalOffset", verticalOffset],
+        ["noseHeight", noseHeight],
+        ["noseWidth", noseWidth],
+      ],
     });
   }
 
@@ -517,6 +642,9 @@ class GameEngine {
             scoreAmount = STRAWBERRY_POINTS;
           } else if (pellet.kind === "pellet") {
             scoreAmount = 1;
+          } else if (pellet.kind === "power-pellet") {
+            this.enableSuper({ playerNum: playerState.playerNum });
+            scoreAmount = 1;
           } else {
             throw new Error(`Unknown pellet kind: ${pellet.kind}`);
           }
@@ -577,7 +705,58 @@ class GameEngine {
     return isMoving;
   }
 
-  maybeMove({ tickTimeMs }) {
+  superThatIsTheFurthestOut() {
+    return Math.max(...this.playerStates.map((x) => x.endSuperAt));
+  }
+
+  maybeEatGhosts({ startTime }) {
+    const superThatIsTheFurthestOut = this.superThatIsTheFurthestOut();
+    const isSuperActive = superThatIsTheFurthestOut > startTime;
+    if (!isSuperActive) {
+      return;
+    }
+    const superActivePlayers = this.playerStates.filter(
+      (x) => x.endSuperAt > startTime
+    );
+    const eatableCandidates = this.playerStates.filter((x) => {
+      const superNotActive = x.endSuperAt <= startTime;
+      const notEaten = x.ghostState.eatRecoveryTime <= startTime;
+      return superNotActive && notEaten;
+    });
+
+    eatableCandidates.forEach((ghostPlayerState) => {
+      const ghostX = ghostPlayerState.position.x + PLAYER_SIZE_IN_SLOTS / 2;
+      const ghostY = ghostPlayerState.position.y + PLAYER_SIZE_IN_SLOTS / 2;
+      superActivePlayers.forEach((superPlayerState) => {
+        const superX = superPlayerState.position.x + PLAYER_SIZE_IN_SLOTS / 2;
+        const superY = superPlayerState.position.y + PLAYER_SIZE_IN_SLOTS / 2;
+        const distance = Math.sqrt(
+          (ghostX - superX) ** 2 + (ghostY - superY) ** 2
+        );
+        if (
+          distance < PLAYER_SIZE_IN_SLOTS ||
+          (IMMEDIATELY_EAT && !didImmediatelyEat)
+        ) {
+          didImmediatelyEat = true;
+          console.log("EAT EAT EAT");
+          superPlayerState.score += 5;
+          ghostPlayerState.ghostState.eatRecoveryTime =
+            startTime + EAT_RECOVERY_TIME * 1000;
+
+          this.updateScoreConsumers();
+          this.updateRelevantGhostStateConsumers({
+            startTime,
+            playerNum: ghostPlayerState,
+          });
+
+          this.sounds.die.currentTime = 0;
+          this.sounds.die.play();
+        }
+      });
+    });
+  }
+
+  maybeMove({ startTime, tickTimeMs }) {
     const secondsOfMovement = tickTimeMs / 1000;
     const maxSlotsToConsume = secondsOfMovement * SLOTS_MOVED_PER_SECOND;
     let isMoving = false;
@@ -592,7 +771,8 @@ class GameEngine {
     this.handleAudio({ isMoving });
     if (isMoving) {
       this.updatePelletsForPosition();
-      this.updatePositionConsumers();
+      this.maybeEatGhosts({ startTime });
+      this.updatePositionConsumers({ startTime });
     }
   }
 
@@ -620,15 +800,19 @@ class GameEngine {
         }
         const enable = Math.random() < 0.5;
         if (enable) {
-          console.log(`enabling ${x}, ${y}`);
-          console.log(JSON.stringify(this.pelletsByPosition));
-          console.log([x, y]);
-          const isAStrawberry = Math.random() < STRAWBERRY_CHANCE;
+          const isSpecial = Math.random() < SPECIAL_RESPAWN_CHANCE;
+          let kind = "pellet";
+          if (isSpecial) {
+            const rand = Math.random();
+            if (rand < SPECIAL_IS_A_FRUIT_CHANCE) {
+              kind = "fruit";
+            } else if (rand < SPECIAL_IS_A_POWER_PELLET_CHANCE) {
+              kind = "power-pellet";
+            }
+          }
           this.pelletsByPosition[[x, y]].enabled = true;
           this.pelletsByPosition[[x, y]].delay = Math.random() * 0.25;
-          this.pelletsByPosition[[x, y]].kind = isAStrawberry
-            ? "fruit"
-            : "pellet";
+          this.pelletsByPosition[[x, y]].kind = kind;
         }
         maxSpawn -= 1;
       }
@@ -677,6 +861,81 @@ class GameEngine {
     }, 1000);
   }
 
+  handleSuperDisplay({ startTime }) {
+    const superThatIsTheFurthestOut = this.superThatIsTheFurthestOut();
+    const isSuperActive = superThatIsTheFurthestOut > startTime;
+
+    if (!isSuperActive) {
+      this.playerStates.forEach((playerState) => {
+        const currentState = playerState.ghostState.state;
+        if (currentState === "ghost") {
+          playerState.ghostState = {
+            ...playerState.ghostState,
+            stateTransitionStartTime: startTime,
+            state: "normal",
+          };
+          this.updateRelevantGhostStateConsumers({
+            playerNum: playerState.playerNum,
+            startTime,
+          });
+        }
+      });
+      return;
+    }
+
+    const timeRemaining = superThatIsTheFurthestOut - startTime;
+    const isHalfOver = timeRemaining < (DEFAULT_SUPER_DURATION * 1000) / 2;
+    this.playerStates.forEach((playerState) => {
+      const isInSuper = playerState.endSuperAt > startTime;
+      if (!isInSuper) {
+        if (!isHalfOver) {
+          const oldState = playerState.ghostState.state;
+          playerState.ghostState = {
+            ...playerState.ghostState,
+            stateTransitionStartTime: startTime,
+            state: "ghost",
+          };
+          if (oldState !== "ghost") {
+            this.updateRelevantGhostStateConsumers({
+              playerNum: playerState.playerNum,
+              startTime,
+            });
+          }
+        } else {
+          const transitionStartTime =
+            playerState.ghostState.stateTransitionStartTime;
+          const diff = startTime - transitionStartTime;
+          const newState =
+            playerState.ghostState.state === "ghost" ? "normal" : "ghost";
+          if (diff > 250) {
+            // nroyalty: prevent this from transitioning right at the end?
+            playerState.ghostState = {
+              ...playerState.ghostState,
+              stateTransitionStartTime: startTime,
+              state: newState,
+            };
+            this.updateRelevantGhostStateConsumers({
+              playerNum: playerState.playerNum,
+              startTime,
+            });
+          }
+        }
+      }
+    });
+  }
+
+  updateEatenGhosts({ startTime }) {
+    this.playerStates.forEach((playerState) => {
+      // this is ugly, but whatever.
+      if (playerState.ghostState.eatRecoveryTime !== 0) {
+        this.updateRelevantGhostStateConsumers({
+          playerNum: playerState.playerNum,
+          startTime,
+        });
+      }
+    });
+  }
+
   async startGameLoop() {
     this.landmarker = await createFaceLandmarker({ numFaces: this.numPlayers });
     if (this.status !== WAITING_TO_START_ROUND) {
@@ -698,9 +957,13 @@ class GameEngine {
         if (this.status === RUNNING_ROUND) {
           const tickTimeMs =
             lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
-          this.maybeMove({ tickTimeMs });
+          this.maybeMove({ startTime, tickTimeMs });
+          this.handleSuperDisplay({ startTime });
           this.maybeSpawnMorePellets();
         }
+        // this should live int he game loop when i'm done testing.
+        this.handleSuperDisplay({ startTime });
+        this.updateEatenGhosts({ startTime });
 
         lastVideoTime = startTime;
       }

@@ -16,6 +16,7 @@ function Playfield({
   setSlotSizePx,
   playfieldPadding,
   setPlayfieldPadding,
+  debugInfo,
 }) {
   const [pellets, setPellets] = React.useState([]);
   const [numSlots, setNumSlots] = React.useState({});
@@ -118,11 +119,13 @@ function Playfield({
                 gameRef={gameRef}
                 videoRef={videoRef}
                 spriteSheet={spriteSheet}
+                ghostSpriteSheet={spriteSheets.current["blue"]}
                 numSlots={numSlots}
                 playerNum={playerNum}
                 addPacmanResultScreenState={addPacmanResultScreenState}
                 status={status}
                 padding={playfieldPadding}
+                debugInfo={debugInfo[playerNum]}
               />
             );
           })}
@@ -133,6 +136,9 @@ function Playfield({
           src = "/aseprite/pellet.png";
         } else if (pellet.kind === "fruit") {
           src = "/aseprite/strawberry2.png";
+          sizeMult = 1.5;
+        } else if (pellet.kind === "power-pellet") {
+          src = "/aseprite/powerpellet.png";
           sizeMult = 1.5;
         } else {
           throw new Error(`Unknown pellet kind: ${pellet.kind}`);
