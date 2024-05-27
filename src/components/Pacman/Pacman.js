@@ -15,6 +15,7 @@ function Pacman({
   status,
   ghostSpriteSheet,
   addPacmanResultScreenState,
+  debugInfo,
 }) {
   const canvasRef = React.useRef();
   const myRef = React.useRef();
@@ -231,6 +232,13 @@ function Pacman({
         width={PLAYER_CANVAS_SIZE}
         height={PLAYER_CANVAS_SIZE}
       />
+      {debugInfo?.length > 0 ? (
+        <DebugWrapper>
+          {debugInfo.map((info, idx) => (
+            <DebugLabel key={idx}>{info}</DebugLabel>
+          ))}
+        </DebugWrapper>
+      ) : null}
     </Player>
   ) : null;
 }
@@ -242,6 +250,23 @@ const fadeIn = keyframes`
   to {
     opacity: 1;
   }
+`;
+
+const DebugWrapper = styled.div`
+  position: relative;
+  z-index: ${zIndex1};
+  bottom: 0;
+  left: 0;
+  transform: translate(5%, 5%);
+  width: max-content;
+  background-color: white;
+  font-size: 1rem;
+`;
+
+const DebugLabel = styled.p`
+  display: block;
+  color: black;
+  font-size: 1.25rem;
 `;
 
 const Player = styled.div`

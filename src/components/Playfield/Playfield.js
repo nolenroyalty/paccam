@@ -16,6 +16,7 @@ function Playfield({
   setSlotSizePx,
   playfieldPadding,
   setPlayfieldPadding,
+  debugInfo,
 }) {
   const [pellets, setPellets] = React.useState([]);
   const [numSlots, setNumSlots] = React.useState({});
@@ -124,6 +125,7 @@ function Playfield({
                 addPacmanResultScreenState={addPacmanResultScreenState}
                 status={status}
                 padding={playfieldPadding}
+                debugInfo={debugInfo[playerNum]}
               />
             );
           })}

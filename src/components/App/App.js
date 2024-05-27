@@ -7,6 +7,8 @@ import StartScreen from "../StartScreen";
 import TimerDisplay from "../TimerDisplay";
 import ScoreDisplay from "../ScoreDisplay";
 
+const DEBUG = false;
+
 function App() {
   const videoRef = React.useRef();
   const gameRef = React.useRef(new GameEngine());
@@ -19,6 +21,8 @@ function App() {
   const [pacmanResultScreenState, setPacmanResultScreenState] = React.useState(
     {}
   );
+
+  const [debugInfo, setDebugInfo] = React.useState({});
 
   const addPacmanResultScreenState = React.useCallback(
     ({ playerNum, position, faceCapture }) => {
@@ -58,6 +62,14 @@ function App() {
     game.subscribeToStatus((status) => {
       setGameState((state) => ({ ...state, status }));
     });
+    if (DEBUG) {
+      const updateDebugInfo = ({ playerNum, debugState }) => {
+        setDebugInfo((state) => {
+          return { ...state, [playerNum]: debugState };
+        });
+      };
+      game.subscribeToDebugInfo(updateDebugInfo);
+    }
   }, []);
 
   React.useEffect(() => {
@@ -124,6 +136,7 @@ function App() {
           status={gameState.status}
           addPacmanResultScreenState={addPacmanResultScreenState}
           setSlotSizePx={setSlotSizePx}
+          debugInfo={debugInfo}
         />
         <audio
           ref={(node) => {
@@ -161,6 +174,21 @@ function App() {
     </Wrapper>
   );
 }
+
+const DebugWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  left: 30%;
+  top: 20%;
+  background-color: white;
+`;
+
+const DebugLabel = styled.p`
+  display: block;
+  color: black;
+  font-size: 1rem;
+`;
 
 const Wrapper = styled.div`
   display: grid;

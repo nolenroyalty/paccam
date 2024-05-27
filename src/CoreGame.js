@@ -18,18 +18,23 @@ import {
   shouldProcessGameLoop,
 } from "./STATUS";
 
+const MIN_DETECTION_CONFIDENCE = 0.4;
+const MIN_SUPPRESSION_THRESHOLD = 0.1;
+
 // this is normally 0.48
 const JAW_OPEN_THRESHOLD = 0.35;
-const JAW_CLOSE_THRESHOLD = 0.25;
+const JAW_CLOSE_THRESHOLD = 0.15;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
+const MINIMUM_NOSE_UPNESS = 0.32;
+const MAXIMUM_NOSE_DOWNNESS = 0.65;
 const SECONDS_IN_ROUND = 30;
 const COUNT_IN_TIME = 3;
 const IGNORE_MISSING_RESULTS = true;
 const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
 const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
-const SPECIAL_RESPAWN_CHANCE = 0.2; // 0.2
+const SPECIAL_RESPAWN_CHANCE = 0.3; // 0.2
 const SPECIAL_IS_A_FRUIT_CHANCE = 0.85; // 0.7
 const SPECIAL_IS_A_POWER_PELLET_CHANCE = 1.0;
 const STRAWBERRY_POINTS = 3;
@@ -52,6 +57,8 @@ async function createFaceLandmarker({ numFaces }) {
       outputFaceBlendshapes: true,
       runningMode: "VIDEO",
       numFaces: numFaces,
+      minFaceDetectionConfidence: MIN_DETECTION_CONFIDENCE,
+      minSuppressionThreshold: MIN_SUPPRESSION_THRESHOLD,
     });
   }
   return getLandmarker();
@@ -74,6 +81,8 @@ class GameEngine {
     this.scoreConsumers = [];
     this.timeConsumers = [];
     this.statusConsumers = [];
+    this.debugConsumers = [];
+    this.stagedDebugUpdate = [];
     this.playerStates = [];
     this.ghostStateConsumers = [];
     this.pelletsByPosition = {};
@@ -165,6 +174,28 @@ class GameEngine {
   subscribeToStatus(callback) {
     this.statusConsumers.push(callback);
     callback(this.status);
+  }
+
+  subscribeToDebugInfo(callback) {
+    this.debugConsumers.push(callback);
+  }
+
+  maybeUpdateDebugState({ playerNum, messages }) {
+    if (!this.debugConsumers.length > 0) {
+      return;
+    }
+    const stagedUpdate = [];
+    stagedUpdate.push(`playerNum: ${playerNum}`);
+    messages.forEach(([label, value]) => {
+      if (typeof value === "number") {
+        stagedUpdate.push(`${label}: ${value.toFixed(2)}`);
+      } else {
+        stagedUpdate.push(`${label}: ${value}`);
+      }
+    });
+    this.debugConsumers.forEach((callback) => {
+      callback({ playerNum, debugState: stagedUpdate });
+    });
   }
 
   updateRelevantFaceStateConsumers({
@@ -444,13 +475,19 @@ class GameEngine {
     const height = maxY - minY;
     const width = maxX - minX;
 
-    const jawOpenAmount = faceBlendshapes.categories[25].score;
+    const jawOpenBlend = faceBlendshapes.categories[25].score;
+    const topLipCenter = landmarks[12];
+    const bottomLipCenter = landmarks[14];
+    const jawOpenDiff = (bottomLipCenter.y - topLipCenter.y) * 9.5;
+    const jawOpenMax = Math.max(jawOpenBlend, jawOpenDiff);
+    const jawOpenMin = Math.min(jawOpenBlend, jawOpenDiff);
+
     let jawIsOpen;
 
     if (this.playerStates[playerNum].jawIsOpen) {
-      jawIsOpen = jawOpenAmount > JAW_CLOSE_THRESHOLD;
+      jawIsOpen = jawOpenMax > JAW_CLOSE_THRESHOLD;
     } else {
-      jawIsOpen = jawOpenAmount > JAW_OPEN_THRESHOLD;
+      jawIsOpen = jawOpenMax > JAW_OPEN_THRESHOLD;
     }
 
     const noseRelativeHeight = nose.y - minY;
@@ -468,24 +505,31 @@ class GameEngine {
       horizontalStrength = (noseWidth - 0.75) / 0.25;
     }
 
-    const verticalOffset = (jawOpenAmount / JAW_OPEN_THRESHOLD) * 0.05;
+    // If 0.05 > NOSE_BASE_LOOK_UP_THRESHOLD - MINIMUM_NOSE_UPNESS,
+    // we could end up with a negative verticalStrength.
+    // We purposely use jawOpenBlend instead of min or max here because
+    // it's a better proxy for what we're measuring.
+    const verticalOffset = (jawOpenBlend / JAW_OPEN_THRESHOLD) * 0.05;
 
     let vertical = "center";
     let verticalStrength = 0;
     let verticalUpThreshold = NOSE_BASE_LOOK_UP_THRESHOLD - verticalOffset;
-    let verticalDownThreshold = NOSE_BASE_LOOK_DOWN_THRSEHOLD + verticalOffset;
+    let verticalDownThreshold = NOSE_BASE_LOOK_DOWN_THRSEHOLD - verticalOffset;
     if (noseHeight < verticalUpThreshold) {
       vertical = "up";
-      verticalStrength = 1 - noseHeight / verticalUpThreshold;
+      const amountPastThreshold = verticalUpThreshold - noseHeight;
+      const thresholdSize = verticalUpThreshold - MINIMUM_NOSE_UPNESS;
+      verticalStrength = amountPastThreshold / thresholdSize;
     } else if (noseHeight > verticalDownThreshold) {
       vertical = "down";
-      verticalStrength =
-        (noseHeight - verticalDownThreshold) / (1 - verticalDownThreshold);
+      const amountPastThreshold = noseHeight - verticalDownThreshold;
+      const thresholdSize = MAXIMUM_NOSE_DOWNNESS - verticalDownThreshold;
+      verticalStrength = amountPastThreshold / thresholdSize;
     }
     this.updateIndividualFaceState({
       playerNum,
       jawIsOpen,
-      jawOpenAmount,
+      jawOpenAmount: jawOpenMax,
       vertical,
       verticalStrength,
       horizontal,
@@ -494,6 +538,22 @@ class GameEngine {
       maxY,
       minX,
       maxX,
+    });
+
+    this.maybeUpdateDebugState({
+      playerNum,
+      messages: [
+        ["jawOpenBlend", jawOpenBlend],
+        ["jawOpenDiff", jawOpenDiff],
+        ["jawOpenMax", jawOpenMax],
+        ["horizontal", horizontal],
+        ["horizontalStrength", horizontalStrength],
+        ["vertical", vertical],
+        ["verticalStrength", verticalStrength],
+        ["verticalOffset", verticalOffset],
+        ["noseHeight", noseHeight],
+        ["noseWidth", noseWidth],
+      ],
     });
   }
 
