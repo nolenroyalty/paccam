@@ -2,6 +2,7 @@ import React from "react";
 import styled, { keyframes } from "styled-components";
 import { PLAYER_SIZE_PERCENT } from "../../constants";
 import { zIndex1 } from "../../zindex";
+import { EATEN, GHOST, NORMAL } from "../../PACMANSTATE";
 const PLAYER_CANVAS_SIZE = 128;
 const SPRITE_WIDTH = 32;
 const SPRITE_HEIGHT = 32;
@@ -163,13 +164,12 @@ function Pacman({
 
     const spriteX = xIdx * 32;
     const ghost = ghostState.state === "ghost";
-    const spriteGhostAlpha = 0.5 + (1 - ghostState.eatenAmount) / 2;
 
     drawPlayerToCanvas({
       ctx,
       spriteX,
       videoCoordinates,
-      spriteGhostAlpha,
+      spriteGhostAlpha: 1,
       ghost,
     });
     ctx.restore();
@@ -221,10 +221,7 @@ function Pacman({
       style={{
         "--left": `${(coords.x / numSlots.horizontal) * 100}%`,
         "--top": `${(coords.y / numSlots.vertical) * 100}%`,
-        "--grayscale":
-          ghostState.eatenAmount === 0
-            ? null
-            : Math.floor(ghostState.eatenAmount * 1000) / 10 + "%",
+        "--grayscale": ghostState.state === EATEN ? "1" : null,
       }}
     >
       <InteriorCanvas

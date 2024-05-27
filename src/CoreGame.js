@@ -17,6 +17,7 @@ import {
   validTransition,
   shouldProcessGameLoop,
 } from "./STATUS";
+import { EATEN, GHOST, NORMAL } from "./PACMANSTATE";
 
 const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_SUPPRESSION_THRESHOLD = 0.1;
@@ -38,8 +39,9 @@ const SPECIAL_RESPAWN_CHANCE = 0.15; // 0.2
 const SPECIAL_IS_A_FRUIT_CHANCE = 1.0; // 0.7
 const STRAWBERRY_POINTS = 3;
 const DEFAULT_SUPER_DURATION = 5.3;
-const EAT_RECOVERY_TIME = 2;
+const EAT_RECOVERY_TIME = 1.5;
 const IMMEDIATELY_EAT = false;
+const MAX_PLAYERS = 4;
 
 const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
   lower: 8,
@@ -160,24 +162,26 @@ class GameEngine {
     );
   }
 
+  spawnLocation({ playerNum }) {
+    if (playerNum === 0) {
+      return { x: 0, y: 0 };
+    } else if (playerNum === 1) {
+      return { x: this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS, y: 0 };
+    } else if (playerNum === 2) {
+      return { x: 0, y: this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS };
+    } else if (playerNum === 3) {
+      return {
+        x: this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS,
+        y: this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS,
+      };
+    }
+  }
+
   initNumPlayers(numPlayers) {
     this.updateStatusAndConsumers(WAITING_TO_START_ROUND, "initNumPlayers");
     this.numPlayers = numPlayers;
     this.playerStates = range(numPlayers).map((playerNum) => {
-      let x, y;
-      if (playerNum === 0) {
-        x = 0;
-        y = 0;
-      } else if (playerNum === 1) {
-        x = this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS;
-        y = 0;
-      } else if (playerNum === 2) {
-        x = 0;
-        y = this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS;
-      } else if (playerNum === 3) {
-        x = this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS;
-        y = this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS;
-      }
+      const { x, y } = this.spawnLocation({ playerNum });
       return {
         position: { x, y },
         direction: "center",
@@ -188,7 +192,7 @@ class GameEngine {
         endSuperAt: 0,
         ghostState: {
           stateTransitionStartTime: 0,
-          state: "normal",
+          state: NORMAL,
           eatRecoveryTime: 0,
         },
       };
@@ -269,18 +273,8 @@ class GameEngine {
     this.ghostStateConsumers.forEach(
       ({ playerNum: consumerPlayerNum, callback }) => {
         if (playerNum === consumerPlayerNum) {
-          const state = this.playerStates[playerNum].ghostState.state;
-          const eatRecoveryTime =
-            this.playerStates[playerNum].ghostState.eatRecoveryTime;
-          // nroyalty: this is ugly and might cause a bug :(
-          let eatenAmount = 0;
-          if (eatRecoveryTime > startTime) {
-            const eatPercent =
-              (eatRecoveryTime - startTime) / (EAT_RECOVERY_TIME * 1000);
-            eatenAmount = 0.5 + eatPercent * 0.5;
-          }
-          const result = { state, eatenAmount };
-          // const eatenAmount = this.playerStates[playerNum].ghostState.eatRecoveryTime;
+          let state = this.playerStates[playerNum].ghostState.state;
+          const result = { state, eatenAmount: 1 };
           callback(result);
         }
       }
@@ -714,11 +708,15 @@ class GameEngine {
     }
   }
 
-  handleIndividualMove({ maxSlotsToConsume, playerState }) {
+  handleIndividualMove({ startTime, maxSlotsToConsume, playerState }) {
     const slotsToConsume = Math.min(playerState.slotsToMove, maxSlotsToConsume);
-    const isMoving = slotsToConsume > 0;
+    let isMoving = slotsToConsume > 0;
+    const isEaten = this.isEaten({
+      playerNum: playerState.playerNum,
+      startTime,
+    });
 
-    if (isMoving) {
+    if (isMoving && !isEaten) {
       playerState.slotsToMove -= slotsToConsume;
       const movementAmount = slotsToConsume;
       let hitWall = false;
@@ -754,12 +752,77 @@ class GameEngine {
       if (hitWall) {
         playerState.slotsToMove = 0;
       }
+    } else if (isEaten) {
+      const amountEaten =
+        1 -
+        (playerState.ghostState.eatRecoveryTime - startTime) /
+          1000 /
+          EAT_RECOVERY_TIME;
+      if (amountEaten > 0) {
+        const startX = playerState.slotToMoveFrom.x;
+        const startY = playerState.slotToMoveFrom.y;
+        const endX = playerState.slotToMoveTo.x;
+        const endY = playerState.slotToMoveTo.y;
+
+        const curX = startX + (endX - startX) * amountEaten;
+        const curY = startY + (endY - startY) * amountEaten;
+        console.log(`
+          ${playerState.playerNum} is eaten.
+          startX: ${startX},
+          startY: ${startY},
+          endX: ${endX},
+          endY: ${endY},
+          curX: ${curX},
+          curY: ${curY},
+          amountEaten: ${amountEaten}
+          `);
+        playerState.position = { x: curX, y: curY };
+        isMoving = true;
+      } else {
+        console.error(
+          `ERROR: ${playerState.playerNum} is eaten but AMOUNTEATEN not > 0. 
+            recoveryTime: ${playerState.ghostState.eatRecoveryTime},
+            startTime: ${startTime},
+            amountEaten: ${amountEaten}`
+        );
+      }
     }
     return isMoving;
   }
 
   superThatIsTheFurthestOut() {
     return Math.max(...this.playerStates.map((x) => x.endSuperAt));
+  }
+
+  eatPlayer({ startTime, ghostPlayerState }) {
+    ghostPlayerState.ghostState.state = EATEN;
+    ghostPlayerState.ghostState.eatRecoveryTime =
+      startTime + EAT_RECOVERY_TIME * 1000;
+    ghostPlayerState.slotsToMove = 0;
+    this.updateRelevantGhostStateConsumers({
+      startTime,
+      playerNum: ghostPlayerState.playerNum,
+    });
+    this.sounds.die.currentTime = 0;
+    this.sounds.die.play();
+
+    let dist = -1;
+    let slotToMoveTo = null;
+    for (let i = 0; i < MAX_PLAYERS; i++) {
+      const loc = this.spawnLocation({ playerNum: i });
+      const locX = loc.x + PLAYER_SIZE_IN_SLOTS / 2;
+      const locY = loc.y + PLAYER_SIZE_IN_SLOTS / 2;
+      const x = ghostPlayerState.position.x + PLAYER_SIZE_IN_SLOTS / 2;
+      const y = ghostPlayerState.position.y + PLAYER_SIZE_IN_SLOTS / 2;
+      const _dist = Math.sqrt((locX - x) ** 2 + (locY - y) ** 2);
+      if (_dist > dist) {
+        dist = _dist;
+        slotToMoveTo = loc;
+      }
+    }
+
+    ghostPlayerState.slotToMoveFrom = ghostPlayerState.position;
+    ghostPlayerState.slotToMoveTo = slotToMoveTo;
   }
 
   maybeEatGhosts({ startTime }) {
@@ -790,19 +853,11 @@ class GameEngine {
 
         if (overlaps || (IMMEDIATELY_EAT && !didImmediatelyEat)) {
           didImmediatelyEat = true;
-          console.log("EAT EAT EAT");
+          console.log(
+            `EAT EAT EAT ${superPlayerState.playerNum} => ${ghostPlayerState.playerNum}`
+          );
           superPlayerState.score += 5;
-          ghostPlayerState.ghostState.eatRecoveryTime =
-            startTime + EAT_RECOVERY_TIME * 1000;
-
-          this.updateScoreConsumers();
-          this.updateRelevantGhostStateConsumers({
-            startTime,
-            playerNum: ghostPlayerState,
-          });
-
-          this.sounds.die.currentTime = 0;
-          this.sounds.die.play();
+          this.eatPlayer({ startTime, ghostPlayerState });
         }
       });
     });
@@ -814,6 +869,7 @@ class GameEngine {
     let isMoving = false;
     for (let i = 0; i < this.numPlayers; i++) {
       const didMove = this.handleIndividualMove({
+        startTime,
         maxSlotsToConsume,
         playerState: this.playerStates[i],
       });
@@ -981,18 +1037,27 @@ class GameEngine {
     }, 1000);
   }
 
-  handleSuperDisplay({ startTime }) {
-    const superThatIsTheFurthestOut = this.superThatIsTheFurthestOut();
-    const isSuperActive = superThatIsTheFurthestOut > startTime;
+  isEaten({ playerNum, startTime }) {
+    return this.playerStates[playerNum].ghostState.eatRecoveryTime > startTime;
+  }
 
-    if (!isSuperActive) {
+  handleSuperDisplay({ startTime }) {
+    const superIsActive = this.superIsActive({ startTime });
+
+    if (!superIsActive) {
       this.playerStates.forEach((playerState) => {
         const currentState = playerState.ghostState.state;
-        if (currentState === "ghost") {
+        const targetState = this.isEaten({
+          playerNum: playerState.playerNum,
+          startTime,
+        })
+          ? EATEN
+          : NORMAL;
+        if (currentState !== targetState) {
           playerState.ghostState = {
             ...playerState.ghostState,
             stateTransitionStartTime: startTime,
-            state: "normal",
+            state: targetState,
           };
           this.updateRelevantGhostStateConsumers({
             playerNum: playerState.playerNum,
@@ -1003,19 +1068,25 @@ class GameEngine {
       return;
     }
 
+    const superThatIsTheFurthestOut = this.superThatIsTheFurthestOut();
     const timeRemaining = superThatIsTheFurthestOut - startTime;
     const isHalfOver = timeRemaining < (DEFAULT_SUPER_DURATION * 1000) / 2;
     this.playerStates.forEach((playerState) => {
       const isInSuper = playerState.endSuperAt > startTime;
+      const isEaten = this.isEaten({
+        playerNum: playerState.playerNum,
+        startTime,
+      });
       if (!isInSuper) {
         if (!isHalfOver) {
           const oldState = playerState.ghostState.state;
+          const targetState = isEaten ? EATEN : GHOST;
           playerState.ghostState = {
             ...playerState.ghostState,
             stateTransitionStartTime: startTime,
-            state: "ghost",
+            state: targetState,
           };
-          if (oldState !== "ghost") {
+          if (oldState !== targetState) {
             this.updateRelevantGhostStateConsumers({
               playerNum: playerState.playerNum,
               startTime,
@@ -1025,14 +1096,16 @@ class GameEngine {
           const transitionStartTime =
             playerState.ghostState.stateTransitionStartTime;
           const diff = startTime - transitionStartTime;
+          // always snap to NORMAL after being eaten
           const newState =
-            playerState.ghostState.state === "ghost" ? "normal" : "ghost";
+            playerState.ghostState.state !== NORMAL ? NORMAL : GHOST;
+          const targetState = isEaten ? EATEN : newState;
           if (diff > 250) {
             // nroyalty: prevent this from transitioning right at the end?
             playerState.ghostState = {
               ...playerState.ghostState,
               stateTransitionStartTime: startTime,
-              state: newState,
+              state: targetState,
             };
             this.updateRelevantGhostStateConsumers({
               playerNum: playerState.playerNum,
@@ -1078,7 +1151,6 @@ class GameEngine {
           const tickTimeMs =
             lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
           this.maybeMove({ startTime, tickTimeMs });
-          this.handleSuperDisplay({ startTime });
           this.maybeSpawnMorePellets({ startTime });
         }
         // this should live int he game loop when i'm done testing.
