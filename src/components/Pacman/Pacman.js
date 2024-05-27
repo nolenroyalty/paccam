@@ -256,7 +256,7 @@ const DebugWrapper = styled.div`
   left: 0;
   transform: translate(5%, 5%);
   width: max-content;
-  background-color: white;
+  background-color: #ffffff80;
   font-size: 1rem;
 `;
 

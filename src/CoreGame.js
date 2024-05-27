@@ -23,8 +23,8 @@ const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_SUPPRESSION_THRESHOLD = 0.1;
 
 // this is normally 0.48
-const JAW_OPEN_THRESHOLD = 0.35;
-const JAW_CLOSE_THRESHOLD = 0.15;
+const JAW_OPEN_THRESHOLD = 0.34;
+const JAW_CLOSE_THRESHOLD = 0.125;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.6;
 const MINIMUM_NOSE_UPNESS = 0.33;
@@ -681,7 +681,11 @@ class GameEngine {
           candidateSize: 1,
           extraCandidateRadius: 0.1,
         });
-        if (overlaps && pellet.enabled) {
+        const isEaten = this.isEaten({
+          playerNum: playerState.playerNum,
+          startTime: this.time,
+        });
+        if (!isEaten && overlaps && pellet.enabled) {
           let scoreAmount;
           if (pellet.kind === "fruit") {
             this.sounds.fruit.currentTime = 0;
