@@ -25,22 +25,34 @@ const MIN_SUPPRESSION_THRESHOLD = 0.1;
 const JAW_OPEN_THRESHOLD = 0.35;
 const JAW_CLOSE_THRESHOLD = 0.15;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
-const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.53;
-const MINIMUM_NOSE_UPNESS = 0.32;
-const MAXIMUM_NOSE_DOWNNESS = 0.65;
+const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.6;
+const MINIMUM_NOSE_UPNESS = 0.33;
+const MAXIMUM_NOSE_DOWNNESS = 0.73;
 const SECONDS_IN_ROUND = 30;
 const COUNT_IN_TIME = 3;
 const IGNORE_MISSING_RESULTS = true;
 const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
 const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
-const SPECIAL_RESPAWN_CHANCE = 0.3; // 0.2
-const SPECIAL_IS_A_FRUIT_CHANCE = 0.85; // 0.7
-const SPECIAL_IS_A_POWER_PELLET_CHANCE = 1.0;
+const SPECIAL_RESPAWN_CHANCE = 0.15; // 0.2
+const SPECIAL_IS_A_FRUIT_CHANCE = 1.0; // 0.7
 const STRAWBERRY_POINTS = 3;
 const DEFAULT_SUPER_DURATION = 5.3;
 const EAT_RECOVERY_TIME = 2;
 const IMMEDIATELY_EAT = false;
+
+const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
+  lower: 8,
+  upper: 16,
+};
+
+const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ numPlayers }) => {
+  if (numPlayers === 4) {
+    return 3;
+  }
+  return 2;
+};
+
 let didImmediatelyEat = false;
 
 async function createFaceLandmarker({ numFaces }) {
@@ -99,6 +111,16 @@ class GameEngine {
     x.endSuperAt = endSuperAt;
     this.sounds.super.currentTime = 0;
     this.sounds.super.play();
+    this.disableOtherSuperPellets();
+  }
+
+  disableOtherSuperPellets() {
+    Object.values(this.pelletsByPosition).forEach((pellet) => {
+      if (pellet.kind === "power-pellet") {
+        pellet.enabled = false;
+      }
+    });
+    this.updatePelletConsumers();
   }
 
   stopGame() {
@@ -125,6 +147,17 @@ class GameEngine {
 
   initNumSlots(numSlots) {
     this.numSlots = numSlots;
+  }
+
+  _initSpawnSupersAfterThisManyEats({ numPlayers }) {
+    const lower = SPAWN_SUPERS_AFTER_THIS_MANY_EATS.lower;
+    const upper = SPAWN_SUPERS_AFTER_THIS_MANY_EATS.upper;
+    const range = upper - lower;
+    const random = Math.random() * range;
+    this.spawnSupersAfterThisManyEats = Math.floor(random + lower);
+    console.log(
+      `SPAWN SUPERS AFTER THIS MANY EATS: ${this.spawnSupersAfterThisManyEats}`
+    );
   }
 
   initNumPlayers(numPlayers) {
@@ -163,6 +196,7 @@ class GameEngine {
     console.log(`INITIALIZED PLAYERS: ${JSON.stringify(this.playerStates)}`);
     this.updatePositionConsumers();
     this.updateScoreConsumers();
+    this._initSpawnSupersAfterThisManyEats({ numPlayers });
   }
 
   _updateStatusConsumers() {
@@ -478,9 +512,8 @@ class GameEngine {
     const jawOpenBlend = faceBlendshapes.categories[25].score;
     const topLipCenter = landmarks[12];
     const bottomLipCenter = landmarks[14];
-    const jawOpenDiff = (bottomLipCenter.y - topLipCenter.y) * 9.5;
+    const jawOpenDiff = (bottomLipCenter.y - topLipCenter.y) * 10;
     const jawOpenMax = Math.max(jawOpenBlend, jawOpenDiff);
-    const jawOpenMin = Math.min(jawOpenBlend, jawOpenDiff);
 
     let jawIsOpen;
 
@@ -622,19 +655,39 @@ class GameEngine {
     }
   }
 
+  overlaps({
+    playerX,
+    playerY,
+    candidateX,
+    candidateY,
+    candidateSize,
+    extraCandidateRadius = 0,
+  }) {
+    playerX = playerX + PLAYER_SIZE_IN_SLOTS / 2;
+    playerY = playerY + PLAYER_SIZE_IN_SLOTS / 2;
+    candidateX = candidateX + candidateSize / 2;
+    candidateY = candidateY + candidateSize / 2;
+    const distance = Math.sqrt(
+      (playerX - candidateX) ** 2 + (playerY - candidateY) ** 2
+    );
+    // player size in slots is the *diameter*
+    return distance < PLAYER_SIZE_IN_SLOTS / 2 + extraCandidateRadius;
+  }
+
   updatePelletsForPosition() {
     let updated = false;
 
     this.playerStates.forEach((playerState) => {
-      const myX = playerState.position.x + PLAYER_SIZE_IN_SLOTS / 2;
-      const myY = playerState.position.y + PLAYER_SIZE_IN_SLOTS / 2;
-
       Object.values(this.pelletsByPosition).forEach((pellet) => {
-        const pelletX = pellet.x + 0.5;
-        const pelletY = pellet.y + 0.5;
-
-        const distance = Math.sqrt((myX - pelletX) ** 2 + (myY - pelletY) ** 2);
-        if (distance < PLAYER_SIZE_IN_SLOTS / 2 && pellet.enabled) {
+        const overlaps = this.overlaps({
+          playerX: playerState.position.x,
+          playerY: playerState.position.y,
+          candidateX: pellet.x,
+          candidateY: pellet.y,
+          candidateSize: 1,
+          extraCandidateRadius: 0.1,
+        });
+        if (overlaps && pellet.enabled) {
           let scoreAmount;
           if (pellet.kind === "fruit") {
             this.sounds.fruit.currentTime = 0;
@@ -644,7 +697,7 @@ class GameEngine {
             scoreAmount = 1;
           } else if (pellet.kind === "power-pellet") {
             this.enableSuper({ playerNum: playerState.playerNum });
-            scoreAmount = 1;
+            scoreAmount = 0;
           } else {
             throw new Error(`Unknown pellet kind: ${pellet.kind}`);
           }
@@ -725,18 +778,17 @@ class GameEngine {
     });
 
     eatableCandidates.forEach((ghostPlayerState) => {
-      const ghostX = ghostPlayerState.position.x + PLAYER_SIZE_IN_SLOTS / 2;
-      const ghostY = ghostPlayerState.position.y + PLAYER_SIZE_IN_SLOTS / 2;
       superActivePlayers.forEach((superPlayerState) => {
-        const superX = superPlayerState.position.x + PLAYER_SIZE_IN_SLOTS / 2;
-        const superY = superPlayerState.position.y + PLAYER_SIZE_IN_SLOTS / 2;
-        const distance = Math.sqrt(
-          (ghostX - superX) ** 2 + (ghostY - superY) ** 2
-        );
-        if (
-          distance < PLAYER_SIZE_IN_SLOTS ||
-          (IMMEDIATELY_EAT && !didImmediatelyEat)
-        ) {
+        const overlaps = this.overlaps({
+          playerX: superPlayerState.position.x,
+          playerY: superPlayerState.position.y,
+          candidateX: ghostPlayerState.position.x,
+          candidateY: ghostPlayerState.position.y,
+          candidateSize: PLAYER_SIZE_IN_SLOTS,
+          extraCandidateRadius: 0.5,
+        });
+
+        if (overlaps || (IMMEDIATELY_EAT && !didImmediatelyEat)) {
           didImmediatelyEat = true;
           console.log("EAT EAT EAT");
           superPlayerState.score += 5;
@@ -776,18 +828,88 @@ class GameEngine {
     }
   }
 
-  maybeSpawnMorePellets() {
+  numberOfSpawnedSuperPellets() {
+    return Object.values(this.pelletsByPosition).filter(
+      (pellet) => pellet.enabled && pellet.kind === "power-pellet"
+    ).length;
+  }
+
+  superIsActive({ startTime }) {
+    return this.superThatIsTheFurthestOut() > startTime;
+  }
+
+  maybeSpawnSuperPellets({ spawnX, spawnY, startTime }) {
+    const superIsActive = this.superIsActive({ startTime });
+    const totalEats = this.playerStates.reduce(
+      (acc, playerState) => acc + playerState.score,
+      0
+    );
+    const exceededSuperSpawnThreshold =
+      totalEats > this.spawnSupersAfterThisManyEats;
+
+    if (superIsActive) {
+      return;
+    }
+    if (!exceededSuperSpawnThreshold) {
+      return;
+    }
+
+    const maxSupers = MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS({
+      numPlayers: this.numPlayers,
+    });
+
+    const spawnedSupers = this.numberOfSpawnedSuperPellets();
+    if (spawnedSupers >= maxSupers) {
+      return;
+    }
+
+    let supersToSpawn = maxSupers - spawnedSupers;
+    let triesRemaining = 20;
+    while (triesRemaining > 0 && supersToSpawn > 0) {
+      triesRemaining -= 1;
+      const x = spawnX();
+      const y = spawnY();
+      let overlaps = false;
+      this.playerStates.forEach((playerState) => {
+        overlaps =
+          overlaps ||
+          this.overlaps({
+            playerX: playerState.position.x,
+            playerY: playerState.position.y,
+            candidateX: x,
+            candidateY: y,
+            candidateSize: 1,
+            extraCandidateRadius: 0.5,
+          });
+      });
+      if (!overlaps && !this.pelletsByPosition[[x, y]]?.enabled) {
+        // maybe add some more jitter here?
+        this.pelletsByPosition[[x, y]] = {
+          x,
+          y,
+          enabled: true,
+          delay: Math.random() * 0.25,
+          kind: "power-pellet",
+        };
+        supersToSpawn -= 1;
+      }
+    }
+  }
+
+  maybeSpawnMorePellets({ startTime }) {
+    const spawnX = () =>
+      1 + Math.floor(Math.random() * Math.max(0, this.numSlots.horizontal - 2));
+    const spawnY = () =>
+      1 + Math.floor(Math.random() * Math.max(0, this.numSlots.vertical - 2));
+
+    this.maybeSpawnSuperPellets({ spawnX, spawnY, startTime });
+
     const enabledCount = Object.values(this.pelletsByPosition).filter(
       (pellet) => pellet.enabled
     ).length;
     const targetEnabledCount =
       0.35 * this.numSlots.horizontal * this.numSlots.vertical;
     const diff = targetEnabledCount - enabledCount;
-
-    const spawnX = () =>
-      1 + Math.floor(Math.random() * Math.max(0, this.numSlots.horizontal - 2));
-    const spawnY = () =>
-      1 + Math.floor(Math.random() * Math.max(0, this.numSlots.vertical - 2));
 
     if (diff > targetEnabledCount * 0.5) {
       let maxSpawn = Math.floor(targetEnabledCount * 0.2);
@@ -806,8 +928,6 @@ class GameEngine {
             const rand = Math.random();
             if (rand < SPECIAL_IS_A_FRUIT_CHANCE) {
               kind = "fruit";
-            } else if (rand < SPECIAL_IS_A_POWER_PELLET_CHANCE) {
-              kind = "power-pellet";
             }
           }
           this.pelletsByPosition[[x, y]].enabled = true;
@@ -959,7 +1079,7 @@ class GameEngine {
             lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
           this.maybeMove({ startTime, tickTimeMs });
           this.handleSuperDisplay({ startTime });
-          this.maybeSpawnMorePellets();
+          this.maybeSpawnMorePellets({ startTime });
         }
         // this should live int he game loop when i'm done testing.
         this.handleSuperDisplay({ startTime });

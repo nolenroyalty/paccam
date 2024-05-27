@@ -7,7 +7,7 @@ import StartScreen from "../StartScreen";
 import TimerDisplay from "../TimerDisplay";
 import ScoreDisplay from "../ScoreDisplay";
 
-const DEBUG = false;
+const DEBUG = true;
 
 function App() {
   const videoRef = React.useRef();
