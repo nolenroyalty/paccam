@@ -72,6 +72,10 @@ function App() {
     }
   }, []);
 
+  const moveToWaitingForPlayerSelect = React.useCallback(() => {
+    gameRef.current.moveToWaitingForPlayerSelect();
+  }, []);
+
   React.useEffect(() => {
     if (!videoEnabled) {
       return;
@@ -175,6 +179,7 @@ function App() {
         pacmanResultScreenState={pacmanResultScreenState}
         slotSizePx={slotSizePx}
         status={gameState.status}
+        moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
       />
     </Wrapper>
   );

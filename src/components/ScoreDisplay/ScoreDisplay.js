@@ -94,6 +94,7 @@ function ScoreDisplay({
   pacmanResultScreenState,
   slotSizePx,
   status,
+  moveToWaitingForPlayerSelect,
 }) {
   const [scores, setScores] = React.useState(null);
 

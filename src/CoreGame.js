@@ -379,6 +379,13 @@ class GameEngine {
     this._updateStatusConsumers();
   }
 
+  moveToWaitingForPlayerSelect() {
+    this.updateStatusAndConsumers(
+      WAITING_FOR_PLAYER_SELECT,
+      "moveToWaitingForPlayerSelect"
+    );
+  }
+
   generatePellets() {
     if (this.numSlots === null) {
       throw new Error("BUG: numSlots is not set.");
