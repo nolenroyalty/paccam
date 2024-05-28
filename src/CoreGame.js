@@ -17,7 +17,7 @@ import {
   validTransition,
   shouldProcessGameLoop,
 } from "./STATUS";
-import { EATEN, GHOST, NORMAL } from "./PACMANSTATE";
+import { EATEN, GHOST, NORMAL, FADED, SUPER } from "./PACMANSTATE";
 
 const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_TRACKING_CONFIDENCE = 0.3;
@@ -32,7 +32,7 @@ const MINIMUM_NOSE_UPNESS = 0.33;
 const MAXIMUM_NOSE_DOWNNESS = 0.73;
 const SECONDS_IN_ROUND = 30;
 const COUNT_IN_TIME = 3;
-const IGNORE_MISSING_RESULTS = false;
+const IGNORE_MISSING_RESULTS = true;
 const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
 const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
@@ -43,6 +43,7 @@ const DEFAULT_SUPER_DURATION = 5.3;
 const EAT_RECOVERY_TIME = 1.5;
 const IMMEDIATELY_EAT = false;
 const MAX_PLAYERS = 4;
+const TIME_TO_TOGGLE_BETWEEN_GHOST_STATES = 250;
 
 const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
   lower: 8,
@@ -100,8 +101,9 @@ class GameEngine {
     this.debugConsumers = [];
     this.stagedDebugUpdate = [];
     this.playerStates = [];
-    this.ghostStateConsumers = [];
+    this.pacmanStateConsumers = [];
     this.pelletsByPosition = {};
+    this.superStatus = { player: null, endSuperAt: null };
     this.numSlots = null;
     this.status = WAITING_FOR_VIDEO;
     this.numPlayers = null;
@@ -111,10 +113,9 @@ class GameEngine {
   enableSuper({ playerNum }) {
     const now = performance.now();
     const endSuperAt = now + DEFAULT_SUPER_DURATION * 1000;
-    const x = this.playerStates[playerNum];
-    x.endSuperAt = endSuperAt;
     this.sounds.super.currentTime = 0;
     this.sounds.super.play();
+    this.superStatus = { playerNum: playerNum, endSuperAt };
     this.disableOtherSuperPellets();
   }
 
@@ -191,12 +192,10 @@ class GameEngine {
         slotsToMove: 0,
         score: 0,
         playerNum,
-        endSuperAt: 0,
-        ghostState: {
-          stateTransitionStartTime: 0,
-          state: NORMAL,
-          eatRecoveryTime: 0,
-        },
+        pacmanState: NORMAL,
+        eatRecoveryTime: null,
+        slotToMoveFrom: null,
+        slotToMoveTo: null,
       };
     });
     console.log(`INITIALIZED PLAYERS: ${JSON.stringify(this.playerStates)}`);
@@ -238,6 +237,22 @@ class GameEngine {
     });
   }
 
+  subscribeToPacmanState({ playerNum, callback }) {
+    this.pacmanStateConsumers.push({ playerNum, callback });
+    callback(this.playerStates[playerNum].pacmanState);
+  }
+
+  updateRelevantPacmanStateConsumers({ playerNum }) {
+    const state = this.playerStates[playerNum].pacmanState;
+    this.pacmanStateConsumers.forEach(
+      ({ playerNum: consumerPlayerNum, callback }) => {
+        if (playerNum === consumerPlayerNum) {
+          callback(state);
+        }
+      }
+    );
+  }
+
   updateRelevantFaceStateConsumers({
     playerNum,
     jawIsOpen,
@@ -269,25 +284,6 @@ class GameEngine {
     this.faceStateConsumers.push({ playerNum, callback });
     // We don't store maxY, etc in state so we can't push them a snapshot.
     // seems...fine?
-  }
-
-  updateRelevantGhostStateConsumers({ playerNum, startTime }) {
-    this.ghostStateConsumers.forEach(
-      ({ playerNum: consumerPlayerNum, callback }) => {
-        if (playerNum === consumerPlayerNum) {
-          let state = this.playerStates[playerNum].ghostState.state;
-          const result = { state, eatenAmount: 1 };
-          callback(result);
-        }
-      }
-    );
-  }
-
-  subscribeToGhostState({ playerNum, callback }) {
-    this.ghostStateConsumers.push({ playerNum, callback });
-    this.updateRelevantGhostStateConsumers({
-      playerNum,
-    });
   }
 
   updatePositionConsumers({
@@ -451,7 +447,7 @@ class GameEngine {
     if (currentState.slotsToMove < 2) {
       currentState.slotsToMove += SLOTS_MOVED_PER_MOUTH_MOVE;
     } else {
-      console.log(`DROPPING MOVEMENT FOR ${playerNum}`);
+      console.debug(`DROPPING MOVEMENT FOR ${playerNum}`);
     }
   }
 
@@ -670,7 +666,7 @@ class GameEngine {
     return distance < PLAYER_SIZE_IN_SLOTS / 2 + extraCandidateRadius;
   }
 
-  updatePelletsForPosition() {
+  updatePelletsForPosition({ startTime }) {
     let updated = false;
 
     this.playerStates.forEach((playerState) => {
@@ -685,7 +681,7 @@ class GameEngine {
         });
         const isEaten = this.isEaten({
           playerNum: playerState.playerNum,
-          startTime: this.time,
+          startTime,
         });
         if (!isEaten && overlaps && pellet.enabled) {
           let scoreAmount;
@@ -759,11 +755,9 @@ class GameEngine {
         playerState.slotsToMove = 0;
       }
     } else if (isEaten) {
-      const amountEaten =
-        1 -
-        (playerState.ghostState.eatRecoveryTime - startTime) /
-          1000 /
-          EAT_RECOVERY_TIME;
+      const secondsRemaining = (playerState.eatRecoveryTime - startTime) / 1000;
+      const percentRemaining = secondsRemaining / EAT_RECOVERY_TIME;
+      const amountEaten = 1 - percentRemaining;
       if (amountEaten > 0) {
         const startX = playerState.slotToMoveFrom.x;
         const startY = playerState.slotToMoveFrom.y;
@@ -772,22 +766,12 @@ class GameEngine {
 
         const curX = startX + (endX - startX) * amountEaten;
         const curY = startY + (endY - startY) * amountEaten;
-        console.log(`
-          ${playerState.playerNum} is eaten.
-          startX: ${startX},
-          startY: ${startY},
-          endX: ${endX},
-          endY: ${endY},
-          curX: ${curX},
-          curY: ${curY},
-          amountEaten: ${amountEaten}
-          `);
         playerState.position = { x: curX, y: curY };
         isMoving = true;
       } else {
         console.error(
           `ERROR: ${playerState.playerNum} is eaten but AMOUNTEATEN not > 0. 
-            recoveryTime: ${playerState.ghostState.eatRecoveryTime},
+            recoveryTime: ${playerState.eatRecoveryTime},
             startTime: ${startTime},
             amountEaten: ${amountEaten}`
         );
@@ -796,19 +780,11 @@ class GameEngine {
     return isMoving;
   }
 
-  superThatIsTheFurthestOut() {
-    return Math.max(...this.playerStates.map((x) => x.endSuperAt));
-  }
-
   eatPlayer({ startTime, ghostPlayerState }) {
-    ghostPlayerState.ghostState.state = EATEN;
-    ghostPlayerState.ghostState.eatRecoveryTime =
-      startTime + EAT_RECOVERY_TIME * 1000;
+    ghostPlayerState.pacmanState = EATEN;
+    ghostPlayerState.eatRecoveryTime = startTime + EAT_RECOVERY_TIME * 1000;
     ghostPlayerState.slotsToMove = 0;
-    this.updateRelevantGhostStateConsumers({
-      startTime,
-      playerNum: ghostPlayerState.playerNum,
-    });
+
     this.sounds.die.currentTime = 0;
     this.sounds.die.play();
 
@@ -829,20 +805,23 @@ class GameEngine {
 
     ghostPlayerState.slotToMoveFrom = ghostPlayerState.position;
     ghostPlayerState.slotToMoveTo = slotToMoveTo;
+    this.updateRelevantPacmanStateConsumers({
+      playerNum: ghostPlayerState.playerNum,
+    });
   }
 
   maybeEatGhosts({ startTime }) {
-    const superThatIsTheFurthestOut = this.superThatIsTheFurthestOut();
-    const isSuperActive = superThatIsTheFurthestOut > startTime;
+    const { endSuperAt, playerNum: superPlayerNum } = this.superStatus;
+    const isSuperActive = endSuperAt > startTime;
     if (!isSuperActive) {
       return;
     }
     const superActivePlayers = this.playerStates.filter(
-      (x) => x.endSuperAt > startTime
+      (x) => x.playerNum === superPlayerNum
     );
     const eatableCandidates = this.playerStates.filter((x) => {
-      const superNotActive = x.endSuperAt <= startTime;
-      const notEaten = x.ghostState.eatRecoveryTime <= startTime;
+      const superNotActive = x.playerNum !== superPlayerNum;
+      const notEaten = !this.isEaten({ playerNum: x.playerNum, startTime });
       return superNotActive && notEaten;
     });
 
@@ -884,7 +863,7 @@ class GameEngine {
 
     this.handleAudio({ isMoving });
     if (isMoving) {
-      this.updatePelletsForPosition();
+      this.updatePelletsForPosition({ startTime });
       this.maybeEatGhosts({ startTime });
       this.updatePositionConsumers({ startTime });
     }
@@ -897,7 +876,7 @@ class GameEngine {
   }
 
   superIsActive({ startTime }) {
-    return this.superThatIsTheFurthestOut() > startTime;
+    return this.superStatus.endSuperAt > startTime;
   }
 
   maybeSpawnSuperPellets({ spawnX, spawnY, startTime }) {
@@ -1044,92 +1023,48 @@ class GameEngine {
   }
 
   isEaten({ playerNum, startTime }) {
-    return this.playerStates[playerNum].ghostState.eatRecoveryTime > startTime;
+    return this.playerStates[playerNum].eatRecoveryTime > startTime;
   }
 
-  handleSuperDisplay({ startTime }) {
+  transitionPacmanStates({ startTime }) {
     const superIsActive = this.superIsActive({ startTime });
+    const fadedOrNormal = ({ diff }) => {
+      if (diff < 0) {
+        console.error(`BUG: fadedOrNormal called when super is not active.`);
+      }
+      const mod = Math.floor(diff / TIME_TO_TOGGLE_BETWEEN_GHOST_STATES);
+      return mod % 2 === 1 ? FADED : GHOST;
+    };
 
-    if (!superIsActive) {
-      this.playerStates.forEach((playerState) => {
-        const currentState = playerState.ghostState.state;
-        const targetState = this.isEaten({
-          playerNum: playerState.playerNum,
-          startTime,
-        })
-          ? EATEN
-          : NORMAL;
-        if (currentState !== targetState) {
-          playerState.ghostState = {
-            ...playerState.ghostState,
-            stateTransitionStartTime: startTime,
-            state: targetState,
-          };
-          this.updateRelevantGhostStateConsumers({
-            playerNum: playerState.playerNum,
-            startTime,
-          });
-        }
-      });
-      return;
-    }
-
-    const superThatIsTheFurthestOut = this.superThatIsTheFurthestOut();
-    const timeRemaining = superThatIsTheFurthestOut - startTime;
-    const isHalfOver = timeRemaining < (DEFAULT_SUPER_DURATION * 1000) / 2;
     this.playerStates.forEach((playerState) => {
-      const isInSuper = playerState.endSuperAt > startTime;
+      let targetState = NORMAL;
       const isEaten = this.isEaten({
         playerNum: playerState.playerNum,
         startTime,
       });
-      if (!isInSuper) {
-        if (!isHalfOver) {
-          const oldState = playerState.ghostState.state;
-          const targetState = isEaten ? EATEN : GHOST;
-          playerState.ghostState = {
-            ...playerState.ghostState,
-            stateTransitionStartTime: startTime,
-            state: targetState,
-          };
-          if (oldState !== targetState) {
-            this.updateRelevantGhostStateConsumers({
-              playerNum: playerState.playerNum,
-              startTime,
-            });
-          }
+      const isSuper = playerState.playerNum === this.superStatus.playerNum;
+      if (superIsActive && isSuper) {
+        targetState = SUPER;
+      } else if (isEaten) {
+        targetState = EATEN;
+      } else if (superIsActive) {
+        const superTime = this.superStatus.endSuperAt;
+        if (superTime < startTime) {
+          targetState = NORMAL;
+          console.error(
+            `BUG: superTime < startTime | ${playerState.playerNum}`
+          );
         } else {
-          const transitionStartTime =
-            playerState.ghostState.stateTransitionStartTime;
-          const diff = startTime - transitionStartTime;
-          // always snap to NORMAL after being eaten
-          const newState =
-            playerState.ghostState.state !== NORMAL ? NORMAL : GHOST;
-          const targetState = isEaten ? EATEN : newState;
-          if (diff > 250) {
-            // nroyalty: prevent this from transitioning right at the end?
-            playerState.ghostState = {
-              ...playerState.ghostState,
-              stateTransitionStartTime: startTime,
-              state: targetState,
-            };
-            this.updateRelevantGhostStateConsumers({
-              playerNum: playerState.playerNum,
-              startTime,
-            });
-          }
+          const diff = superTime - startTime;
+          const inFirstHalf = diff > (DEFAULT_SUPER_DURATION * 1000) / 2;
+          targetState = inFirstHalf ? GHOST : fadedOrNormal({ diff });
         }
       }
-    });
-  }
 
-  updateEatenGhosts({ startTime }) {
-    this.playerStates.forEach((playerState) => {
-      // this is ugly, but whatever.
-      if (playerState.ghostState.eatRecoveryTime !== 0) {
-        this.updateRelevantGhostStateConsumers({
+      if (playerState.pacmanState !== targetState) {
+        playerState.pacmanState = targetState;
+        this.updateRelevantPacmanStateConsumers({
           playerNum: playerState.playerNum,
-          startTime,
         });
       }
     });
@@ -1159,10 +1094,8 @@ class GameEngine {
           this.maybeMove({ startTime, tickTimeMs });
           this.maybeSpawnMorePellets({ startTime });
         }
-        // this should live int he game loop when i'm done testing.
-        this.handleSuperDisplay({ startTime });
-        this.updateEatenGhosts({ startTime });
-
+        // this should live in the game loop when i'm done testing.
+        this.transitionPacmanStates({ startTime });
         lastVideoTime = startTime;
       }
       requestAnimationFrame(loop.bind(this));

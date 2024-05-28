@@ -7,7 +7,7 @@ import StartScreen from "../StartScreen";
 import TimerDisplay from "../TimerDisplay";
 import ScoreDisplay from "../ScoreDisplay";
 
-const DEBUG = true;
+const DEBUG = false;
 
 function App() {
   const videoRef = React.useRef();
@@ -115,8 +115,13 @@ function App() {
         alt=""
       />
       <HiddenImage
-        ref={(node) => (spriteSheets.current["blue"] = node)}
+        ref={(node) => (spriteSheets.current["ghost"] = node)}
         src="/aseprite/pacman-blue.png"
+        alt=""
+      />
+      <HiddenImage
+        ref={(node) => (spriteSheets.current["super"] = node)}
+        src="/aseprite/pacman-super.png"
         alt=""
       />
       <GameHolderOverlapping>
