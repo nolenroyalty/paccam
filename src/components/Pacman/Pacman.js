@@ -176,7 +176,7 @@ function Pacman({
     const spriteX = xIdx * 32;
     let spriteAlpha = 1;
     if (pacmanSpriteState === GHOST) {
-      spriteAlpha = 0.5;
+      spriteAlpha = 0.8;
     } else if (pacmanSpriteState === FADED) {
       spriteAlpha = 0.5;
     }

@@ -116,7 +116,7 @@ function App() {
       />
       <HiddenImage
         ref={(node) => (spriteSheets.current["ghost"] = node)}
-        src="/aseprite/pacman-blue.png"
+        src="/aseprite/pacman-ghost.png"
         alt=""
       />
       <HiddenImage
