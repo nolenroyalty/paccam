@@ -44,6 +44,7 @@ const EAT_RECOVERY_TIME = 1.5;
 const IMMEDIATELY_EAT = false;
 const MAX_PLAYERS = 4;
 const TIME_TO_TOGGLE_BETWEEN_GHOST_STATES = 400;
+const SPEED_MULTIPLIER_IF_SUPER = 1.2;
 
 const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
   lower: 8,
@@ -853,9 +854,12 @@ class GameEngine {
     const maxSlotsToConsume = secondsOfMovement * SLOTS_MOVED_PER_SECOND;
     let isMoving = false;
     for (let i = 0; i < this.numPlayers; i++) {
+      const isSuper =
+        this.superIsActive({ startTime }) && this.superStatus.playerNum === i;
+      const mult = isSuper ? SPEED_MULTIPLIER_IF_SUPER : 1;
       const didMove = this.handleIndividualMove({
         startTime,
-        maxSlotsToConsume,
+        maxSlotsToConsume: maxSlotsToConsume * mult,
         playerState: this.playerStates[i],
       });
       isMoving = isMoving || didMove;
