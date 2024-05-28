@@ -20,6 +20,7 @@ import {
 import { EATEN, GHOST, NORMAL } from "./PACMANSTATE";
 
 const MIN_DETECTION_CONFIDENCE = 0.4;
+const MIN_TRACKING_CONFIDENCE = 0.3;
 const MIN_SUPPRESSION_THRESHOLD = 0.1;
 
 // this is normally 0.48
@@ -31,7 +32,7 @@ const MINIMUM_NOSE_UPNESS = 0.33;
 const MAXIMUM_NOSE_DOWNNESS = 0.73;
 const SECONDS_IN_ROUND = 30;
 const COUNT_IN_TIME = 3;
-const IGNORE_MISSING_RESULTS = true;
+const IGNORE_MISSING_RESULTS = false;
 const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
 const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
@@ -72,6 +73,7 @@ async function createFaceLandmarker({ numFaces }) {
       runningMode: "VIDEO",
       numFaces: numFaces,
       minFaceDetectionConfidence: MIN_DETECTION_CONFIDENCE,
+      minTrackingConfidence: MIN_TRACKING_CONFIDENCE,
       minSuppressionThreshold: MIN_SUPPRESSION_THRESHOLD,
     });
   }
