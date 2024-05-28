@@ -27,6 +27,7 @@ function Pacman({
   const [pacmanSpriteState, setPacmanSpriteState] = React.useState(NORMAL);
   const [maxJawState, setMaxJawState] = React.useState(0);
   const [videoCoordinates, setVideoCoordinates] = React.useState(null);
+  const id = React.useId();
 
   React.useEffect(() => {
     const updateFaceState = ({
@@ -48,16 +49,26 @@ function Pacman({
       throw new Error("BUG: gameRef.current is not set.");
     }
 
-    gameRef.current.subscribeToFaceState({
+    const game = gameRef.current;
+
+    game.subscribeToFaceState({
       callback: updateFaceState,
       playerNum,
+      id,
     });
-    gameRef.current.subscribeToPosition({ callback: setCoords, playerNum });
-    gameRef.current.subscribeToPacmanState({
+    game.subscribeToPosition({ callback: setCoords, playerNum, id });
+    game.subscribeToPacmanState({
       callback: setPacmanSpriteState,
       playerNum,
+      id,
     });
-  }, [gameRef, playerNum]);
+
+    return () => {
+      game.unsubscribeFromFaceState(playerNum);
+      game.unsubscribeFromPosition(playerNum);
+      game.unsubscribeFromPacmanState(playerNum);
+    };
+  }, [gameRef, id, playerNum]);
 
   const drawCurrentSprite = React.useCallback(
     ({ outline, ctx, spriteX, spriteKind }) => {

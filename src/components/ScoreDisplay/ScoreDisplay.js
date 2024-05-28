@@ -3,6 +3,7 @@ import styled, { keyframes } from "styled-components";
 import { SHOWING_RESULTS, COMPLETED_ROUND } from "../../STATUS";
 import { PLAYER_SIZE_IN_SLOTS } from "../../constants";
 import { COLORS } from "../../COLORS";
+import Button from "../Button";
 
 /* The original intention here was to animate the score text and pacman faces
 so that they go directly from their location on the playfield to their
@@ -160,6 +161,15 @@ function ScoreDisplay({
           status={status}
         />
       )}
+      {(status === SHOWING_RESULTS || status === COMPLETED_ROUND) && (
+        <RestartButton
+          style={{ "--opacity": status === SHOWING_RESULTS ? 1 : 0 }}
+          onClick={moveToWaitingForPlayerSelect}
+          size="large"
+        >
+          Restart
+        </RestartButton>
+      )}
     </Wrapper>
   );
 }
@@ -172,8 +182,8 @@ const Wrapper = styled.div`
     "p1 result1 p2"
     "p1 result2 p2"
     "p3 result3 p4"
-    "p3 result4 p4";
-
+    "p3 result4 p4"
+    "p3 restart p4";
   position: absolute;
   top: 0;
   right: 0;
@@ -226,6 +236,15 @@ const PlayerScoreDisplay = styled.div`
   justify-content: var(--justify-content);
   align-self: var(--align-self);
   grid-area: var(--grid-area);
+`;
+
+const RestartButton = styled(Button)`
+  grid-area: restart;
+  opacity: var(--opacity);
+  transition: opacity 1s ease-out;
+  justify-self: center;
+  align-self: center;
+  pointer-events: auto;
 `;
 
 const FadeAndDropIn = keyframes`

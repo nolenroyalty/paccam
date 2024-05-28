@@ -23,6 +23,9 @@ const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_TRACKING_CONFIDENCE = 0.3;
 const MIN_SUPPRESSION_THRESHOLD = 0.1;
 
+const SECONDS_IN_ROUND = 30; // 30
+const COUNT_IN_TIME = 3; // 3
+
 // this is normally 0.48
 const JAW_OPEN_THRESHOLD = 0.34;
 const JAW_CLOSE_THRESHOLD = 0.125;
@@ -30,9 +33,7 @@ const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.6;
 const MINIMUM_NOSE_UPNESS = 0.33;
 const MAXIMUM_NOSE_DOWNNESS = 0.73;
-const SECONDS_IN_ROUND = 30;
-const COUNT_IN_TIME = 3;
-const IGNORE_MISSING_RESULTS = true;
+const IGNORE_MISSING_RESULTS = false;
 const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
 const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
@@ -238,9 +239,24 @@ class GameEngine {
     });
   }
 
-  subscribeToPacmanState({ playerNum, callback }) {
-    this.pacmanStateConsumers.push({ playerNum, callback });
+  subscribeToPacmanState({ playerNum, callback, id }) {
+    this.pacmanStateConsumers.push({ playerNum, callback, id });
     callback(this.playerStates[playerNum].pacmanState);
+  }
+
+  unsubscribeFromPacmanState({ playerNum, id }) {
+    this.pacmanStateConsumers = this.pacmanStateConsumers.filter((consumer) => {
+      // consumer.id !== id;
+      if (consumer.id === id) {
+        if (consumer.playerNum !== playerNum) {
+          console.error(
+            `ERROR: consumer playerNum ${consumer.playerNum} !== playerNum ${playerNum} but ids match`
+          );
+        }
+        return false;
+      }
+      return false;
+    });
   }
 
   updateRelevantPacmanStateConsumers({ playerNum }) {
@@ -281,10 +297,24 @@ class GameEngine {
     );
   }
 
-  subscribeToFaceState({ playerNum, callback }) {
-    this.faceStateConsumers.push({ playerNum, callback });
+  subscribeToFaceState({ playerNum, callback, id }) {
+    this.faceStateConsumers.push({ playerNum, callback, id });
     // We don't store maxY, etc in state so we can't push them a snapshot.
     // seems...fine?
+  }
+
+  unsubscribeFromFaceState({ playerNum, id }) {
+    this.faceStateConsumers = this.faceStateConsumers.filter((consumer) => {
+      if (consumer.id === id) {
+        if (consumer.playerNum !== playerNum) {
+          console.error(
+            `ERROR: consumer playerNum ${consumer.playerNum} !== playerNum ${playerNum} but ids match`
+          );
+        }
+        return false;
+      }
+      return true;
+    });
   }
 
   updatePositionConsumers({
@@ -302,11 +332,25 @@ class GameEngine {
     }
   }
 
-  subscribeToPosition({ playerNum, callback }) {
-    this.positionConsumers.push({ playerNum, callback });
+  subscribeToPosition({ playerNum, callback, id }) {
+    this.positionConsumers.push({ playerNum, callback, id });
     this.updatePositionConsumers({
       singleCalback: callback,
       singlePlayerNum: playerNum,
+    });
+  }
+
+  unsubscribeFromPosition({ playerNum, id }) {
+    this.positionConsumers = this.positionConsumers.filter((consumer) => {
+      if (consumer.id === id) {
+        if (consumer.playerNum !== playerNum) {
+          console.error(
+            `ERROR: consumer playerNum ${consumer.playerNum} !== playerNum ${playerNum} but ids match`
+          );
+        }
+        return false;
+      }
+      return true;
     });
   }
 
@@ -364,6 +408,18 @@ class GameEngine {
     if (this.slotsToMove < 2) {
       this.slotsToMove += SLOTS_MOVED_PER_MOUTH_MOVE;
     }
+  }
+
+  resetState() {
+    this.pelletsByPosition = {};
+    this.playerStates = [];
+    this.superStatus = { player: null, endSuperAt: null };
+    this.numPlayers = null;
+    this.time = null;
+
+    this.updateTimeConsumers();
+    this.updatePelletConsumers();
+    this.updateScoreConsumers();
   }
 
   updateStatusAndConsumers(status, tag = "no tag provided") {

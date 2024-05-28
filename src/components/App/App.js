@@ -73,6 +73,8 @@ function App() {
   }, []);
 
   const moveToWaitingForPlayerSelect = React.useCallback(() => {
+    gameRef.current.resetState();
+    setGameState((state) => ({ ...state, numPlayers: null }));
     gameRef.current.moveToWaitingForPlayerSelect();
   }, []);
 
@@ -184,21 +186,6 @@ function App() {
     </Wrapper>
   );
 }
-
-const DebugWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  position: absolute;
-  left: 30%;
-  top: 20%;
-  background-color: white;
-`;
-
-const DebugLabel = styled.p`
-  display: block;
-  color: black;
-  font-size: 1rem;
-`;
 
 const Wrapper = styled.div`
   display: grid;
