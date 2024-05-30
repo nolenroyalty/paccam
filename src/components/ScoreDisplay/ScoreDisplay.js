@@ -167,7 +167,7 @@ function ScoreDisplay({
           onClick={moveToWaitingForPlayerSelect}
           size="large"
         >
-          Restart
+          Play Again
         </RestartButton>
       )}
     </Wrapper>

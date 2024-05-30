@@ -64,9 +64,9 @@ function Pacman({
     });
 
     return () => {
-      game.unsubscribeFromFaceState(playerNum);
-      game.unsubscribeFromPosition(playerNum);
-      game.unsubscribeFromPacmanState(playerNum);
+      game.unsubscribeFromFaceState({ playerNum, id });
+      game.unsubscribeFromPosition({ playerNum, id });
+      game.unsubscribeFromPacmanState({ playerNum, id });
     };
   }, [gameRef, id, playerNum]);
 
