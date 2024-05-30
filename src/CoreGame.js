@@ -48,6 +48,8 @@ const MAX_PLAYERS = 4;
 const TIME_TO_TOGGLE_BETWEEN_GHOST_STATES = 400;
 const SPEED_MULTIPLIER_IF_SUPER = 1.2;
 
+const TOGGLE_FACE_STATE_EVERY_N_MS = 500;
+
 const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
   lower: 8,
   upper: 16,
@@ -91,6 +93,14 @@ function invertLandmarks(landmarks) {
     y: landmark.y,
     z: landmark.z,
   }));
+}
+
+function moveWithoutMouthMovement({ playerNum }) {
+  return playerNum !== 0;
+}
+
+function automaticallyToggleMouthMovement({ playerNum }) {
+  return playerNum === 1;
 }
 
 class GameEngine {
@@ -183,23 +193,30 @@ class GameEngine {
     }
   }
 
+  initialState({ playerNum }) {
+    const { x, y } = this.spawnLocation({ playerNum });
+    return {
+      position: { x, y },
+      direction: "center",
+      mouthIsActuallyOpen: false,
+      displayMouthAsOpen: false,
+      slotsToMove: 0,
+      score: 0,
+      playerNum,
+      pacmanState: NORMAL,
+      eatRecoveryTime: null,
+      slotToMoveFrom: null,
+      slotToMoveTo: null,
+      lastTrackedMouthStateChange: 0,
+      lastAutomatedMouthStateChange: 0,
+    };
+  }
+
   initNumPlayers(numPlayers) {
     this.updateStatusAndConsumers(WAITING_TO_START_ROUND, "initNumPlayers");
     this.numPlayers = numPlayers;
     this.playerStates = range(numPlayers).map((playerNum) => {
-      const { x, y } = this.spawnLocation({ playerNum });
-      return {
-        position: { x, y },
-        direction: "center",
-        jawIsOpen: false,
-        slotsToMove: 0,
-        score: 0,
-        playerNum,
-        pacmanState: NORMAL,
-        eatRecoveryTime: null,
-        slotToMoveFrom: null,
-        slotToMoveTo: null,
-      };
+      return this.initialState({ playerNum });
     });
     console.log(`INITIALIZED PLAYERS: ${JSON.stringify(this.playerStates)}`);
     this.updatePositionConsumers();
@@ -273,7 +290,7 @@ class GameEngine {
 
   updateRelevantFaceStateConsumers({
     playerNum,
-    jawIsOpen,
+    displayMouthAsOpen,
     direction,
     jawOpenAmount,
     minY,
@@ -285,7 +302,7 @@ class GameEngine {
       ({ playerNum: consumerPlayerNum, callback }) => {
         if (playerNum === consumerPlayerNum) {
           callback({
-            jawIsOpen,
+            displayMouthAsOpen,
             direction,
             jawOpenAmount,
             minY,
@@ -516,9 +533,32 @@ class GameEngine {
     }
   }
 
+  maybeToggleDisplayedMouthState({ playerNum, startTime }) {
+    // This might need to do something clever to detect our "first" automated toggle and ensure it's the right
+    // direction, but I think that should happen automatically
+    if (!automaticallyToggleMouthMovement({ playerNum })) {
+      return this.playerStates[playerNum].mouthIsActuallyOpen;
+    }
+    const lastTrackedTime =
+      this.playerStates[playerNum].lastTrackedMouthStateChange;
+    const lastTrackedDiff = startTime - lastTrackedTime;
+    const lastAutomatedTime =
+      this.playerStates[playerNum].lastAutomatedMouthStateChange;
+    const lastAutomatedDiff = startTime - lastAutomatedTime;
+    if (lastTrackedDiff < TOGGLE_FACE_STATE_EVERY_N_MS) {
+      return this.playerStates[playerNum].mouthIsActuallyOpen;
+    }
+
+    if (lastAutomatedDiff < TOGGLE_FACE_STATE_EVERY_N_MS) {
+      return this.playerStates[playerNum].displayMouthAsOpen;
+    }
+    this.playerStates[playerNum].lastAutomatedMouthStateChange = startTime;
+    return !this.playerStates[playerNum].displayMouthAsOpen;
+  }
+
   updateIndividualFaceState({
     playerNum,
-    jawIsOpen,
+    mouthIsOpen,
     jawOpenAmount,
     vertical,
     verticalStrength,
@@ -528,6 +568,7 @@ class GameEngine {
     maxY,
     minX,
     maxX,
+    startTime,
   }) {
     let currentState = this.playerStates[playerNum];
     let direction = currentState.direction;
@@ -539,13 +580,21 @@ class GameEngine {
       direction = vertical;
     }
     currentState.direction = direction;
-    if (this.status === RUNNING_ROUND && currentState.jawIsOpen !== jawIsOpen) {
-      this.addIndividualMovement({ playerNum, currentState });
+    if (currentState.mouthIsActuallyOpen !== mouthIsOpen) {
+      currentState.lastTrackedMouthStateChange = startTime;
+      if (this.status === RUNNING_ROUND) {
+        this.addIndividualMovement({ playerNum, currentState });
+      }
     }
-    currentState.jawIsOpen = jawIsOpen;
+    currentState.mouthIsActuallyOpen = mouthIsOpen;
+    const displayMouthAsOpen = this.maybeToggleDisplayedMouthState({
+      playerNum,
+      startTime,
+    });
+    currentState.displayMouthAsOpen = displayMouthAsOpen;
     this.updateRelevantFaceStateConsumers({
       playerNum,
-      jawIsOpen,
+      displayMouthAsOpen,
       jawOpenAmount,
       direction,
       minY,
@@ -555,7 +604,12 @@ class GameEngine {
     });
   }
 
-  processIndividualResult({ playerNum, faceLandmarks, faceBlendshapes }) {
+  processIndividualResult({
+    playerNum,
+    faceLandmarks,
+    faceBlendshapes,
+    startTime,
+  }) {
     const landmarks = invertLandmarks(faceLandmarks);
     const minY = Math.min(...landmarks.map((landmark) => landmark.y));
     const maxY = Math.max(...landmarks.map((landmark) => landmark.y));
@@ -572,12 +626,12 @@ class GameEngine {
     const jawOpenDiff = (bottomLipCenter.y - topLipCenter.y) * 10;
     const jawOpenMax = Math.max(jawOpenBlend, jawOpenDiff);
 
-    let jawIsOpen;
+    let mouthIsOpen;
 
-    if (this.playerStates[playerNum].jawIsOpen) {
-      jawIsOpen = jawOpenMax > JAW_CLOSE_THRESHOLD;
+    if (this.playerStates[playerNum].mouthIsActuallyOpen) {
+      mouthIsOpen = jawOpenMax > JAW_CLOSE_THRESHOLD;
     } else {
-      jawIsOpen = jawOpenMax > JAW_OPEN_THRESHOLD;
+      mouthIsOpen = jawOpenMax > JAW_OPEN_THRESHOLD;
     }
 
     const noseRelativeHeight = nose.y - minY;
@@ -618,7 +672,7 @@ class GameEngine {
     }
     this.updateIndividualFaceState({
       playerNum,
-      jawIsOpen,
+      mouthIsOpen,
       jawOpenAmount: jawOpenMax,
       vertical,
       verticalStrength,
@@ -628,6 +682,7 @@ class GameEngine {
       maxY,
       minX,
       maxX,
+      startTime,
     });
 
     this.maybeUpdateDebugState({
@@ -647,7 +702,7 @@ class GameEngine {
     });
   }
 
-  processAllResults(results) {
+  processAllResults({ results, startTime }) {
     if (
       !results ||
       !results.faceLandmarks ||
@@ -678,6 +733,7 @@ class GameEngine {
           playerNum,
           faceLandmarks,
           faceBlendshapes,
+          startTime,
         });
       });
 
@@ -693,6 +749,7 @@ class GameEngine {
           playerNum: results.faceLandmarks.length + i,
           faceLandmarks,
           faceBlendshapes,
+          startTime,
         });
       }
     }
@@ -785,12 +842,18 @@ class GameEngine {
       playerState.slotsToMove,
       bonusMovement
     );
-    // let isMoving = slotsToConsume > 0;
-    let isMoving = true;
+
     const isEaten = this.isEaten({
       playerNum: playerState.playerNum,
       startTime,
     });
+
+    let isMoving;
+    if (moveWithoutMouthMovement({ playerNum: playerState.playerNum })) {
+      isMoving = true;
+    } else {
+      isMoving = bonusSlotsToConsume > 0;
+    }
 
     if (isMoving && !isEaten) {
       playerState.slotsToMove -= bonusSlotsToConsume;
@@ -1167,7 +1230,7 @@ class GameEngine {
       if (this.video.currentTime !== lastVideoTime) {
         const startTime = performance.now();
         const results = this.landmarker.detectForVideo(this.video, startTime);
-        this.processAllResults.bind(this)(results);
+        this.processAllResults.bind(this)({ results, startTime });
         if (this.status === RUNNING_ROUND) {
           const tickTimeMs =
             lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
