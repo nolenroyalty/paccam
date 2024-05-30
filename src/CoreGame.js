@@ -2,7 +2,8 @@ import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import {
   PLAYER_SIZE_IN_SLOTS,
   SLOTS_MOVED_PER_MOUTH_MOVE,
-  SLOTS_MOVED_PER_SECOND,
+  BASE_SLOTS_MOVED_PER_SECOND,
+  BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT,
 } from "./constants";
 import { range } from "./utils";
 import {
@@ -774,17 +775,26 @@ class GameEngine {
     }
   }
 
-  handleIndividualMove({ startTime, maxSlotsToConsume, playerState }) {
-    const slotsToConsume = Math.min(playerState.slotsToMove, maxSlotsToConsume);
-    let isMoving = slotsToConsume > 0;
+  handleIndividualMove({
+    startTime,
+    baseMovement,
+    bonusMovement,
+    playerState,
+  }) {
+    const bonusSlotsToConsume = Math.min(
+      playerState.slotsToMove,
+      bonusMovement
+    );
+    // let isMoving = slotsToConsume > 0;
+    let isMoving = true;
     const isEaten = this.isEaten({
       playerNum: playerState.playerNum,
       startTime,
     });
 
     if (isMoving && !isEaten) {
-      playerState.slotsToMove -= slotsToConsume;
-      const movementAmount = slotsToConsume;
+      playerState.slotsToMove -= bonusSlotsToConsume;
+      const movementAmount = bonusSlotsToConsume + baseMovement;
       let hitWall = false;
       if (playerState.direction === "up") {
         const min = 0;
@@ -914,7 +924,9 @@ class GameEngine {
 
   maybeMove({ startTime, tickTimeMs }) {
     const secondsOfMovement = tickTimeMs / 1000;
-    const maxSlotsToConsume = secondsOfMovement * SLOTS_MOVED_PER_SECOND;
+    const baseMovement = secondsOfMovement * BASE_SLOTS_MOVED_PER_SECOND;
+    const bonusMovement =
+      secondsOfMovement * BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT;
     let isMoving = false;
     for (let i = 0; i < this.numPlayers; i++) {
       const isSuper =
@@ -922,7 +934,8 @@ class GameEngine {
       const mult = isSuper ? SPEED_MULTIPLIER_IF_SUPER : 1;
       const didMove = this.handleIndividualMove({
         startTime,
-        maxSlotsToConsume: maxSlotsToConsume * mult,
+        baseMovement: baseMovement * mult,
+        bonusMovement: bonusMovement * mult,
         playerState: this.playerStates[i],
       });
       isMoving = isMoving || didMove;
