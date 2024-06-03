@@ -31,7 +31,7 @@ function Pacman({
 
   React.useEffect(() => {
     const updateFaceState = ({
-      displayMouthAsOpen,
+      mouthIsOpen,
       jawOpenAmount,
       direction,
       minY,
@@ -40,7 +40,7 @@ function Pacman({
       maxX,
     }) => {
       setDirection(direction);
-      setMouthState(displayMouthAsOpen ? "open" : "closed");
+      setMouthState(mouthIsOpen ? "open" : "closed");
       setVideoCoordinates({ minY, maxY, minX, maxX });
       setMaxJawState((prev) => Math.max(prev, jawOpenAmount));
     };

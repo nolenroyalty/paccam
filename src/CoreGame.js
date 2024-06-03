@@ -190,8 +190,7 @@ class GameEngine {
     return {
       position: { x, y },
       direction: "center",
-      mouthIsActuallyOpen: false,
-      displayMouthAsOpen: false,
+      mouthIsOpen: false,
       slotsToMove: 0,
       score: 0,
       playerNum,
@@ -199,8 +198,6 @@ class GameEngine {
       eatRecoveryTime: null,
       slotToMoveFrom: null,
       slotToMoveTo: null,
-      lastTrackedMouthStateChange: 0,
-      lastAutomatedMouthStateChange: 0,
     };
   }
 
@@ -282,7 +279,7 @@ class GameEngine {
 
   updateRelevantFaceStateConsumers({
     playerNum,
-    displayMouthAsOpen,
+    mouthIsOpen,
     direction,
     jawOpenAmount,
     minY,
@@ -294,7 +291,7 @@ class GameEngine {
       ({ playerNum: consumerPlayerNum, callback }) => {
         if (playerNum === consumerPlayerNum) {
           callback({
-            displayMouthAsOpen,
+            mouthIsOpen,
             direction,
             jawOpenAmount,
             minY,
@@ -525,29 +522,6 @@ class GameEngine {
     }
   }
 
-  maybeToggleDisplayedMouthState({ playerNum, startTime }) {
-    // This might need to do something clever to detect our "first" automated toggle and ensure it's the right
-    // direction, but I think that should happen automatically
-    if (this.status !== RUNNING_ROUND) {
-      return this.playerStates[playerNum].mouthIsActuallyOpen;
-    }
-    const lastTrackedTime =
-      this.playerStates[playerNum].lastTrackedMouthStateChange;
-    const lastTrackedDiff = startTime - lastTrackedTime;
-    const lastAutomatedTime =
-      this.playerStates[playerNum].lastAutomatedMouthStateChange;
-    const lastAutomatedDiff = startTime - lastAutomatedTime;
-    if (lastTrackedDiff < TOGGLE_FACE_STATE_EVERY_N_MS) {
-      return this.playerStates[playerNum].mouthIsActuallyOpen;
-    }
-
-    if (lastAutomatedDiff < TOGGLE_FACE_STATE_EVERY_N_MS) {
-      return this.playerStates[playerNum].displayMouthAsOpen;
-    }
-    this.playerStates[playerNum].lastAutomatedMouthStateChange = startTime;
-    return !this.playerStates[playerNum].displayMouthAsOpen;
-  }
-
   updateIndividualFaceState({
     playerNum,
     mouthIsOpen,
@@ -572,22 +546,16 @@ class GameEngine {
       direction = vertical;
     }
     currentState.direction = direction;
-    if (currentState.mouthIsActuallyOpen !== mouthIsOpen) {
-      currentState.lastTrackedMouthStateChange = startTime;
+    if (currentState.mouthIsOpen !== mouthIsOpen) {
       if (this.status === RUNNING_ROUND) {
         this.addIndividualMovement({ playerNum, currentState });
       }
     }
-    currentState.mouthIsActuallyOpen = mouthIsOpen;
+    currentState.mouthIsOpen = mouthIsOpen;
 
-    const displayMouthAsOpen = this.maybeToggleDisplayedMouthState({
-      playerNum,
-      startTime,
-    });
-    currentState.displayMouthAsOpen = displayMouthAsOpen;
     this.updateRelevantFaceStateConsumers({
       playerNum,
-      displayMouthAsOpen,
+      mouthIsOpen,
       jawOpenAmount,
       direction,
       minY,
@@ -621,7 +589,7 @@ class GameEngine {
 
     let mouthIsOpen;
 
-    if (this.playerStates[playerNum].mouthIsActuallyOpen) {
+    if (this.playerStates[playerNum].mouthIsOpen) {
       mouthIsOpen = jawOpenMax > JAW_CLOSE_THRESHOLD;
     } else {
       mouthIsOpen = jawOpenMax > JAW_OPEN_THRESHOLD;
