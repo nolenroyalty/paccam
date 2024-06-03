@@ -21,8 +21,10 @@ function Pacman({
 }) {
   const canvasRef = React.useRef();
   const myRef = React.useRef();
+  const dupeCanvasRef = React.useRef();
   const [coords, setCoords] = React.useState(null);
-  const [duplicatedPosition, setDuplicatedPosition] = React.useState(null);
+  const [displayDupe, setDisplayDupe] = React.useState(false);
+  const [dupePosition, setDupePosition] = React.useState(null);
   const [direction, setDirection] = React.useState("center");
   const [mouthState, setMouthState] = React.useState("closed");
   const [pacmanSpriteState, setPacmanSpriteState] = React.useState(NORMAL);
@@ -60,7 +62,14 @@ function Pacman({
     game.subscribeToPosition({
       callback: ({ position, duped }) => {
         setCoords(position);
-        setDuplicatedPosition(duped);
+        if (duped !== null) {
+          setDupePosition(duped);
+          setDisplayDupe(true);
+        } else {
+          dupeCanvasRef.current = null;
+          setDisplayDupe(false);
+          setDupePosition(null);
+        }
       },
       playerNum,
       id,
@@ -207,6 +216,21 @@ function Pacman({
       spriteAlpha,
       spriteKind: pacmanSpriteState,
     });
+
+    if (displayDupe && dupeCanvasRef.current) {
+      const dupeCtx = dupeCanvasRef.current.getContext("2d");
+      dupeCtx.save();
+      dupeCtx.clearRect(0, 0, PLAYER_CANVAS_SIZE, PLAYER_CANVAS_SIZE);
+      drawPlayerToCanvas({
+        ctx: dupeCtx,
+        spriteX,
+        videoCoordinates,
+        spriteAlpha,
+        spriteKind: pacmanSpriteState,
+      });
+      dupeCtx.restore();
+    }
+
     ctx.restore();
   }, [
     coords,
@@ -217,6 +241,7 @@ function Pacman({
     spriteSheet,
     videoCoordinates,
     videoRef,
+    displayDupe,
   ]);
 
   // good proxy for "funniest image" is "the time you opened your mouth the most"
@@ -276,13 +301,20 @@ function Pacman({
           </DebugWrapper>
         ) : null}
       </Player>
-      {duplicatedPosition ? (
-        <DUPE
+      {displayDupe ? (
+        <PlayerBase
           style={{
-            "--left": `${(duplicatedPosition.x / numSlots.horizontal) * 100}%`,
-            "--top": `${(duplicatedPosition.y / numSlots.vertical) * 100}%`,
+            "--left": `${(dupePosition.x / numSlots.horizontal) * 100}%`,
+            "--top": `${(dupePosition.y / numSlots.vertical) * 100}%`,
+            "--grayscale": grayScale,
           }}
-        />
+        >
+          <InteriorCanvas
+            ref={dupeCanvasRef}
+            width={PLAYER_CANVAS_SIZE}
+            height={PLAYER_CANVAS_SIZE}
+          />
+        </PlayerBase>
       ) : null}
     </>
   ) : null;
@@ -295,17 +327,6 @@ const fadeIn = keyframes`
   to {
     opacity: 1;
   }
-`;
-
-const DUPE = styled.div`
-  position: absolute;
-  z-index: ${zIndex1};
-  width: ${PLAYER_SIZE_PERCENT}%;
-  aspect-ratio: 1/1;
-  left: var(--left);
-  top: var(--top);
-  background-color: green;
-  border-radius: 50%;
 `;
 
 const DebugWrapper = styled.div`
@@ -325,15 +346,18 @@ const DebugLabel = styled.p`
   font-size: 1.25rem;
 `;
 
-const Player = styled.div`
+const PlayerBase = styled.div`
   position: absolute;
   z-index: ${zIndex1};
   width: ${PLAYER_SIZE_PERCENT}%;
   aspect-ratio: 1/1;
   left: var(--left);
   top: var(--top);
-  animation: ${fadeIn} 0.5s forwards;
   filter: grayscale(var(--grayscale));
+`;
+
+const Player = styled(PlayerBase)`
+  animation: ${fadeIn} 0.5s forwards;
 `;
 
 const InteriorCanvas = styled.canvas`
