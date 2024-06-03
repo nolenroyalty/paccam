@@ -964,9 +964,6 @@ class GameEngine {
         const x = playerState.forceMove.from.x + xDiff * percentElapsed;
         const y = playerState.forceMove.from.y + yDiff * percentElapsed;
 
-        console.log(`FORCE MOVE: ${x}, ${y}, elapsed: ${elapsed}`);
-        console.log(`startTime: ${startTime}, endTime: ${endTime}`);
-        console.log(`JSON: ${JSON.stringify(playerState.forceMove)}`);
         playerState.position = { x, y };
       }
     });
