@@ -95,14 +95,6 @@ function invertLandmarks(landmarks) {
   }));
 }
 
-function moveWithoutMouthMovement({ playerNum }) {
-  return playerNum !== 0;
-}
-
-function automaticallyToggleMouthMovement({ playerNum }) {
-  return playerNum === 1;
-}
-
 class GameEngine {
   constructor() {
     this.faceStateConsumers = [];
@@ -536,7 +528,7 @@ class GameEngine {
   maybeToggleDisplayedMouthState({ playerNum, startTime }) {
     // This might need to do something clever to detect our "first" automated toggle and ensure it's the right
     // direction, but I think that should happen automatically
-    if (!automaticallyToggleMouthMovement({ playerNum })) {
+    if (this.status !== RUNNING_ROUND) {
       return this.playerStates[playerNum].mouthIsActuallyOpen;
     }
     const lastTrackedTime =
@@ -587,6 +579,7 @@ class GameEngine {
       }
     }
     currentState.mouthIsActuallyOpen = mouthIsOpen;
+
     const displayMouthAsOpen = this.maybeToggleDisplayedMouthState({
       playerNum,
       startTime,
@@ -848,14 +841,7 @@ class GameEngine {
       startTime,
     });
 
-    let isMoving;
-    if (moveWithoutMouthMovement({ playerNum: playerState.playerNum })) {
-      isMoving = true;
-    } else {
-      isMoving = bonusSlotsToConsume > 0;
-    }
-
-    if (isMoving && !isEaten) {
+    if (!isEaten) {
       playerState.slotsToMove -= bonusSlotsToConsume;
       const movementAmount = bonusSlotsToConsume + baseMovement;
       let hitWall = false;
@@ -904,7 +890,6 @@ class GameEngine {
         const curX = startX + (endX - startX) * amountEaten;
         const curY = startY + (endY - startY) * amountEaten;
         playerState.position = { x: curX, y: curY };
-        isMoving = true;
       } else {
         console.error(
           `ERROR: ${playerState.playerNum} is eaten but AMOUNTEATEN not > 0. 
@@ -914,7 +899,7 @@ class GameEngine {
         );
       }
     }
-    return isMoving;
+    return true;
   }
 
   eatPlayer({ startTime, ghostPlayerState }) {
@@ -976,7 +961,7 @@ class GameEngine {
         if (overlaps || (IMMEDIATELY_EAT && !didImmediatelyEat)) {
           didImmediatelyEat = true;
           console.log(
-            `EAT EAT EAT ${superPlayerState.playerNum} => ${ghostPlayerState.playerNum}`
+            `EAT ${superPlayerState.playerNum} => ${ghostPlayerState.playerNum}`
           );
           superPlayerState.score += 5;
           this.eatPlayer({ startTime, ghostPlayerState });
