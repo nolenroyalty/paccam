@@ -852,7 +852,7 @@ class GameEngine {
       }
     }
 
-    return true;
+    return bonusSlotsToConsume > 0;
   }
 
   eatPlayer({ startTime, ghostPlayerState }) {
@@ -941,20 +941,16 @@ class GameEngine {
       const isSuper =
         this.superIsActive({ startTime }) && this.superStatus.playerNum === i;
       const mult = isSuper ? SPEED_MULTIPLIER_IF_SUPER : 1;
-      const didMove = this.handleIndividualMove({
+      const didMouthMovement = this.handleIndividualMove({
         startTime,
         baseMovement: baseMovement * mult,
         bonusMovement: bonusMovement * mult,
         playerState: this.playerStates[i],
       });
-      isMoving = isMoving || didMove;
+      isMoving = isMoving || didMouthMovement;
     }
 
     this.handleAudio({ isMoving });
-    if (isMoving) {
-      this.updatePelletsForPosition({ startTime });
-      this.maybeEatGhosts({ startTime });
-    }
   }
 
   maybeForceMove({ startTime }) {
@@ -1200,6 +1196,8 @@ class GameEngine {
             lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
           this.maybeMove({ startTime, tickTimeMs });
           this.maybeSpawnMorePellets({ startTime });
+          this.updatePelletsForPosition({ startTime });
+          this.maybeEatGhosts({ startTime });
         }
         this.maybeForceMove({ startTime });
         this.updatePositionConsumers({ startTime });
