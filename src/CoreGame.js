@@ -168,23 +168,32 @@ class GameEngine {
     );
   }
 
-  spawnLocation({ playerNum }) {
+  /* bug here on small screens? */
+  spawnLocation({ playerNum, waiting }) {
+    const xOffset = waiting ? this.numSlots.horizontal / 4 : 0;
+    const yOffset = waiting ? this.numSlots.vertical / 4 : 0;
     if (playerNum === 0) {
-      return { x: 0, y: 0 };
+      return { x: xOffset, y: yOffset };
     } else if (playerNum === 1) {
-      return { x: this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS, y: 0 };
+      return {
+        x: this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS - xOffset,
+        y: yOffset,
+      };
     } else if (playerNum === 2) {
-      return { x: 0, y: this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS };
+      return {
+        x: xOffset,
+        y: this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS - yOffset,
+      };
     } else if (playerNum === 3) {
       return {
-        x: this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS,
-        y: this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS,
+        x: this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS - xOffset,
+        y: this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS - yOffset,
       };
     }
   }
 
   initialState({ playerNum }) {
-    const { x, y } = this.spawnLocation({ playerNum });
+    const { x, y } = this.spawnLocation({ playerNum, waiting: true });
     return {
       position: { x, y },
       direction: "center",
@@ -1092,11 +1101,26 @@ class GameEngine {
     }, 1000);
   }
 
+  movePlayersToStartingLocation() {
+    const startTime = performance.now();
+    const totalTime = (COUNT_IN_TIME * 1000) / 1.15;
+    const endTime = startTime + totalTime;
+    this.playerStates.forEach((playerState) => {
+      const to = this.spawnLocation({
+        playerNum: playerState.playerNum,
+        waiting: false,
+      });
+      const from = playerState.position;
+      playerState.forceMove = { from, to, startTime, totalTime, endTime };
+    });
+  }
+
   countInRound() {
     this.updateStatusAndConsumers(COUNTING_IN_ROUND, "countInRound");
     this.time = "starting";
     this.sounds.start.currentTime = 0;
     this.sounds.start.play();
+    this.movePlayersToStartingLocation();
 
     const intervalId = setInterval(() => {
       if (this.time === "starting") {
