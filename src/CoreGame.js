@@ -200,9 +200,6 @@ class GameEngine {
         startTime: null,
         totalTime: null,
       },
-
-      slotToMoveFrom: null,
-      slotToMoveTo: null,
     };
   }
 
@@ -886,8 +883,6 @@ class GameEngine {
       endTime: startTime + EAT_RECOVERY_TIME * 1000,
     };
 
-    ghostPlayerState.slotToMoveFrom = ghostPlayerState.position;
-    ghostPlayerState.slotToMoveTo = slotToMoveTo;
     this.updateRelevantPacmanStateConsumers({
       playerNum: ghostPlayerState.playerNum,
     });
