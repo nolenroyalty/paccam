@@ -22,6 +22,7 @@ function Pacman({
   const canvasRef = React.useRef();
   const myRef = React.useRef();
   const [coords, setCoords] = React.useState(null);
+  const [duplicatedPosition, setDuplicatedPosition] = React.useState(null);
   const [direction, setDirection] = React.useState("center");
   const [mouthState, setMouthState] = React.useState("closed");
   const [pacmanSpriteState, setPacmanSpriteState] = React.useState(NORMAL);
@@ -56,7 +57,14 @@ function Pacman({
       playerNum,
       id,
     });
-    game.subscribeToPosition({ callback: setCoords, playerNum, id });
+    game.subscribeToPosition({
+      callback: ({ position, duped }) => {
+        setCoords(position);
+        setDuplicatedPosition(duped);
+      },
+      playerNum,
+      id,
+    });
     game.subscribeToPacmanState({
       callback: setPacmanSpriteState,
       playerNum,
@@ -245,28 +253,38 @@ function Pacman({
   const grayScale = pacmanSpriteState === EATEN ? 1 : null;
 
   return coords ? (
-    <Player
-      ref={myRef}
-      data-player={`player-${playerNum}`}
-      style={{
-        "--left": `${(coords.x / numSlots.horizontal) * 100}%`,
-        "--top": `${(coords.y / numSlots.vertical) * 100}%`,
-        "--grayscale": grayScale,
-      }}
-    >
-      <InteriorCanvas
-        ref={canvasRef}
-        width={PLAYER_CANVAS_SIZE}
-        height={PLAYER_CANVAS_SIZE}
-      />
-      {debugInfo?.length > 0 ? (
-        <DebugWrapper>
-          {debugInfo.map((info, idx) => (
-            <DebugLabel key={idx}>{info}</DebugLabel>
-          ))}
-        </DebugWrapper>
+    <>
+      <Player
+        ref={myRef}
+        data-player={`player-${playerNum}`}
+        style={{
+          "--left": `${(coords.x / numSlots.horizontal) * 100}%`,
+          "--top": `${(coords.y / numSlots.vertical) * 100}%`,
+          "--grayscale": grayScale,
+        }}
+      >
+        <InteriorCanvas
+          ref={canvasRef}
+          width={PLAYER_CANVAS_SIZE}
+          height={PLAYER_CANVAS_SIZE}
+        />
+        {debugInfo?.length > 0 ? (
+          <DebugWrapper>
+            {debugInfo.map((info, idx) => (
+              <DebugLabel key={idx}>{info}</DebugLabel>
+            ))}
+          </DebugWrapper>
+        ) : null}
+      </Player>
+      {duplicatedPosition ? (
+        <DUPE
+          style={{
+            "--left": `${(duplicatedPosition.x / numSlots.horizontal) * 100}%`,
+            "--top": `${(duplicatedPosition.y / numSlots.vertical) * 100}%`,
+          }}
+        />
       ) : null}
-    </Player>
+    </>
   ) : null;
 }
 
@@ -277,6 +295,17 @@ const fadeIn = keyframes`
   to {
     opacity: 1;
   }
+`;
+
+const DUPE = styled.div`
+  position: absolute;
+  z-index: ${zIndex1};
+  width: ${PLAYER_SIZE_PERCENT}%;
+  aspect-ratio: 1/1;
+  left: var(--left);
+  top: var(--top);
+  background-color: green;
+  border-radius: 50%;
 `;
 
 const DebugWrapper = styled.div`

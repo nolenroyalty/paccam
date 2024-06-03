@@ -335,6 +335,32 @@ class GameEngine {
     });
   }
 
+  maybeDuplicate({ position }) {
+    let dupeX = position.x;
+    let dupeY = position.y;
+    let duped = false;
+    if (position.x < 0) {
+      dupeX = this.numSlots.horizontal + position.x;
+      duped = true;
+    } else if (position.x + PLAYER_SIZE_IN_SLOTS >= this.numSlots.horizontal) {
+      dupeX = position.x - this.numSlots.horizontal;
+      duped = true;
+    }
+    if (position.y < 0) {
+      dupeY = this.numSlots.vertical + position.y;
+      duped = true;
+    } else if (position.y + PLAYER_SIZE_IN_SLOTS >= this.numSlots.vertical) {
+      dupeY = position.y - this.numSlots.vertical;
+      duped = true;
+    }
+    if (duped) {
+      console.log(
+        `DUPED: ${JSON.stringify({ realX: position.x, realY: position.y, dupeX, dupeY })}`
+      );
+    }
+    return duped ? { x: dupeX, y: dupeY } : null;
+  }
+
   updatePositionConsumers({
     singleCalback = null,
     singlePlayerNum = null,
@@ -345,7 +371,8 @@ class GameEngine {
     } else {
       this.positionConsumers.forEach(({ playerNum, callback }) => {
         const position = this.playerStates[playerNum].position;
-        callback(position);
+        const duped = this.maybeDuplicate({ position });
+        callback({ position, duped });
       });
     }
   }
@@ -823,38 +850,30 @@ class GameEngine {
     if (!isEaten) {
       playerState.slotsToMove -= bonusSlotsToConsume;
       const movementAmount = bonusSlotsToConsume + baseMovement;
-      let hitWall = false;
       if (playerState.direction === "up") {
-        const min = 0;
-        playerState.position = {
-          x: playerState.position.x,
-          y: Math.max(playerState.position.y - movementAmount, min),
-        };
-        hitWall = playerState.position.y === min;
+        let y = playerState.position.y - movementAmount;
+        if (y < -PLAYER_SIZE_IN_SLOTS) {
+          y += this.numSlots.vertical;
+        }
+        playerState.position.y = y;
       } else if (playerState.direction === "down") {
-        const max = this.numSlots.vertical - PLAYER_SIZE_IN_SLOTS;
-        playerState.position = {
-          x: playerState.position.x,
-          y: Math.min(playerState.position.y + movementAmount, max),
-        };
-        hitWall = playerState.position.y === max;
+        let y = playerState.position.y + movementAmount;
+        if (y + PLAYER_SIZE_IN_SLOTS >= this.numSlots.vertical) {
+          y -= this.numSlots.vertical;
+        }
+        playerState.position.y = y;
       } else if (playerState.direction === "left") {
-        const min = 0;
-        playerState.position = {
-          x: Math.max(playerState.position.x - movementAmount, min),
-          y: playerState.position.y,
-        };
-        hitWall = playerState.position.x === min;
+        let x = playerState.position.x - movementAmount;
+        if (x < -PLAYER_SIZE_IN_SLOTS) {
+          x += this.numSlots.horizontal;
+        }
+        playerState.position.x = x;
       } else if (playerState.direction === "right") {
-        const max = this.numSlots.horizontal - PLAYER_SIZE_IN_SLOTS;
-        playerState.position = {
-          x: Math.min(playerState.position.x + movementAmount, max),
-          y: playerState.position.y,
-        };
-        hitWall = playerState.position.x === max;
-      }
-      if (hitWall) {
-        playerState.slotsToMove = 0;
+        let x = playerState.position.x + movementAmount;
+        if (x + PLAYER_SIZE_IN_SLOTS >= this.numSlots.horizontal) {
+          x -= this.numSlots.horizontal;
+        }
+        playerState.position.x = x;
       }
     }
 

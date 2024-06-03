@@ -174,15 +174,15 @@ function App() {
             sounds.current["die"] = node;
           }}
         />
+        <ScoreDisplay
+          numPlayers={gameState.numPlayers}
+          gameRef={gameRef}
+          pacmanResultScreenState={pacmanResultScreenState}
+          slotSizePx={slotSizePx}
+          status={gameState.status}
+          moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
+        />
       </GameHolderOverlapping>
-      <ScoreDisplay
-        numPlayers={gameState.numPlayers}
-        gameRef={gameRef}
-        pacmanResultScreenState={pacmanResultScreenState}
-        slotSizePx={slotSizePx}
-        status={gameState.status}
-        moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
-      />
     </Wrapper>
   );
 }
@@ -215,6 +215,8 @@ const GameHolderOverlapping = styled.div`
   /* aspect-ratio: 1 / 1; */
   outline: 12px dashed black;
   border-radius: 4px;
+  /* prevent scrollbars... */
+  overflow: hidden;
 `;
 
 export default App;
