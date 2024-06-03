@@ -48,8 +48,6 @@ const MAX_PLAYERS = 4;
 const TIME_TO_TOGGLE_BETWEEN_GHOST_STATES = 400;
 const SPEED_MULTIPLIER_IF_SUPER = 1.2;
 
-const TOGGLE_FACE_STATE_EVERY_N_MS = 500;
-
 const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
   lower: 8,
   upper: 16,
@@ -196,6 +194,13 @@ class GameEngine {
       playerNum,
       pacmanState: NORMAL,
       eatRecoveryTime: null,
+      forceMove: {
+        from: null,
+        to: null,
+        startTime: null,
+        totalTime: null,
+      },
+
       slotToMoveFrom: null,
       slotToMoveTo: null,
     };
@@ -845,28 +850,8 @@ class GameEngine {
       if (hitWall) {
         playerState.slotsToMove = 0;
       }
-    } else if (isEaten) {
-      const secondsRemaining = (playerState.eatRecoveryTime - startTime) / 1000;
-      const percentRemaining = secondsRemaining / EAT_RECOVERY_TIME;
-      const amountEaten = 1 - percentRemaining;
-      if (amountEaten > 0) {
-        const startX = playerState.slotToMoveFrom.x;
-        const startY = playerState.slotToMoveFrom.y;
-        const endX = playerState.slotToMoveTo.x;
-        const endY = playerState.slotToMoveTo.y;
-
-        const curX = startX + (endX - startX) * amountEaten;
-        const curY = startY + (endY - startY) * amountEaten;
-        playerState.position = { x: curX, y: curY };
-      } else {
-        console.error(
-          `ERROR: ${playerState.playerNum} is eaten but AMOUNTEATEN not > 0. 
-            recoveryTime: ${playerState.eatRecoveryTime},
-            startTime: ${startTime},
-            amountEaten: ${amountEaten}`
-        );
-      }
     }
+
     return true;
   }
 
@@ -892,6 +877,14 @@ class GameEngine {
         slotToMoveTo = loc;
       }
     }
+
+    ghostPlayerState.forceMove = {
+      from: ghostPlayerState.position,
+      to: slotToMoveTo,
+      startTime: startTime,
+      totalTime: EAT_RECOVERY_TIME * 1000,
+      endTime: startTime + EAT_RECOVERY_TIME * 1000,
+    };
 
     ghostPlayerState.slotToMoveFrom = ghostPlayerState.position;
     ghostPlayerState.slotToMoveTo = slotToMoveTo;
@@ -961,8 +954,26 @@ class GameEngine {
     if (isMoving) {
       this.updatePelletsForPosition({ startTime });
       this.maybeEatGhosts({ startTime });
-      this.updatePositionConsumers({ startTime });
     }
+  }
+
+  maybeForceMove({ startTime }) {
+    this.playerStates.forEach((playerState) => {
+      const endTime = playerState.forceMove.endTime;
+      if (endTime && endTime > startTime) {
+        const elapsed = startTime - playerState.forceMove.startTime;
+        const percentElapsed = elapsed / playerState.forceMove.totalTime;
+        const xDiff = playerState.forceMove.to.x - playerState.forceMove.from.x;
+        const yDiff = playerState.forceMove.to.y - playerState.forceMove.from.y;
+        const x = playerState.forceMove.from.x + xDiff * percentElapsed;
+        const y = playerState.forceMove.from.y + yDiff * percentElapsed;
+
+        console.log(`FORCE MOVE: ${x}, ${y}, elapsed: ${elapsed}`);
+        console.log(`startTime: ${startTime}, endTime: ${endTime}`);
+        console.log(`JSON: ${JSON.stringify(playerState.forceMove)}`);
+        playerState.position = { x, y };
+      }
+    });
   }
 
   numberOfSpawnedSuperPellets() {
@@ -1190,6 +1201,9 @@ class GameEngine {
           this.maybeMove({ startTime, tickTimeMs });
           this.maybeSpawnMorePellets({ startTime });
         }
+        this.maybeForceMove({ startTime });
+        this.updatePositionConsumers({ startTime });
+
         // this should live in the game loop when i'm done testing.
         this.transitionPacmanStates({ startTime });
         lastVideoTime = startTime;
