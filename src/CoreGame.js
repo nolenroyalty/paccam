@@ -5,7 +5,7 @@ import {
   BASE_SLOTS_MOVED_PER_SECOND,
   BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT,
 } from "./constants";
-import { range } from "./utils";
+import { range, easeOutPow } from "./utils";
 import {
   WAITING_FOR_VIDEO,
   WAITING_FOR_PLAYER_SELECT,
@@ -961,12 +961,22 @@ class GameEngine {
     this.playerStates.forEach((playerState) => {
       const endTime = playerState.forceMove.endTime;
       if (endTime && endTime > startTime) {
-        const elapsed = startTime - playerState.forceMove.startTime;
-        const percentElapsed = elapsed / playerState.forceMove.totalTime;
-        const xDiff = playerState.forceMove.to.x - playerState.forceMove.from.x;
-        const yDiff = playerState.forceMove.to.y - playerState.forceMove.from.y;
-        const x = playerState.forceMove.from.x + xDiff * percentElapsed;
-        const y = playerState.forceMove.from.y + yDiff * percentElapsed;
+        const x = easeOutPow({
+          start: playerState.forceMove.from.x,
+          end: playerState.forceMove.to.x,
+          startTime: playerState.forceMove.startTime,
+          currentTime: startTime,
+          duration: playerState.forceMove.totalTime,
+          pow: 2,
+        });
+        const y = easeOutPow({
+          start: playerState.forceMove.from.y,
+          end: playerState.forceMove.to.y,
+          startTime: playerState.forceMove.startTime,
+          currentTime: startTime,
+          duration: playerState.forceMove.totalTime,
+          pow: 2,
+        });
 
         playerState.position = { x, y };
       }

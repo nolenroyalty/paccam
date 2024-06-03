@@ -14,3 +14,38 @@ export function truncateObjectDecimals(obj, places = 4) {
     {}
   );
 }
+
+export function easeLinear({ start, end, startTime, currentTime, duration }) {
+  const diff = end - start;
+  const elapsed = currentTime - startTime;
+  const t = elapsed / duration;
+  return start + diff * t;
+}
+
+export function easeInPow({
+  start,
+  end,
+  startTime,
+  currentTime,
+  duration,
+  pow,
+}) {
+  const diff = end - start;
+  const elapsed = currentTime - startTime;
+  const t = elapsed / duration;
+  return start + diff * Math.pow(t, pow);
+}
+
+export function easeOutPow({
+  start,
+  end,
+  startTime,
+  currentTime,
+  duration,
+  pow,
+}) {
+  const diff = end - start;
+  const elapsed = currentTime - startTime;
+  const t = elapsed / duration;
+  return start + diff * (1 - Math.pow(1 - t, pow));
+}
