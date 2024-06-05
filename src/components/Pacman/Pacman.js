@@ -21,17 +21,16 @@ function Pacman({
 }) {
   const canvasRef = React.useRef();
   const myRef = React.useRef();
-  const dupeCanvasRef = React.useRef();
   const [coords, setCoords] = React.useState(null);
   const [displayDupe, setDisplayDupe] = React.useState(false);
-  const [dupePosition, setDupePosition] = React.useState(null);
+  const [dupePositions, setDupePositions] = React.useState(null);
+  const dupeRef = React.useRef([]);
   const [direction, setDirection] = React.useState("center");
   const [mouthState, setMouthState] = React.useState("closed");
   const [pacmanSpriteState, setPacmanSpriteState] = React.useState(NORMAL);
   const [maxJawState, setMaxJawState] = React.useState(0);
   const [videoCoordinates, setVideoCoordinates] = React.useState(null);
   const id = React.useId();
-
   React.useEffect(() => {
     const updateFaceState = ({
       mouthIsOpen,
@@ -62,13 +61,19 @@ function Pacman({
     game.subscribeToPosition({
       callback: ({ position, duped }) => {
         setCoords(position);
-        if (duped !== null) {
-          setDupePosition(duped);
+        setDupePositions(duped);
+        const didDupe =
+          Object.values(duped).find((d) => d !== null) !== undefined;
+        if (didDupe) {
           setDisplayDupe(true);
+          Object.entries(duped).forEach(([key, pos]) => {
+            if (pos === null) {
+              dupeRef.current[key] = null;
+            }
+          });
         } else {
-          dupeCanvasRef.current = null;
           setDisplayDupe(false);
-          setDupePosition(null);
+          dupeRef.current = [];
         }
       },
       playerNum,
@@ -217,18 +222,22 @@ function Pacman({
       spriteKind: pacmanSpriteState,
     });
 
-    if (displayDupe && dupeCanvasRef.current) {
-      const dupeCtx = dupeCanvasRef.current.getContext("2d");
-      dupeCtx.save();
-      dupeCtx.clearRect(0, 0, PLAYER_CANVAS_SIZE, PLAYER_CANVAS_SIZE);
-      drawPlayerToCanvas({
-        ctx: dupeCtx,
-        spriteX,
-        videoCoordinates,
-        spriteAlpha,
-        spriteKind: pacmanSpriteState,
+    if (displayDupe) {
+      Object.values(dupeRef.current).forEach((ref) => {
+        if (ref !== null) {
+          const dupeCtx = ref.getContext("2d");
+          dupeCtx.save();
+          dupeCtx.clearRect(0, 0, PLAYER_CANVAS_SIZE, PLAYER_CANVAS_SIZE);
+          drawPlayerToCanvas({
+            ctx: dupeCtx,
+            spriteX,
+            videoCoordinates,
+            spriteAlpha,
+            spriteKind: pacmanSpriteState,
+          });
+          dupeCtx.restore();
+        }
       });
-      dupeCtx.restore();
     }
 
     ctx.restore();
@@ -301,21 +310,28 @@ function Pacman({
           </DebugWrapper>
         ) : null}
       </Player>
-      {displayDupe ? (
-        <PlayerBase
-          style={{
-            "--left": `${(dupePosition.x / numSlots.horizontal) * 100}%`,
-            "--top": `${(dupePosition.y / numSlots.vertical) * 100}%`,
-            "--grayscale": grayScale,
-          }}
-        >
-          <InteriorCanvas
-            ref={dupeCanvasRef}
-            width={PLAYER_CANVAS_SIZE}
-            height={PLAYER_CANVAS_SIZE}
-          />
-        </PlayerBase>
-      ) : null}
+      {displayDupe &&
+        Object.entries(dupePositions).map(([key, pos], idx) => {
+          if (pos === null) {
+            return null;
+          }
+          return (
+            <PlayerBase
+              key={key}
+              style={{
+                "--left": `${(pos.x / numSlots.horizontal) * 100}%`,
+                "--top": `${(pos.y / numSlots.vertical) * 100}%`,
+                "--grayscale": grayScale,
+              }}
+            >
+              <InteriorCanvas
+                ref={(el) => (dupeRef.current[idx] = el)}
+                width={PLAYER_CANVAS_SIZE}
+                height={PLAYER_CANVAS_SIZE}
+              />
+            </PlayerBase>
+          );
+        })}
     </>
   ) : null;
 }

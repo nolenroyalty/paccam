@@ -56,7 +56,6 @@ function App() {
   );
 
   const enableVideo = React.useCallback(() => {
-    // There's a bug here if we actually ever stop the game.
     setVideoEnabled(true);
     gameRef.current.initVideo(videoRef.current);
   }, []);
@@ -67,14 +66,13 @@ function App() {
   });
 
   const setNumPlayers = React.useCallback((numPlayers) => {
-    setGameState((state) => ({ ...state, numPlayers }));
     gameRef.current.initNumPlayers(numPlayers);
+    setGameState((state) => ({ ...state, numPlayers }));
     gameRef.current.startGameLoop();
   }, []);
 
   const startGame = React.useCallback(() => {
     setGameState((state) => ({ ...state, running: true }));
-    // can we make this wait for video to load?
     gameRef.current.countInRound();
   }, []);
 

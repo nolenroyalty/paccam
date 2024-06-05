@@ -157,6 +157,53 @@ class GameEngine {
     this.sounds = sounds.current;
   }
 
+  enableManualMove() {
+    const move = (direction, dx, dy) => {
+      this.playerStates.forEach((playerState) => {
+        playerState.position.x += dx;
+        playerState.position.y += dy;
+        playerState.direction = direction;
+      });
+    };
+
+    const wrap = (d) => {
+      if (this.playerStates[0].position.x <= -PLAYER_SIZE_IN_SLOTS) {
+        this.playerStates[0].position.x += this.numSlots.horizontal;
+      }
+      if (this.playerStates[0].position.x >= this.numSlots.horizontal) {
+        this.playerStates[0].position.x -= this.numSlots.horizontal;
+      }
+      if (this.playerStates[0].position.y <= -PLAYER_SIZE_IN_SLOTS) {
+        this.playerStates[0].position.y += this.numSlots.vertical;
+      }
+      if (this.playerStates[0].position.y >= this.numSlots.vertical) {
+        this.playerStates[0].position.y -= this.numSlots.vertical;
+      }
+      this.updatePositionConsumers();
+    };
+
+    document.addEventListener("keydown", (e) => {
+      const incr = 0.25;
+      if (e.key === "ArrowLeft") {
+        const d = "left";
+        move(d, -incr, 0);
+        wrap(d);
+      } else if (e.key === "ArrowRight") {
+        const d = "right";
+        move(d, incr, 0);
+        wrap(d);
+      } else if (e.key === "ArrowUp") {
+        const d = "up";
+        move(d, 0, -incr);
+        wrap(d);
+      } else if (e.key === "ArrowDown") {
+        const d = "down";
+        move(d, 0, incr);
+        wrap(d);
+      }
+    });
+  }
+
   initNumSlots(numSlots) {
     this.numSlots = numSlots;
   }
@@ -268,7 +315,6 @@ class GameEngine {
 
   unsubscribeFromPacmanState({ playerNum, id }) {
     this.pacmanStateConsumers = this.pacmanStateConsumers.filter((consumer) => {
-      // consumer.id !== id;
       if (consumer.id === id) {
         if (consumer.playerNum !== playerNum) {
           console.error(
@@ -339,51 +385,61 @@ class GameEngine {
     });
   }
 
-  maybeDuplicate({ position }) {
-    let dupeX = position.x;
-    let dupeY = position.y;
-    let duped = false;
+  maybeDuplicate({ position, direction }) {
+    let dupeHorizontal = null;
+    let dupeVertical = null;
+    let dupeDiagonal = null;
     if (position.x < 0) {
-      dupeX = this.numSlots.horizontal + position.x;
-      duped = true;
-    } else if (position.x + PLAYER_SIZE_IN_SLOTS >= this.numSlots.horizontal) {
-      dupeX = position.x - this.numSlots.horizontal;
-      duped = true;
+      const dupeX = this.numSlots.horizontal + position.x;
+      dupeHorizontal = { x: dupeX, y: position.y };
+    } else if (position.x + PLAYER_SIZE_IN_SLOTS > this.numSlots.horizontal) {
+      const dupeX = position.x - this.numSlots.horizontal;
+      dupeHorizontal = { x: dupeX, y: position.y };
     }
     if (position.y < 0) {
-      dupeY = this.numSlots.vertical + position.y;
-      duped = true;
-    } else if (position.y + PLAYER_SIZE_IN_SLOTS >= this.numSlots.vertical) {
-      dupeY = position.y - this.numSlots.vertical;
-      duped = true;
+      const dupeY = this.numSlots.vertical + position.y;
+      dupeVertical = { x: position.x, y: dupeY };
+    } else if (position.y + PLAYER_SIZE_IN_SLOTS > this.numSlots.vertical) {
+      const dupeY = position.y - this.numSlots.vertical;
+      dupeVertical = { x: position.x, y: dupeY };
     }
-    if (duped) {
-      console.log(
-        `DUPED: ${JSON.stringify({ realX: position.x, realY: position.y, dupeX, dupeY })}`
-      );
+    if (dupeVertical !== null && dupeHorizontal !== null) {
+      dupeDiagonal = { x: dupeHorizontal.x, y: dupeVertical.y };
     }
-    return duped ? { x: dupeX, y: dupeY } : null;
+
+    return {
+      horizontal: dupeHorizontal,
+      vertical: dupeVertical,
+      diagonal: dupeDiagonal,
+    };
   }
 
   updatePositionConsumers({
     singleCalback = null,
     singlePlayerNum = null,
   } = {}) {
+    const forPlayerNum = ({ playerNum, callback }) => {
+      const position = this.playerStates[playerNum].position;
+      const direction = this.playerStates[playerNum].direction;
+      const duped = this.maybeDuplicate({
+        position,
+        direction,
+      });
+      callback({ position, duped });
+    };
+
     if (singleCalback && singlePlayerNum !== null) {
-      const pos = this.playerStates[singlePlayerNum].position;
-      singleCalback(pos);
+      forPlayerNum({ playerNum: singlePlayerNum, callback: singleCalback });
     } else {
       this.positionConsumers.forEach(({ playerNum, callback }) => {
-        const position = this.playerStates[playerNum].position;
-        const duped = this.maybeDuplicate({ position });
-        callback({ position, duped });
+        forPlayerNum({ playerNum, callback });
       });
     }
   }
 
   subscribeToPosition({ playerNum, callback, id }) {
     this.positionConsumers.push({ playerNum, callback, id });
-    this.updatePositionConsumers({
+    this.updatePositionConsumers.bind(this)({
       singleCalback: callback,
       singlePlayerNum: playerNum,
     });
@@ -856,25 +912,25 @@ class GameEngine {
       const movementAmount = bonusSlotsToConsume + baseMovement;
       if (playerState.direction === "up") {
         let y = playerState.position.y - movementAmount;
-        if (y < -PLAYER_SIZE_IN_SLOTS) {
+        if (y <= -PLAYER_SIZE_IN_SLOTS) {
           y += this.numSlots.vertical;
         }
         playerState.position.y = y;
       } else if (playerState.direction === "down") {
         let y = playerState.position.y + movementAmount;
-        if (y + PLAYER_SIZE_IN_SLOTS >= this.numSlots.vertical) {
+        if (y >= this.numSlots.vertical) {
           y -= this.numSlots.vertical;
         }
         playerState.position.y = y;
       } else if (playerState.direction === "left") {
         let x = playerState.position.x - movementAmount;
-        if (x < -PLAYER_SIZE_IN_SLOTS) {
+        if (x <= -PLAYER_SIZE_IN_SLOTS) {
           x += this.numSlots.horizontal;
         }
         playerState.position.x = x;
       } else if (playerState.direction === "right") {
         let x = playerState.position.x + movementAmount;
-        if (x + PLAYER_SIZE_IN_SLOTS >= this.numSlots.horizontal) {
+        if (x >= this.numSlots.horizontal) {
           x -= this.numSlots.horizontal;
         }
         playerState.position.x = x;
@@ -1239,7 +1295,7 @@ class GameEngine {
       if (this.video.currentTime !== lastVideoTime) {
         const startTime = performance.now();
         const results = this.landmarker.detectForVideo(this.video, startTime);
-        this.processAllResults.bind(this)({ results, startTime });
+        this.processAllResults({ results, startTime });
         if (this.status === RUNNING_ROUND) {
           const tickTimeMs =
             lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
