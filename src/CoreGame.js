@@ -34,7 +34,6 @@ const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.6;
 const MINIMUM_NOSE_UPNESS = 0.33;
 const MAXIMUM_NOSE_DOWNNESS = 0.73;
-const IGNORE_MISSING_RESULTS = false;
 const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
 const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
@@ -111,6 +110,7 @@ class GameEngine {
     this.status = WAITING_FOR_VIDEO;
     this.numPlayers = null;
     this.time = null;
+    this.ignoreMissingFaces = false;
   }
 
   enableSuper({ playerNum }) {
@@ -134,6 +134,10 @@ class GameEngine {
   stopGame() {
     console.log("STOPPING FULL GAME?");
     this.updateStatusAndConsumers(STOPPED, "stopGame");
+  }
+
+  setIgnoreMissingFaces(value) {
+    this.ignoreMissingFaces = value;
   }
 
   initVideo(video) {
@@ -712,7 +716,7 @@ class GameEngine {
     }
     if (
       results.faceLandmarks.length !== this.numPlayers &&
-      !IGNORE_MISSING_RESULTS
+      !this.ignoreMissingFaces
     ) {
       console.error(
         `INCORRECT NUMBER OF FACE LANDMARK RESULTS: ${results.faceLandmarks.length}. Expected num players: ${this.numPlayers} Bailing.`
@@ -738,7 +742,7 @@ class GameEngine {
 
     if (
       results.faceLandmarks.length < this.numPlayers &&
-      IGNORE_MISSING_RESULTS
+      this.ignoreMissingFaces
     ) {
       const missingCount = this.numPlayers - results.faceLandmarks.length;
       const faceLandmarks = results.faceLandmarks[0];

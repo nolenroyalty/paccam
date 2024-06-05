@@ -15,6 +15,7 @@ function App() {
   const sounds = React.useRef({});
   const spriteSheets = React.useRef({});
   const [playfieldPadding, setPlayfieldPadding] = React.useState({});
+  const [ignoreMissingFaces, setIgnoreMissingFaces] = React.useState(false);
 
   const [videoEnabled, setVideoEnabled] = React.useState(false);
   const [slotSizePx, setSlotSizePx] = React.useState(null);
@@ -23,6 +24,26 @@ function App() {
   );
 
   const [debugInfo, setDebugInfo] = React.useState({});
+
+  React.useEffect(() => {
+    if (!gameRef.current) {
+      return;
+    }
+    gameRef.current.setIgnoreMissingFaces(ignoreMissingFaces);
+  }, [ignoreMissingFaces]);
+
+  // alt-f to toggle ignore missing results
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === "KeyF" && e.altKey) {
+        setIgnoreMissingFaces((state) => !state);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const addPacmanResultScreenState = React.useCallback(
     ({ playerNum, position, faceCapture }) => {
@@ -183,6 +204,19 @@ function App() {
           moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
         />
       </GameHolderOverlapping>
+      <ScoreDisplay
+        numPlayers={gameState.numPlayers}
+        gameRef={gameRef}
+        pacmanResultScreenState={pacmanResultScreenState}
+        slotSizePx={slotSizePx}
+        status={gameState.status}
+        moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
+      />
+      {ignoreMissingFaces && (
+        <IgnoreMissingFacesBanner>
+          Ignoring missing faces
+        </IgnoreMissingFacesBanner>
+      )}
     </Wrapper>
   );
 }
@@ -202,6 +236,15 @@ const HiddenImage = styled.img`
   pointer-events: none;
   width: 0px;
   height: 0px;
+`;
+
+const IgnoreMissingFacesBanner = styled.h3`
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  background-color: red;
 `;
 
 const GameHolderOverlapping = styled.div`
