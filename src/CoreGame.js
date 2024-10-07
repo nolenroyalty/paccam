@@ -608,7 +608,6 @@ class GameEngine {
         slotX += 2;
       }
     }
-    console.log(`should have made ${generatedPelletCount} pellets`);
     this.pelletsByPosition = pelletsByPosition;
 
     this.updatePelletConsumers();
