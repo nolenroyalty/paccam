@@ -73,6 +73,7 @@ async function createFaceLandmarker({ numFaces }) {
         delegate: "GPU",
       },
       outputFaceBlendshapes: true,
+      outputFacialTransformationMatrixes: true,
       runningMode: "VIDEO",
       numFaces: numFaces,
       minFaceDetectionConfidence: MIN_DETECTION_CONFIDENCE,
@@ -644,6 +645,7 @@ class GameEngine {
     } else if (vertical !== "center") {
       direction = vertical;
     }
+
     currentState.direction = direction;
     if (currentState.mouthIsOpen !== mouthIsOpen) {
       if (this.status === RUNNING_ROUND) {
@@ -664,41 +666,21 @@ class GameEngine {
     });
   }
 
-  processIndividualResult({
-    playerNum,
-    faceLandmarks,
-    faceBlendshapes,
-    startTime,
+  oldStyleYawPitchCalculation({
+    minX,
+    minY,
+    maxX,
+    maxY,
+    jawOpenBlend,
+    landmarks,
   }) {
-    const landmarks = invertLandmarks(faceLandmarks);
-    const minY = Math.min(...landmarks.map((landmark) => landmark.y));
-    const maxY = Math.max(...landmarks.map((landmark) => landmark.y));
-    const minX = Math.min(...landmarks.map((landmark) => landmark.x));
-    const maxX = Math.max(...landmarks.map((landmark) => landmark.x));
-
     const nose = landmarks[4];
     const height = maxY - minY;
     const width = maxX - minX;
-
-    const jawOpenBlend = faceBlendshapes.categories[25].score;
-    const topLipCenter = landmarks[12];
-    const bottomLipCenter = landmarks[14];
-    const jawOpenDiff = (bottomLipCenter.y - topLipCenter.y) * 10;
-    const jawOpenMax = Math.max(jawOpenBlend, jawOpenDiff);
-
-    let mouthIsOpen;
-
-    if (this.playerStates[playerNum].mouthIsOpen) {
-      mouthIsOpen = jawOpenMax > JAW_CLOSE_THRESHOLD;
-    } else {
-      mouthIsOpen = jawOpenMax > JAW_OPEN_THRESHOLD;
-    }
-
     const noseRelativeHeight = nose.y - minY;
     const noseHeight = noseRelativeHeight / height;
     const noseRelativeWidth = nose.x - minX;
     const noseWidth = noseRelativeWidth / width;
-
     let horizontal = "center";
     let horizontalStrength = 0;
     if (noseWidth < 0.25) {
@@ -708,13 +690,11 @@ class GameEngine {
       horizontal = "right";
       horizontalStrength = (noseWidth - 0.75) / 0.25;
     }
-
     // If 0.05 > NOSE_BASE_LOOK_UP_THRESHOLD - MINIMUM_NOSE_UPNESS,
     // we could end up with a negative verticalStrength.
     // We purposely use jawOpenBlend instead of min or max here because
     // it's a better proxy for what we're measuring.
     const verticalOffset = (jawOpenBlend / JAW_OPEN_THRESHOLD) * 0.05;
-
     let vertical = "center";
     let verticalStrength = 0;
     let verticalUpThreshold = NOSE_BASE_LOOK_UP_THRESHOLD - verticalOffset;
@@ -730,6 +710,70 @@ class GameEngine {
       const thresholdSize = MAXIMUM_NOSE_DOWNNESS - verticalDownThreshold;
       verticalStrength = amountPastThreshold / thresholdSize;
     }
+  }
+
+  processIndividualResult({
+    playerNum,
+    faceLandmarks,
+    faceBlendshapes,
+    facialTransformationMatrix,
+    startTime,
+  }) {
+    const landmarks = invertLandmarks(faceLandmarks);
+    const minY = Math.min(...landmarks.map((landmark) => landmark.y));
+    const maxY = Math.max(...landmarks.map((landmark) => landmark.y));
+    const minX = Math.min(...landmarks.map((landmark) => landmark.x));
+    const maxX = Math.max(...landmarks.map((landmark) => landmark.x));
+
+    const jawOpenBlend = faceBlendshapes.categories[25].score;
+    const topLipCenter = landmarks[12];
+    const bottomLipCenter = landmarks[14];
+    const jawOpenDiff = (bottomLipCenter.y - topLipCenter.y) * 10;
+    const jawOpenMax = Math.max(jawOpenBlend, jawOpenDiff);
+
+    let mouthIsOpen;
+
+    if (this.playerStates[playerNum].mouthIsOpen) {
+      mouthIsOpen = jawOpenMax > JAW_CLOSE_THRESHOLD;
+    } else {
+      mouthIsOpen = jawOpenMax > JAW_OPEN_THRESHOLD;
+    }
+
+    const ftm = facialTransformationMatrix.data;
+
+    const [r00, r01, r02, r03] = ftm.slice(0, 4);
+    const [r10, r11, r12, r13] = ftm.slice(4, 8);
+    const [r20, r21, r22, r23] = ftm.slice(8, 12);
+    const [r30, r31, r32, r33] = ftm.slice(12, 16);
+
+    const toDegrees = (x) => x * (180 / Math.PI);
+    // const pitch = toDegrees(Math.asin(r21));
+    // const yaw = toDegrees(Math.asin(r02));
+    const pitch = toDegrees(Math.atan2(-r21, Math.sqrt(r20 * r20 + r22 * r22)));
+    const yaw = toDegrees(Math.atan2(-r02, r00));
+    // console.log(`PITCH: ${pitch}, YAW: ${yaw}`);
+
+    const pitchThreshold = 10;
+    const yawThreshold = 15;
+    let vertical = "center";
+    let verticalStrength = 0;
+    let horizontal = "center";
+    let horizontalStrength = 0;
+    if (pitch > pitchThreshold) {
+      vertical = "down";
+      verticalStrength = 1.25 * (pitch - pitchThreshold);
+    } else if (pitch < -pitchThreshold) {
+      vertical = "up";
+      verticalStrength = 1.25 * (-pitch - pitchThreshold);
+    }
+    if (yaw > yawThreshold) {
+      horizontal = "left";
+      horizontalStrength = yaw - yawThreshold;
+    } else if (yaw < -yawThreshold) {
+      horizontal = "right";
+      horizontalStrength = -yaw - yawThreshold;
+    }
+
     this.updateIndividualFaceState({
       playerNum,
       mouthIsOpen,
@@ -755,9 +799,6 @@ class GameEngine {
         ["horizontalStrength", horizontalStrength],
         ["vertical", vertical],
         ["verticalStrength", verticalStrength],
-        ["verticalOffset", verticalOffset],
-        ["noseHeight", noseHeight],
-        ["noseWidth", noseWidth],
       ],
     });
   }
@@ -784,18 +825,31 @@ class GameEngine {
     results.faceLandmarks
       .map((faceLandmarks, index) => {
         const faceBlendshapes = results.faceBlendshapes[index];
+        const facialTransformationMatrix =
+          results.facialTransformationMatrixes[index];
         const maxX = Math.max(...faceLandmarks.map((landmark) => landmark.x));
-        return { faceLandmarks, faceBlendshapes, maxX };
-      })
-      .sort((a, b) => b.maxX - a.maxX)
-      .forEach(({ faceLandmarks, faceBlendshapes }, playerNum) => {
-        this.processIndividualResult({
-          playerNum,
+        return {
           faceLandmarks,
           faceBlendshapes,
-          startTime,
-        });
-      });
+          facialTransformationMatrix,
+          maxX,
+        };
+      })
+      .sort((a, b) => b.maxX - a.maxX)
+      .forEach(
+        (
+          { faceLandmarks, faceBlendshapes, facialTransformationMatrix },
+          playerNum
+        ) => {
+          this.processIndividualResult({
+            playerNum,
+            faceLandmarks,
+            faceBlendshapes,
+            facialTransformationMatrix,
+            startTime,
+          });
+        }
+      );
 
     if (
       results.faceLandmarks.length < this.numPlayers &&
@@ -804,11 +858,14 @@ class GameEngine {
       const missingCount = this.numPlayers - results.faceLandmarks.length;
       const faceLandmarks = results.faceLandmarks[0];
       const faceBlendshapes = results.faceBlendshapes[0];
+      const facialTransformationMatrix =
+        results.facialTransformationMatrixes[0];
       for (let i = 0; i < missingCount; i++) {
         this.processIndividualResult({
           playerNum: results.faceLandmarks.length + i,
           faceLandmarks,
           faceBlendshapes,
+          facialTransformationMatrix,
           startTime,
         });
       }
