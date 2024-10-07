@@ -157,6 +157,7 @@ class GameEngine {
     this.sounds = sounds.current;
   }
 
+  // manually move using the arrow keys; for debugging only
   enableManualMove() {
     const move = (direction, dx, dy) => {
       this.playerStates.forEach((playerState) => {
