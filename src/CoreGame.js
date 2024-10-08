@@ -560,6 +560,7 @@ class GameEngine {
   resetState() {
     this.pelletsByPosition = {};
     this.playerStates = [];
+    // CR nroyalty: this should be playerNum?
     this.superStatus = { player: null, endSuperAt: null };
     this.numPlayers = null;
     this.satisfiedTutorialDirectiveTime = null;
@@ -1124,9 +1125,10 @@ class GameEngine {
     });
   }
 
-  maybeMove({ startTime, tickTimeMs }) {
+  maybeMove({ startTime, tickTimeMs, baseMovementOverride = 1 }) {
     const secondsOfMovement = tickTimeMs / 1000;
-    const baseMovement = secondsOfMovement * BASE_SLOTS_MOVED_PER_SECOND;
+    const baseMovement =
+      secondsOfMovement * BASE_SLOTS_MOVED_PER_SECOND * baseMovementOverride;
     const bonusMovement =
       secondsOfMovement * BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT;
     let isMoving = false;
@@ -1392,7 +1394,7 @@ class GameEngine {
           }
           return [remaining, false];
         }
-      } else if (directiveAction === "chomp") {
+      } else if (directiveAction === "chomp" || directiveAction === "move") {
         const lastState = this.tutorialState.lastMouthState;
         const currentState = playerState.mouthIsOpen;
         let text = null;
@@ -1403,6 +1405,12 @@ class GameEngine {
           this.tutorialState.lastMouthState = currentState;
           if (lastState !== currentState && lastState !== null) {
             this.tutorialState.actionSatisfactionCount += 1;
+            if (directiveAction === "move") {
+              this.addIndividualMovement({
+                playerNum: 1,
+                currentState: playerState,
+              });
+            }
           }
           if (
             lastState !== null &&
@@ -1434,6 +1442,8 @@ class GameEngine {
         return ["Look", directiveDirection];
       } else if (directiveAction === "chomp") {
         return ["Look", directiveDirection, "and", "chomp"];
+      } else if (directiveAction === "move") {
+        return ["Look", directiveDirection, "chomp", "and", "move"];
       }
     };
 
@@ -1578,12 +1588,12 @@ class GameEngine {
         const startTime = performance.now();
         const results = this.landmarker.detectForVideo(this.video, startTime);
         this.processAllResults({ results, startTime });
+        const tickTimeMs = lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
         if (this.status === RUNNING_TUTORIAL) {
           const shouldMove = this.handleTutorialStep();
+          this.maybeMove({ startTime, tickTimeMs, baseMovementOverride: 0 });
         }
         if (this.status === RUNNING_ROUND) {
-          const tickTimeMs =
-            lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
           this.maybeMove({ startTime, tickTimeMs });
           this.maybeSpawnMorePellets({ startTime });
           this.updatePelletsForPosition({ startTime });
