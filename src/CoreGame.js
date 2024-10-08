@@ -53,7 +53,20 @@ const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
   upper: 16,
 };
 
-const TUTORIAL_DIRECTIVES = ["left", "up", "right", "down", "chomp"];
+const TUTORIAL_DIRECTIVES = [
+  // ["left", "wait"],
+  // ["up", "wait"],
+  // ["right", "wait"],
+  // ["down", "wait"],
+  ["left", "chomp"],
+  ["up", "chomp"],
+  ["right", "chomp"],
+  ["down", "chomp"],
+  ["left", "move"],
+  ["up", "move"],
+  ["right", "move"],
+  ["down", "move"],
+];
 
 const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ numPlayers }) => {
   if (numPlayers === 4) {
@@ -109,6 +122,7 @@ class GameEngine {
     this.playerStates = [];
     this.pacmanStateConsumers = [];
     this.satisfiedTutorialDirectiveTime = null;
+    this.tutorialState = null;
     this.pelletsByPosition = {};
     this.superStatus = { player: null, endSuperAt: null };
     this.numSlots = null;
@@ -118,6 +132,16 @@ class GameEngine {
     this.ignoreMissingFaces = false;
     this.setTutorialInstruction = setTutorialInstruction;
     this.tutorialState = null;
+  }
+
+  _initTutorialState() {
+    return {
+      directiveIndex: 0,
+      satisfiedDirectiveTime: null,
+      status: null,
+      lastMouthState: null,
+      actionSatisfactionCount: 0,
+    };
   }
 
   enableSuper({ playerNum }) {
@@ -1291,8 +1315,7 @@ class GameEngine {
   }
 
   beginTutorial() {
-    this.tutorialDirectiveIndex = 0;
-    this.tutorialSuccessCount = 0;
+    this.tutorialState = this._initTutorialState();
     this.updateStatusAndConsumers(RUNNING_TUTORIAL, "beginTutorial");
   }
 
@@ -1308,21 +1331,21 @@ class GameEngine {
     const TOO_FAR_RESET = "too-far-reset";
     // maybe different for vertical?
     const LOOK_THRESHOLD = 25;
+    const REQUIRED_ACTION_SATISFACTION_COUNT = 10;
 
     const playerState = this.playerStates[0];
     const direction = playerState.tutorialDirection;
     const trackedFaceThisFrame = playerState.trackedFaceThisFrame;
-    const directive = TUTORIAL_DIRECTIVES[this.tutorialDirectiveIndex];
+    const [directiveDirection, directiveAction] =
+      TUTORIAL_DIRECTIVES[this.tutorialState.directiveIndex];
 
-    let satisfiesDirective = trackedFaceThisFrame;
-
-    const computeStrength = (d) => {
-      if (d === "left" || d === "right") {
+    const computeStrength = () => {
+      if (directiveDirection === "left" || directiveDirection === "right") {
         return playerState.horizontalStrength;
-      } else if (d === "up" || d === "down") {
+      } else if (directiveDirection === "up" || directiveDirection === "down") {
         return playerState.verticalStrength;
       } else {
-        console.warn(`BUG: computeStrength called with ${d}`);
+        console.warn(`BUG: computeStrength called with ${directiveDirection}`);
         return 0;
       }
     };
@@ -1335,54 +1358,128 @@ class GameEngine {
     };
 
     const calcDiff = () =>
-      this.satisfiedTutorialDirectiveTime === null
+      this.tutorialState.satisfiedDirectiveTime === null
         ? 0
-        : performance.now() - this.satisfiedTutorialDirectiveTime;
+        : performance.now() - this.tutorialState.satisfiedDirectiveTime;
 
-    if (directive === "chomp") {
-      // figure this out...
-    } else if (directive !== null && directive !== undefined) {
-      if (this.tutorialState === null) {
-        this.tutorialState = DISPLAYING_DIRECTIVE;
-        this.setTutorialInstruction(["Look", directive]);
-      } else if (this.tutorialState === DISPLAYING_DIRECTIVE) {
-        const strength = computeStrength(directive);
-        satisfiesDirective = satisfiesDirective && direction === directive;
+    const retryThisDirective = (state, comment) => {
+      this.tutorialState.status = state;
+      this.tutorialState.satisfiedDirectiveTime = null;
+      this.tutorialState.actionSatisfactionCount = 0;
+      this.time = comment;
+      this.updateTimeConsumers();
+    };
+
+    const satisfiesDirectiveDirection = () => {
+      return direction === directiveDirection;
+    };
+
+    const satisfiesDirectiveAction = (satisfiesDirection) => {
+      if (!satisfiesDirection) {
+        return [null, false];
+      }
+      if (directiveAction === "wait") {
         const diff = calcDiff();
-        const countingDown = this.satisfiedTutorialDirectiveTime !== null;
-        if (countingDown && satisfiesDirective && strength > LOOK_THRESHOLD) {
-          maybePlayErrorSound();
-          this.tutorialState = TOO_FAR_RESET;
-          this.satisfiedTutorialDirectiveTime = null;
-          this.time = "RETRY";
-          this.updateTimeConsumers();
-        } else if (countingDown && satisfiesDirective && diff > DIFF_CUTOFF) {
-          this.tutorialState = null;
-          this.time = "DONE";
-          this.updateTimeConsumers();
-          this.satisfiedTutorialDirectiveTime = null;
-          this.tutorialDirectiveIndex += 1;
-        } else if (satisfiesDirective) {
+        const countingDown = this.tutorialState.satisfiedDirectiveTime !== null;
+        if (countingDown && diff > DIFF_CUTOFF) {
+          return ["DONE", true];
+        } else {
           const remaining = (TIME_TO_SATISFY_DIRECTIVE - diff / 1000).toFixed(
             0
           );
-          console.log(`remaining: ${remaining}`);
-          this.time = `${remaining}`;
-          this.updateTimeConsumers();
           if (!countingDown) {
-            this.satisfiedTutorialDirectiveTime = performance.now();
+            this.tutorialState.satisfiedDirectiveTime = performance.now();
           }
-        } else if (countingDown && !satisfiesDirective) {
-          this.time = "RETRY";
-          this.updateTimeConsumers();
-          this.satisfiedTutorialDirectiveTime = null;
+          return [remaining, false];
         }
-      } else if (this.tutorialState === TOO_FAR_RESET) {
-        if (direction === "center") {
-          this.tutorialState = null;
+      } else if (directiveAction === "chomp") {
+        const lastState = this.tutorialState.lastMouthState;
+        const currentState = playerState.mouthIsOpen;
+        let text = null;
+        if (lastState === null) {
+          this.tutorialState.lastMouthState = currentState;
+          this.tutorialState.actionSatisfactionCount = 0;
         } else {
-          this.setTutorialInstruction("too far - back to center".split(" "));
+          this.tutorialState.lastMouthState = currentState;
+          if (lastState !== currentState && lastState !== null) {
+            this.tutorialState.actionSatisfactionCount += 1;
+          }
+          if (
+            lastState !== null &&
+            this.tutorialState.actionSatisfactionCount >= 1
+          ) {
+            if (currentState) {
+              text = "open";
+            } else {
+              text = "close";
+            }
+          }
         }
+        const complete =
+          this.tutorialState.actionSatisfactionCount >=
+          REQUIRED_ACTION_SATISFACTION_COUNT;
+        return [text, complete];
+      }
+    };
+
+    const faceTrackedThisFrame = trackedFaceThisFrame;
+
+    if (!faceTrackedThisFrame) {
+      // reset?
+      return;
+    }
+
+    const getInstruction = () => {
+      if (directiveAction === "wait") {
+        return ["Look", directiveDirection];
+      } else if (directiveAction === "chomp") {
+        return ["Look", directiveDirection, "and", "chomp"];
+      }
+    };
+
+    if (this.tutorialState.status === null) {
+      this.tutorialState.status = DISPLAYING_DIRECTIVE;
+      this.setTutorialInstruction(getInstruction());
+    } else if (this.tutorialState.status === TOO_FAR_RESET) {
+      if (direction === "center") {
+        this.tutorialState.status = null;
+      } else {
+        this.setTutorialInstruction("too far - back to center".split(" "));
+      }
+    } else if (this.tutorialState.status === DISPLAYING_DIRECTIVE) {
+      const strength = computeStrength();
+      const directionSatisfied = satisfiesDirectiveDirection();
+      const [successText, actionSatisfied] =
+        satisfiesDirectiveAction(directionSatisfied);
+      const tooFar = strength > LOOK_THRESHOLD;
+      const inProgress =
+        this.tutorialState.satisfiedDirectiveTime !== null ||
+        this.tutorialState.actionSatisfactionCount > 0;
+      if (tooFar) {
+        maybePlayErrorSound();
+        retryThisDirective(TOO_FAR_RESET, "RETRY");
+      } else if (directionSatisfied && actionSatisfied) {
+        this.tutorialState.status = null;
+        this.time = "DONE";
+        this.updateTimeConsumers();
+        this.tutorialState.satisfiedDirectiveTime = null;
+        this.tutorialState.directiveIndex += 1;
+        this.tutorialState.lastMouthState = null;
+        this.tutorialState.actionSatisfactionCount = 0;
+      } else if (directionSatisfied) {
+        this.time = successText;
+        this.updateTimeConsumers();
+      } else if (this.tutorialState.status === TOO_FAR_RESET) {
+        if (direction === "center") {
+          this.tutorialState.status = null;
+        } else {
+          this.time = "too far - back to center";
+          this.updateTimeConsumers();
+        }
+      } else if (inProgress && !directionSatisfied) {
+        retryThisDirective(DISPLAYING_DIRECTIVE, "RETRY");
+      } else {
+        // noop
       }
     }
   }
