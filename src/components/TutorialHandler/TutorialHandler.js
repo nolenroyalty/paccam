@@ -3,7 +3,7 @@ import { zIndex1 } from "../../zindex";
 import styled from "styled-components";
 
 function TutorialHandler({ tutorialInstruction }) {
-  if (tutorialInstruction.length === 0) {
+  if (!tutorialInstruction || tutorialInstruction.length === 0) {
     return null;
   }
   const interspersed = tutorialInstruction.flatMap((instruction, index) =>

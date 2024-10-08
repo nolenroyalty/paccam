@@ -54,10 +54,10 @@ const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
 };
 
 const TUTORIAL_DIRECTIVES = [
-  // ["left", "wait"],
-  // ["up", "wait"],
-  // ["right", "wait"],
-  // ["down", "wait"],
+  ["left", "wait"],
+  ["up", "wait"],
+  ["right", "wait"],
+  ["down", "wait"],
   ["left", "chomp"],
   ["up", "chomp"],
   ["right", "chomp"],
@@ -461,13 +461,16 @@ class GameEngine {
     singlePlayerNum = null,
   } = {}) {
     const forPlayerNum = ({ playerNum, callback }) => {
-      const position = this.playerStates[playerNum].position;
-      const direction = this.playerStates[playerNum].direction;
-      const duped = this.maybeDuplicate({
-        position,
-        direction,
-      });
-      callback({ position, duped });
+      const state = this.playerStates[playerNum];
+      if (playerNum !== null && state) {
+        const position = this.playerStates[playerNum].position;
+        const direction = this.playerStates[playerNum].direction;
+        const duped = this.maybeDuplicate({
+          position,
+          direction,
+        });
+        callback({ position, duped });
+      }
     };
 
     if (singleCalback && singlePlayerNum !== null) {
@@ -564,7 +567,7 @@ class GameEngine {
     this.superStatus = { player: null, endSuperAt: null };
     this.numPlayers = null;
     this.satisfiedTutorialDirectiveTime = null;
-    this.tutorialState = null;
+    this.tutorialState = this._initTutorialState();
     this.time = null;
 
     this.updateTimeConsumers();
@@ -1474,6 +1477,14 @@ class GameEngine {
         this.updateTimeConsumers();
         this.tutorialState.satisfiedDirectiveTime = null;
         this.tutorialState.directiveIndex += 1;
+        if (this.tutorialState.directiveIndex >= TUTORIAL_DIRECTIVES.length) {
+          this.time = null;
+          this.updateTimeConsumers();
+          this.setTutorialInstruction(null);
+          this.nullOutNumPlayers();
+          this.resetState();
+          this.moveToWaitingForPlayerSelect();
+        }
         this.tutorialState.lastMouthState = null;
         this.tutorialState.actionSatisfactionCount = 0;
       } else if (directionSatisfied) {

@@ -73,10 +73,16 @@ function App() {
     gameRef.current.startGameLoop();
   }, []);
 
+  const nullOutNumPlayers = React.useCallback(() => {
+    setGameState((state) => ({ ...state, numPlayers: null }));
+  }, []);
+
   const beginTutorial = React.useCallback(() => {
     gameRef.current.beginTutorial();
+    // HACK
+    gameRef.current.nullOutNumPlayers = nullOutNumPlayers;
     setNumPlayers(1);
-  }, [setNumPlayers]);
+  }, [nullOutNumPlayers, setNumPlayers]);
 
   // alt-d to begin tutorial
   React.useEffect(() => {

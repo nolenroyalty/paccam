@@ -1,6 +1,10 @@
 import React from "react";
 import styled, { keyframes } from "styled-components";
-import { SHOWING_RESULTS, COMPLETED_ROUND } from "../../STATUS";
+import {
+  SHOWING_RESULTS,
+  COMPLETED_ROUND,
+  RUNNING_TUTORIAL,
+} from "../../STATUS";
 import { PLAYER_SIZE_IN_SLOTS } from "../../constants";
 import { COLORS } from "../../COLORS";
 import Button from "../Button";
@@ -102,6 +106,10 @@ function ScoreDisplay({
   React.useEffect(() => {
     gameRef.current.subscribeToScores(setScores);
   }, [gameRef]);
+
+  if (status === RUNNING_TUTORIAL) {
+    return null;
+  }
 
   return (
     <Wrapper>
