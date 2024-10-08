@@ -10,13 +10,17 @@ function TimerDisplay({ gameRef }) {
   }, [gameRef]);
 
   const text = String(time);
-  const firstBit = text.slice(0, -1);
-  const lastBit = text.slice(-1);
+  // no memory of why I did this first / last bit shit
+  // think it's because of bad sizing on the ! char?
+  // const firstBit = text.slice(0, -1);
+  // const lastBit = text.slice(-1);
 
   return time === null || time === undefined ? null : (
     <Text key={text}>
-      <span>{firstBit}</span>
-      <NoSpacing>{lastBit}</NoSpacing>
+      {text === "GO!" ? <span>&nbsp;</span> : null}
+      {text}
+      {/* <span>{firstBit}</span> */}
+      {/* <NoSpacing>{lastBit}</NoSpacing> */}
     </Text>
   );
 }
@@ -55,6 +59,7 @@ const Text = styled.p`
   position: absolute;
   top: 50%;
   left: 50%;
+  transform: translate(-50%, -50%);
   animation: ${PopInDropOut} 1s both;
   z-index: ${zIndex1};
   pointer-events: none;

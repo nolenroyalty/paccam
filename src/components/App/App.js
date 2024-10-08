@@ -6,12 +6,14 @@ import GameEngine from "../../CoreGame";
 import StartScreen from "../StartScreen";
 import TimerDisplay from "../TimerDisplay";
 import ScoreDisplay from "../ScoreDisplay";
+import TutorialHandler from "../TutorialHandler";
 
 const DEBUG = false;
 
 function App() {
   const videoRef = React.useRef();
-  const gameRef = React.useRef(new GameEngine());
+  const [tutorialInstruction, setTutorialInstruction] = React.useState([]);
+  const gameRef = React.useRef(new GameEngine({ setTutorialInstruction }));
   const sounds = React.useRef({});
   const spriteSheets = React.useRef({});
   const [playfieldPadding, setPlayfieldPadding] = React.useState({});
@@ -71,6 +73,25 @@ function App() {
     gameRef.current.startGameLoop();
   }, []);
 
+  const beginTutorial = React.useCallback(() => {
+    gameRef.current.beginTutorial();
+    setNumPlayers(1);
+  }, [setNumPlayers]);
+
+  // alt-d to begin tutorial
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === "KeyD" && e.altKey) {
+        console.log("HI");
+        beginTutorial();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [beginTutorial]);
+
   const startGame = React.useCallback(() => {
     setGameState((state) => ({ ...state, running: true }));
     gameRef.current.countInRound();
@@ -119,6 +140,7 @@ function App() {
   return (
     <Wrapper>
       <TimerDisplay gameRef={gameRef} />
+      <TutorialHandler tutorialInstruction={tutorialInstruction} />
       <HiddenImage
         ref={(node) => (spriteSheets.current["yellow"] = node)}
         src="/aseprite/pacman-yellow.png"
@@ -192,14 +214,6 @@ function App() {
           ref={(node) => {
             sounds.current["die"] = node;
           }}
-        />
-        <ScoreDisplay
-          numPlayers={gameState.numPlayers}
-          gameRef={gameRef}
-          pacmanResultScreenState={pacmanResultScreenState}
-          slotSizePx={slotSizePx}
-          status={gameState.status}
-          moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
         />
       </GameHolderOverlapping>
       <ScoreDisplay

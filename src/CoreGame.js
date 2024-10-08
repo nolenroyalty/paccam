@@ -15,6 +15,7 @@ import {
   COMPLETED_ROUND,
   SHOWING_RESULTS,
   STOPPED,
+  RUNNING_TUTORIAL,
   validTransition,
   shouldProcessGameLoop,
 } from "./STATUS";
@@ -51,6 +52,8 @@ const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
   lower: 8,
   upper: 16,
 };
+
+const TUTORIAL_DIRECTIVES = ["left", "up", "right", "down", "chomp"];
 
 const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ numPlayers }) => {
   if (numPlayers === 4) {
@@ -94,7 +97,7 @@ function invertLandmarks(landmarks) {
 }
 
 class GameEngine {
-  constructor() {
+  constructor({ setTutorialInstruction }) {
     this.faceStateConsumers = [];
     this.positionConsumers = [];
     this.pelletConsumers = [];
@@ -105,6 +108,7 @@ class GameEngine {
     this.stagedDebugUpdate = [];
     this.playerStates = [];
     this.pacmanStateConsumers = [];
+    this.satisfiedTutorialDirectiveTime = null;
     this.pelletsByPosition = {};
     this.superStatus = { player: null, endSuperAt: null };
     this.numSlots = null;
@@ -112,6 +116,8 @@ class GameEngine {
     this.numPlayers = null;
     this.time = null;
     this.ignoreMissingFaces = false;
+    this.setTutorialInstruction = setTutorialInstruction;
+    this.tutorialState = null;
   }
 
   enableSuper({ playerNum }) {
@@ -146,12 +152,12 @@ class GameEngine {
     this.updateStatusAndConsumers(WAITING_FOR_PLAYER_SELECT, "initVideo");
 
     // enable super on space
-    document.addEventListener("keydown", (e) => {
-      if (e.key === " ") {
-        this.enableSuper = this.enableSuper.bind(this);
-        this.enableSuper({ playerNum: 0 });
-      }
-    });
+    // document.addEventListener("keydown", (e) => {
+    //   if (e.key === " ") {
+    //     this.enableSuper = this.enableSuper.bind(this);
+    //     this.enableSuper({ playerNum: 0 });
+    //   }
+    // });
   }
 
   initAudio({ sounds }) {
@@ -250,6 +256,9 @@ class GameEngine {
     return {
       position: { x, y },
       direction: "center",
+      tutorialDirection: "center",
+      horizontalStrength: 0,
+      verticalStrength: 0,
       mouthIsOpen: false,
       slotsToMove: 0,
       score: 0,
@@ -266,7 +275,10 @@ class GameEngine {
   }
 
   initNumPlayers(numPlayers) {
-    this.updateStatusAndConsumers(WAITING_TO_START_ROUND, "initNumPlayers");
+    if (this.status === RUNNING_TUTORIAL) {
+    } else {
+      this.updateStatusAndConsumers(WAITING_TO_START_ROUND, "initNumPlayers");
+    }
     this.numPlayers = numPlayers;
     this.playerStates = range(numPlayers).map((playerNum) => {
       return this.initialState({ playerNum });
@@ -344,6 +356,9 @@ class GameEngine {
     playerNum,
     mouthIsOpen,
     direction,
+    horizontalStrength,
+    verticalStrength,
+    tutorialDirection,
     jawOpenAmount,
     minY,
     maxY,
@@ -356,6 +371,7 @@ class GameEngine {
           callback({
             mouthIsOpen,
             direction,
+            tutorialDirection,
             jawOpenAmount,
             minY,
             maxY,
@@ -522,6 +538,8 @@ class GameEngine {
     this.playerStates = [];
     this.superStatus = { player: null, endSuperAt: null };
     this.numPlayers = null;
+    this.satisfiedTutorialDirectiveTime = null;
+    this.tutorialState = null;
     this.time = null;
 
     this.updateTimeConsumers();
@@ -555,7 +573,6 @@ class GameEngine {
     }
 
     const pelletsByPosition = {};
-    let generatedPelletCount = 0;
 
     if (RANDOM_PELLETS) {
       for (let x = 1; x < this.numSlots.horizontal - 1; x += 1) {
@@ -584,9 +601,6 @@ class GameEngine {
             kind = "pellet";
           }
           const p = { x, y, enabled: makeIt, delay, kind: kind };
-          if (makeIt) {
-            generatedPelletCount += 1;
-          }
           pelletsByPosition[[x, y]] = p;
         }
       }
@@ -637,15 +651,23 @@ class GameEngine {
   }) {
     let currentState = this.playerStates[playerNum];
     let direction = currentState.direction;
+    let tutorialDirection = "center";
     if (vertical !== "center" && horizontal !== "center") {
       direction = verticalStrength > horizontalStrength ? vertical : horizontal;
+      tutorialDirection = direction;
     } else if (horizontal !== "center") {
       direction = horizontal;
+      tutorialDirection = direction;
     } else if (vertical !== "center") {
       direction = vertical;
+      tutorialDirection = direction;
     }
 
     currentState.direction = direction;
+    currentState.tutorialDirection = tutorialDirection;
+    currentState.trackedFaceThisFrame = true;
+    currentState.horizontalStrength = horizontalStrength;
+    currentState.verticalStrength = verticalStrength;
     if (currentState.mouthIsOpen !== mouthIsOpen) {
       if (this.status === RUNNING_ROUND) {
         this.addIndividualMovement({ playerNum, currentState });
@@ -658,6 +680,7 @@ class GameEngine {
       mouthIsOpen,
       jawOpenAmount,
       direction,
+      tutorialDirection,
       minY,
       maxY,
       minX,
@@ -665,7 +688,7 @@ class GameEngine {
     });
   }
 
-  oldStyleYawPitchCalculation({
+  _oldStyleYawPitchCalculation({
     minX,
     minY,
     maxX,
@@ -709,6 +732,7 @@ class GameEngine {
       const thresholdSize = MAXIMUM_NOSE_DOWNNESS - verticalDownThreshold;
       verticalStrength = amountPastThreshold / thresholdSize;
     }
+    return { vertical, verticalStrength, horizontal, horizontalStrength };
   }
 
   processIndividualResult({
@@ -746,11 +770,8 @@ class GameEngine {
     const [r30, r31, r32, r33] = ftm.slice(12, 16);
 
     const toDegrees = (x) => x * (180 / Math.PI);
-    // const pitch = toDegrees(Math.asin(r21));
-    // const yaw = toDegrees(Math.asin(r02));
     const pitch = toDegrees(Math.atan2(-r21, Math.sqrt(r20 * r20 + r22 * r22)));
     const yaw = toDegrees(Math.atan2(-r02, r00));
-    // console.log(`PITCH: ${pitch}, YAW: ${yaw}`);
 
     const pitchThreshold = 10;
     const yawThreshold = 15;
@@ -803,13 +824,14 @@ class GameEngine {
   }
 
   processAllResults({ results, startTime }) {
+    let shouldEarlyReturn = false;
     if (
       !results ||
       !results.faceLandmarks ||
       results.faceLandmarks.length === 0
     ) {
       console.error("NO FACE LANDMARK RESULTS? Bailing.");
-      return;
+      shouldEarlyReturn = true;
     }
     if (
       results.faceLandmarks.length !== this.numPlayers &&
@@ -818,6 +840,13 @@ class GameEngine {
       console.error(
         `INCORRECT NUMBER OF FACE LANDMARK RESULTS: ${results.faceLandmarks.length}. Expected num players: ${this.numPlayers} Bailing.`
       );
+      shouldEarlyReturn = true;
+    }
+
+    if (shouldEarlyReturn) {
+      this.playerStates.forEach((playerState) => {
+        playerState.trackedFaceThisFrame = false;
+      });
       return;
     }
 
@@ -1261,6 +1290,103 @@ class GameEngine {
     });
   }
 
+  beginTutorial() {
+    this.tutorialDirectiveIndex = 0;
+    this.tutorialSuccessCount = 0;
+    this.updateStatusAndConsumers(RUNNING_TUTORIAL, "beginTutorial");
+  }
+
+  handleTutorialStep() {
+    // since we're rounding to the nearest 0.5, we use this offset to make sure
+    // that we count down for a full second at the first second (and we skip the last
+    // 0.5 seconds of our count)
+    const OFFSET_FOR_NICER_COUNTING = 0.49;
+    const TIME_TO_SATISFY_DIRECTIVE = 4 + OFFSET_FOR_NICER_COUNTING;
+    const DIFF_CUTOFF =
+      (TIME_TO_SATISFY_DIRECTIVE - OFFSET_FOR_NICER_COUNTING) * 1000;
+    const DISPLAYING_DIRECTIVE = "displaying-directive";
+    const TOO_FAR_RESET = "too-far-reset";
+    // maybe different for vertical?
+    const LOOK_THRESHOLD = 25;
+
+    const playerState = this.playerStates[0];
+    const direction = playerState.tutorialDirection;
+    const trackedFaceThisFrame = playerState.trackedFaceThisFrame;
+    const directive = TUTORIAL_DIRECTIVES[this.tutorialDirectiveIndex];
+
+    let satisfiesDirective = trackedFaceThisFrame;
+
+    const computeStrength = (d) => {
+      if (d === "left" || d === "right") {
+        return playerState.horizontalStrength;
+      } else if (d === "up" || d === "down") {
+        return playerState.verticalStrength;
+      } else {
+        console.warn(`BUG: computeStrength called with ${d}`);
+        return 0;
+      }
+    };
+
+    const maybePlayErrorSound = () => {
+      if (this.sounds.fruit.paused) {
+        this.sounds.fruit.currentTime = 0;
+        this.sounds.fruit.play();
+      }
+    };
+
+    const calcDiff = () =>
+      this.satisfiedTutorialDirectiveTime === null
+        ? 0
+        : performance.now() - this.satisfiedTutorialDirectiveTime;
+
+    if (directive === "chomp") {
+      // figure this out...
+    } else if (directive !== null && directive !== undefined) {
+      if (this.tutorialState === null) {
+        this.tutorialState = DISPLAYING_DIRECTIVE;
+        this.setTutorialInstruction(["Look", directive]);
+      } else if (this.tutorialState === DISPLAYING_DIRECTIVE) {
+        const strength = computeStrength(directive);
+        satisfiesDirective = satisfiesDirective && direction === directive;
+        const diff = calcDiff();
+        const countingDown = this.satisfiedTutorialDirectiveTime !== null;
+        if (countingDown && satisfiesDirective && strength > LOOK_THRESHOLD) {
+          maybePlayErrorSound();
+          this.tutorialState = TOO_FAR_RESET;
+          this.satisfiedTutorialDirectiveTime = null;
+          this.time = "RETRY";
+          this.updateTimeConsumers();
+        } else if (countingDown && satisfiesDirective && diff > DIFF_CUTOFF) {
+          this.tutorialState = null;
+          this.time = "DONE";
+          this.updateTimeConsumers();
+          this.satisfiedTutorialDirectiveTime = null;
+          this.tutorialDirectiveIndex += 1;
+        } else if (satisfiesDirective) {
+          const remaining = (TIME_TO_SATISFY_DIRECTIVE - diff / 1000).toFixed(
+            0
+          );
+          console.log(`remaining: ${remaining}`);
+          this.time = `${remaining}`;
+          this.updateTimeConsumers();
+          if (!countingDown) {
+            this.satisfiedTutorialDirectiveTime = performance.now();
+          }
+        } else if (countingDown && !satisfiesDirective) {
+          this.time = "RETRY";
+          this.updateTimeConsumers();
+          this.satisfiedTutorialDirectiveTime = null;
+        }
+      } else if (this.tutorialState === TOO_FAR_RESET) {
+        if (direction === "center") {
+          this.tutorialState = null;
+        } else {
+          this.setTutorialInstruction("too far - back to center".split(" "));
+        }
+      }
+    }
+  }
+
   countInRound() {
     this.updateStatusAndConsumers(COUNTING_IN_ROUND, "countInRound");
     this.time = "starting";
@@ -1337,7 +1463,9 @@ class GameEngine {
 
   async startGameLoop() {
     this.landmarker = await createFaceLandmarker({ numFaces: this.numPlayers });
-    if (this.status !== WAITING_TO_START_ROUND) {
+    if (this.status === RUNNING_TUTORIAL) {
+      // ok
+    } else if (this.status !== WAITING_TO_START_ROUND) {
       throw new Error(
         `BUG: startGameLoop called when not waiting for video - ${this.status}`
       );
@@ -1353,6 +1481,9 @@ class GameEngine {
         const startTime = performance.now();
         const results = this.landmarker.detectForVideo(this.video, startTime);
         this.processAllResults({ results, startTime });
+        if (this.status === RUNNING_TUTORIAL) {
+          const shouldMove = this.handleTutorialStep();
+        }
         if (this.status === RUNNING_ROUND) {
           const tickTimeMs =
             lastVideoTime === -1 ? 0 : startTime - lastVideoTime;

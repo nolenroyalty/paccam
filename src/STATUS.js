@@ -1,5 +1,6 @@
 export const WAITING_FOR_VIDEO = "waiting-for-video";
 export const WAITING_FOR_PLAYER_SELECT = "waiting-for-player-select";
+export const RUNNING_TUTORIAL = "running-tutorial";
 export const WAITING_TO_START_ROUND = "waiting-to-start-round";
 export const COUNTING_IN_ROUND = "counting-in-round";
 export const RUNNING_ROUND = "running-round";
@@ -14,6 +15,10 @@ export function validTransition({ from, to }) {
     from === WAITING_FOR_PLAYER_SELECT &&
     to === WAITING_TO_START_ROUND
   ) {
+    return true;
+  } else if (from === WAITING_FOR_PLAYER_SELECT && to === RUNNING_TUTORIAL) {
+    return true;
+  } else if (from === RUNNING_TUTORIAL && to === WAITING_FOR_PLAYER_SELECT) {
     return true;
   } else if (from === WAITING_TO_START_ROUND && to === COUNTING_IN_ROUND) {
     return true;
@@ -38,7 +43,8 @@ export function shouldProcessGameLoop(status) {
   if (
     status === RUNNING_ROUND ||
     status === COUNTING_IN_ROUND ||
-    status === WAITING_TO_START_ROUND
+    status === WAITING_TO_START_ROUND ||
+    status === RUNNING_TUTORIAL
   ) {
     return true;
   }

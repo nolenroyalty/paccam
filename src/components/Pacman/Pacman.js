@@ -3,6 +3,7 @@ import styled, { keyframes } from "styled-components";
 import { PLAYER_SIZE_PERCENT } from "../../constants";
 import { zIndex1 } from "../../zindex";
 import { EATEN, GHOST, NORMAL, FADED, SUPER } from "../../PACMANSTATE";
+import { RUNNING_TUTORIAL } from "../../STATUS";
 const PLAYER_CANVAS_SIZE = 128;
 const SPRITE_WIDTH = 32;
 const SPRITE_HEIGHT = 32;
@@ -14,6 +15,7 @@ function Pacman({
   numSlots,
   playerNum,
   status,
+  padding,
   ghostSpriteSheet,
   superSpriteSheet,
   addPacmanResultScreenState,
@@ -36,12 +38,17 @@ function Pacman({
       mouthIsOpen,
       jawOpenAmount,
       direction,
+      tutorialDirection,
       minY,
       maxY,
       minX,
       maxX,
     }) => {
-      setDirection(direction);
+      if (status === RUNNING_TUTORIAL) {
+        setDirection(tutorialDirection);
+      } else {
+        setDirection(direction);
+      }
       setMouthState(mouthIsOpen ? "open" : "closed");
       setVideoCoordinates({ minY, maxY, minX, maxX });
       setMaxJawState((prev) => Math.max(prev, jawOpenAmount));
@@ -90,7 +97,7 @@ function Pacman({
       game.unsubscribeFromPosition({ playerNum, id });
       game.unsubscribeFromPacmanState({ playerNum, id });
     };
-  }, [gameRef, id, playerNum]);
+  }, [gameRef, id, playerNum, status]);
 
   const drawCurrentSprite = React.useCallback(
     ({ outline, ctx, spriteX, spriteKind }) => {
@@ -294,6 +301,8 @@ function Pacman({
         style={{
           "--left": `${(coords.x / numSlots.horizontal) * 100}%`,
           "--top": `${(coords.y / numSlots.vertical) * 100}%`,
+          "--padding-left": `${padding.left}px`,
+          "--padding-top": `${padding.top}px`,
           "--grayscale": grayScale,
         }}
       >
