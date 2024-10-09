@@ -29,8 +29,8 @@ const SECONDS_IN_ROUND = 30; // 30
 const COUNT_IN_TIME = 3; // 3
 
 // this is normally 0.48
-const JAW_OPEN_THRESHOLD = 0.34;
-const JAW_CLOSE_THRESHOLD = 0.125;
+const JAW_OPEN_THRESHOLD = 0.36;
+const JAW_CLOSE_THRESHOLD = 0.135;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.6;
 const MINIMUM_NOSE_UPNESS = 0.33;
@@ -1325,7 +1325,7 @@ class GameEngine {
   }
 
   endTutorial() {
-    this.time = null;
+    this.time = "DONE";
     this.updateTimeConsumers();
     this.setTutorialInstruction(null);
     this.nullOutNumPlayers();
@@ -1483,12 +1483,13 @@ class GameEngine {
         retryThisDirective(TOO_FAR_RESET, "RETRY");
       } else if (directionSatisfied && actionSatisfied) {
         this.tutorialState.status = null;
-        this.time = "DONE";
-        this.updateTimeConsumers();
         resetDirectiveState();
         this.tutorialState.directiveIndex += 1;
         if (this.tutorialState.directiveIndex >= TUTORIAL_DIRECTIVES.length) {
           this.endTutorial();
+        } else {
+          this.time = "GOOD";
+          this.updateTimeConsumers();
         }
       } else if (directionSatisfied) {
         this.time = successText;

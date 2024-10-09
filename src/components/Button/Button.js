@@ -11,11 +11,11 @@ function Button({ children, style = {}, size, ...props }) {
     padding = "1rem";
     fontSize = "2rem";
   } else if (size === "medium") {
-    borderPx = 8;
+    borderPx = 4;
     padding = "1.5rem";
     fontSize = "3rem";
   } else if (size === "large") {
-    borderPx = 8;
+    borderPx = 4;
     padding = "2rem";
     fontSize = "3rem";
   } else {
@@ -37,7 +37,7 @@ function Button({ children, style = {}, size, ...props }) {
 }
 
 const Wrapper = styled(UnstyledButton)`
-  /* border: var(--border-size) dashed black; */
+  /* border: var(--border-size) dashed yellow; */
   color: white;
   font-family: "Arcade Classic";
   white-space: pre-wrap;
@@ -45,13 +45,15 @@ const Wrapper = styled(UnstyledButton)`
   font-size: var(--font-size);
   background-color: black;
   transition:
-    background-color 0.2s,
-    color 0.2s;
+    background-color 0.25s ease,
+    color 0.25s ease,
+    opacity 1s ease;
   padding: var(--padding);
 
   &:hover {
     background-color: white;
     color: black;
+    /* border: var(--border-size) dashed white; */
   }
 `;
 
