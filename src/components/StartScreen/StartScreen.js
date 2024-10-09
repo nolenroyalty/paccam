@@ -8,36 +8,6 @@ import {
 } from "../../STATUS";
 import * as Checkbox from "@radix-ui/react-checkbox";
 
-function PlayerSelect({ disabled, setNumPlayers }) {
-  const onClick = React.useCallback(
-    (numPlayers) => {
-      return (e) => {
-        console.log(`set num players to ${numPlayers}`);
-        e.preventDefault();
-        setNumPlayers(numPlayers);
-      };
-    },
-    [setNumPlayers]
-  );
-
-  return (
-    <PlayerSelectWrapper $disabled={disabled}>
-      <ButtonWrapper disabled={disabled} onClick={onClick(1)} size="small">
-        1 &nbsp;Player
-      </ButtonWrapper>
-      <ButtonWrapper disabled={disabled} onClick={onClick(2)} size="small">
-        2 &nbsp;Players
-      </ButtonWrapper>
-      <ButtonWrapper disabled={disabled} onClick={onClick(3)} size="small">
-        3 &nbsp;Players
-      </ButtonWrapper>
-      <ButtonWrapper disabled={disabled} onClick={onClick(4)} size="small">
-        4 &nbsp;Players
-      </ButtonWrapper>
-    </PlayerSelectWrapper>
-  );
-}
-
 const MAX_PLAYERS = 4;
 
 function StartScreen({ status, startGame, setNumPlayers }) {
@@ -46,23 +16,33 @@ function StartScreen({ status, startGame, setNumPlayers }) {
   const [allowMorePlayers, setAllowMorePlayers] = React.useState(false);
   const [speculativelyHighlighted, _setSpeculativelyHighlighted] =
     React.useState({ CPUs: null, Humans: null });
+  const [doThing, setDoThing] = React.useState(false);
+  const [hideVideoButton, setHideVideoButton] = React.useState(false);
 
   const setSpeculativelyHighlighted = React.useCallback(
     ({ count, kind }) => {
       if (kind === "CPUs") {
         const humans = Math.min(MAX_PLAYERS - count, numHumans);
         const cpus = count < numCPUs ? count - 1 : count;
-        console.log(`setting speculatively highlighted to ${count} ${kind}`);
-        console.log(`cpus: ${cpus}, humans: ${humans}`);
-        _setSpeculativelyHighlighted({ CPUs: cpus, Humans: humans });
+        _setSpeculativelyHighlighted((prev) => ({
+          ...prev,
+          CPUs: cpus,
+          Humans: humans,
+        }));
       } else if (kind === "Humans") {
         const cpus = Math.min(MAX_PLAYERS - count, numCPUs);
         const humans = count < numHumans ? count - 1 : count;
-        console.log(`setting speculatively highlighted to ${count} ${kind}`);
-        console.log(`cpus: ${cpus}, humans: ${humans}`);
-        _setSpeculativelyHighlighted({ CPUs: cpus, Humans: humans });
+        _setSpeculativelyHighlighted((prev) => ({
+          ...prev,
+          CPUs: cpus,
+          Humans: humans,
+        }));
       } else {
-        _setSpeculativelyHighlighted({ CPUs: null, Humans: null });
+        _setSpeculativelyHighlighted({
+          clickedThisCycle: false,
+          CPUs: null,
+          Humans: null,
+        });
       }
     },
     [numCPUs, numHumans]
@@ -74,8 +54,12 @@ function StartScreen({ status, startGame, setNumPlayers }) {
         setNumCPUs(MAX_PLAYERS - numHumans);
       }
       setNumHumans(numHumans);
+      setSpeculativelyHighlighted((prev) => ({
+        ...prev,
+        clickedThisCycle: true,
+      }));
     },
-    [numCPUs]
+    [numCPUs, setSpeculativelyHighlighted]
   );
 
   const checkNumCPUs = React.useCallback(
@@ -84,8 +68,12 @@ function StartScreen({ status, startGame, setNumPlayers }) {
         setNumHumans(MAX_PLAYERS - numCPUs);
       }
       setNumCPUs(numCPUs);
+      setSpeculativelyHighlighted((prev) => ({
+        ...prev,
+        clickedThisCycle: true,
+      }));
     },
-    [numHumans]
+    [numHumans, setSpeculativelyHighlighted]
   );
 
   if (
@@ -97,11 +85,28 @@ function StartScreen({ status, startGame, setNumPlayers }) {
 
   return (
     <Wrapper>
-      <Title>PacCam</Title>
-      {/* <PlayerSelect
-        disabled={status !== WAITING_FOR_PLAYER_SELECT}
-        setNumPlayers={setNumPlayers}
-      /> */}
+      <TitleSubheadWrapper>
+        <DonoLinkHolder>
+          <IconLink href="https://eieio.substack.com" target="_blank">
+            <MailIcon />
+          </IconLink>
+          <IconLink href="https://buymeacoffee.com/eieio" target="_blank">
+            <DollarIcon />
+          </IconLink>
+        </DonoLinkHolder>
+        <Title>PacCam</Title>
+        <SubHead>
+          a game by{" "}
+          <a
+            href="https://eieio.games"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "yellow" }}
+          >
+            eieio
+          </a>
+        </SubHead>
+      </TitleSubheadWrapper>
 
       <CheckboxContainer
         numBoxes={4}
@@ -127,24 +132,109 @@ function StartScreen({ status, startGame, setNumPlayers }) {
         setNumHumans={setNumHumans}
       />
       <ButtonHolder>
-        <Button size="small">How&nbsp;&nbsp;To&nbsp;&nbsp;Play</Button>
-        <Button
-          onClick={(e) => {
-            startGame();
-          }}
-          disabled={status !== WAITING_TO_START_ROUND}
-          size="small"
-        >
-          Start Game
-        </Button>
+        {<Button size="small">How&nbsp;&nbsp;To&nbsp;&nbsp;Play</Button>}
+        {!doThing && (
+          <FadeOutButton
+            onClick={(e) => {
+              setDoThing(true);
+              setHideVideoButton(true);
+            }}
+            size="small"
+            style={{ "--opacity": hideVideoButton ? 0 : 1 }}
+          >
+            Enable Webcam
+          </FadeOutButton>
+        )}
+        {doThing && (
+          <FadeInButton
+            onClick={(e) => {
+              startGame();
+            }}
+            disabled={numHumans + numCPUs === 0}
+            size="small"
+          >
+            Start Game
+          </FadeInButton>
+        )}
       </ButtonHolder>
     </Wrapper>
   );
 }
 
 const ButtonHolder = styled.div`
+  display: grid;
+  /* justify-content: space-between;
+  grid-template-columns: 50% 50%;
+  gap: 0.5rem;
+  padding: 0; */
+  grid-template-columns: 100%;
+  grid-template-rows: 1fr 1fr;
+  justify-items: stretch;
+  padding: 0 15%;
+  gap: 0.5rem;
+
+  @media (max-width: 650px) {
+    grid-template-columns: 100%;
+    grid-template-rows: 1fr 1fr;
+    justify-items: stretch;
+    padding: 0 10%;
+  }
+`;
+
+const DonoLinkHolder = styled.div`
   display: flex;
-  justify-content: space-between;
+  flex-direction: row;
+  justify-content: right;
+  gap: 0.5rem;
+  size: 0.5rem;
+  /* margin-bottom: -1rem; */
+`;
+
+const MailIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="1rem"
+    height="1rem"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+    <polyline points="22,6 12,13 2,6"></polyline>
+  </svg>
+);
+
+const DollarIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="1rem"
+    height="1rem"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="12" y1="1" x2="12" y2="23"></line>
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+  </svg>
+);
+
+const IconLink = styled.a`
+  display: inline-flex;
+  vertical-align: middle;
+  color: yellow;
+  text-decoration: none;
+  /* border-radius: 5px; */
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    color: black;
+  }
 `;
 
 function CheckboxContainer({
@@ -179,7 +269,10 @@ function CheckboxContainer({
       if (toSpeculativelyHighlight === null) {
         return count <= currentCount ? "yellow" : "white";
       } else {
-        if (count <= toSpeculativelyHighlight) {
+        if (
+          count <= toSpeculativelyHighlight &&
+          !speculativelyHighlighted.clickedThisCycle
+        ) {
           return "yellow";
         } else {
           return isEnabled ? "white" : "darkgray";
@@ -292,11 +385,9 @@ const CheckboxRoot = styled(Checkbox.Root)`
   width: 24px;
   height: 24px;
   background-color: var(--background-color);
-  /* background-color: ${(p) => (p.disabled ? "darkgray" : "white")}; */
   pointer-events: auto;
 
   &:hover {
-    /* background-color: ${(p) => (p.disabled ? "darkgray" : "yellow")}; */
     opacity: ${(p) => (p.disabled ? 1 : 0.9)};
   }
 
@@ -314,37 +405,60 @@ const Wrapper = styled.div`
   position: absolute;
   display: flex;
   flex-direction: column;
-  width: clamp(350px, 50%, 500px);
+  width: clamp(300px, 70%, 500px);
   left: 50%;
-  top: 0%;
+  top: 10%;
   transform: translateX(-50%);
   gap: 2rem;
   z-index: ${zIndex1};
-  // blur background
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px) contrast(0.5);
   padding: 20px;
   border-radius: 20px;
   border: 4px solid white;
 `;
 
 const Title = styled.h2`
-  grid-area: title;
   font-size: 4rem;
   text-align: center;
+  line-height: 0.5;
   font-family: "Arcade Classic";
+  color: yellow;
 `;
 
-const PlayerSelectWrapper = styled.div`
+const SubHead = styled.h3`
+  font-size: 1.5rem;
+  text-align: center;
+  font-family: "Arcade Classic";
+  color: black;
+  /* margin-top: -2rem; */
+
+  a {
+    color: yellow;
+    // dotted underline
+    text-decoration-style: dotted;
+  }
+`;
+
+const TitleSubheadWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  opacity: ${(props) => (props.$disabled ? 0 : 1)};
-  transition: opacity 0.2s ease-out;
-  grid-area: players;
+  gap: 0.5rem;
 `;
 
-const ButtonWrapper = styled(Button)`
-  pointer-events: ${(props) => (props.disabled ? "none" : "auto")};
+const FadeOutButton = styled(Button)`
+  transition: opacity 0.2s ease;
+  opacity: var(--opacity);
+`;
+
+const FadeInButton = styled(Button)`
+  opacity: 0;
+  animation: fadeIn 1s 0.25s forwards;
+
+  @keyframes fadeIn {
+    to {
+      opacity: 1;
+    }
+  }
 `;
 
 export default StartScreen;

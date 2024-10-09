@@ -8,7 +8,7 @@ function Button({ children, style = {}, size, disabled, ...props }) {
   let fontSize;
   if (size === "small") {
     borderPx = 2;
-    padding = "1rem";
+    padding = "1rem 0.5rem";
     fontSize = "2rem";
   } else if (size === "medium") {
     borderPx = 4;
@@ -38,7 +38,7 @@ function Button({ children, style = {}, size, disabled, ...props }) {
 
 const Wrapper = styled(UnstyledButton)`
   /* border: var(--border-size) dashed yellow; */
-  color: white;
+  color: ${(p) => (p.disabled ? "lightgrey" : "white")};
   font-family: "Arcade Classic";
   white-space: pre-wrap;
   border-radius: var(--border-size);
@@ -53,7 +53,7 @@ const Wrapper = styled(UnstyledButton)`
 
   &:hover {
     background-color: ${(p) => (p.disabled ? "darkgrey" : "white")};
-    color: ${(p) => (p.disabled ? "white" : "black")};
+    color: ${(p) => (p.disabled ? "lightgrey" : "black")};
     /* border: var(--border-size) dashed white; */
   }
 `;
