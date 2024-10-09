@@ -58,6 +58,7 @@ const EnableVideoButton = styled(Button)`
 
   pointer-events: ${(props) => (props.$disabled ? "none" : "auto")};
   opacity: ${(props) => (props.$disabled ? 0 : 1)};
+  /* transition: opacity 1s; */
 `;
 
 const Wrapper = styled.div`

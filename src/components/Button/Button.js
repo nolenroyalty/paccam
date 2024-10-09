@@ -2,7 +2,7 @@ import React from "react";
 import styled from "styled-components";
 import UnstyledButton from "../UnstyledButton";
 
-function Button({ children, style = {}, size, ...props }) {
+function Button({ children, style = {}, size, disabled, ...props }) {
   let borderPx;
   let padding;
   let fontSize;
@@ -30,7 +30,7 @@ function Button({ children, style = {}, size, ...props }) {
   };
 
   return (
-    <Wrapper style={style} {...props}>
+    <Wrapper style={style} disabled={disabled} {...props}>
       {children}
     </Wrapper>
   );
@@ -43,7 +43,8 @@ const Wrapper = styled(UnstyledButton)`
   white-space: pre-wrap;
   border-radius: var(--border-size);
   font-size: var(--font-size);
-  background-color: black;
+  background-color: ${(p) => (p.disabled ? "darkgrey" : "black")};
+  pointer-events: ${(p) => (p.disabled ? "none" : "auto")};
   transition:
     background-color 0.25s ease,
     color 0.25s ease,
@@ -51,8 +52,8 @@ const Wrapper = styled(UnstyledButton)`
   padding: var(--padding);
 
   &:hover {
-    background-color: white;
-    color: black;
+    background-color: ${(p) => (p.disabled ? "darkgrey" : "white")};
+    color: ${(p) => (p.disabled ? "white" : "black")};
     /* border: var(--border-size) dashed white; */
   }
 `;

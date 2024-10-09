@@ -43,6 +43,30 @@ const MAX_PLAYERS = 4;
 function StartScreen({ status, startGame, setNumPlayers }) {
   const [numCPUs, setNumCPUs] = React.useState(0);
   const [numHumans, setNumHumans] = React.useState(0);
+  const [allowMorePlayers, setAllowMorePlayers] = React.useState(false);
+  const [speculativelyHighlighted, _setSpeculativelyHighlighted] =
+    React.useState({ CPUs: null, Humans: null });
+
+  const setSpeculativelyHighlighted = React.useCallback(
+    ({ count, kind }) => {
+      if (kind === "CPUs") {
+        const humans = Math.min(MAX_PLAYERS - count, numHumans);
+        const cpus = count < numCPUs ? count - 1 : count;
+        console.log(`setting speculatively highlighted to ${count} ${kind}`);
+        console.log(`cpus: ${cpus}, humans: ${humans}`);
+        _setSpeculativelyHighlighted({ CPUs: cpus, Humans: humans });
+      } else if (kind === "Humans") {
+        const cpus = Math.min(MAX_PLAYERS - count, numCPUs);
+        const humans = count < numHumans ? count - 1 : count;
+        console.log(`setting speculatively highlighted to ${count} ${kind}`);
+        console.log(`cpus: ${cpus}, humans: ${humans}`);
+        _setSpeculativelyHighlighted({ CPUs: cpus, Humans: humans });
+      } else {
+        _setSpeculativelyHighlighted({ CPUs: null, Humans: null });
+      }
+    },
+    [numCPUs, numHumans]
+  );
 
   const checkNumHumans = React.useCallback(
     (numHumans) => {
@@ -79,43 +103,139 @@ function StartScreen({ status, startGame, setNumPlayers }) {
         setNumPlayers={setNumPlayers}
       /> */}
 
-      <StartGameButton
-        onClick={(e) => {
-          startGame();
-        }}
-        // disabled={status !== WAITING_TO_START_ROUND}
-        size="medium"
-      >
-        Start Game
-      </StartGameButton>
       <CheckboxContainer
-        label="Human Players"
         numBoxes={4}
         onCheck={checkNumHumans}
-        numCPUs={numHumans}
+        currentCount={numHumans}
+        allowMoreThan2={allowMorePlayers}
+        speculativelyHighlighted={speculativelyHighlighted}
+        setSpeculativelyHighlighted={setSpeculativelyHighlighted}
+        kind="Humans"
       />
       <CheckboxContainer
-        label="CPU Players"
         numBoxes={4}
         onCheck={checkNumCPUs}
-        numCPUs={numCPUs}
+        currentCount={numCPUs}
+        allowMoreThan2={true}
+        speculativelyHighlighted={speculativelyHighlighted}
+        setSpeculativelyHighlighted={setSpeculativelyHighlighted}
+        kind="CPUs"
       />
+      <AllowMorePlayers
+        allowMorePlayers={allowMorePlayers}
+        setAllowMorePlayers={setAllowMorePlayers}
+        setNumHumans={setNumHumans}
+      />
+      <ButtonHolder>
+        <Button size="small">How&nbsp;&nbsp;To&nbsp;&nbsp;Play</Button>
+        <Button
+          onClick={(e) => {
+            startGame();
+          }}
+          disabled={status !== WAITING_TO_START_ROUND}
+          size="small"
+        >
+          Start Game
+        </Button>
+      </ButtonHolder>
     </Wrapper>
   );
 }
 
-function CheckboxContainer({ numCPUs, label, numBoxes, onCheck }) {
+const ButtonHolder = styled.div`
+  display: flex;
+  justify-content: space-between;
+`;
+
+function CheckboxContainer({
+  currentCount,
+  kind,
+  numBoxes,
+  onCheck,
+  allowMoreThan2,
+  speculativelyHighlighted,
+  setSpeculativelyHighlighted,
+}) {
+  const enabled = React.useCallback(
+    (x) => x <= 2 || allowMoreThan2,
+    [allowMoreThan2]
+  );
+
+  const updateSpeculativelyHighlighted = React.useCallback(
+    ({ count, kind }) => {
+      setSpeculativelyHighlighted({ count, kind });
+    },
+    [setSpeculativelyHighlighted]
+  );
+
+  const determineBackgroundColor = React.useCallback(
+    (count) => {
+      // checked is handled in CSS
+      const toSpeculativelyHighlight = speculativelyHighlighted[kind];
+      const isEnabled = enabled(count);
+      if (!isEnabled) {
+        return "darkgray";
+      }
+      if (toSpeculativelyHighlight === null) {
+        return count <= currentCount ? "yellow" : "white";
+      } else {
+        if (count <= toSpeculativelyHighlight) {
+          return "yellow";
+        } else {
+          return isEnabled ? "white" : "darkgray";
+        }
+      }
+    },
+    [speculativelyHighlighted, kind, enabled, currentCount]
+  );
+
   return (
     <CheckboxContainerWrapper>
-      <CheckboxContainerLabel>{label}</CheckboxContainerLabel>
-      {[...Array(numBoxes)].map((_, i) => (
-        <SingleCheckbox
-          key={i}
-          myCheckCount={i + 1}
-          checkCount={numCPUs}
-          onCheck={onCheck}
-        />
-      ))}
+      <CheckboxContainerLabel>{kind}</CheckboxContainerLabel>
+      <CheckboxGroupHolder>
+        {[...Array(numBoxes)].map((_, i) => (
+          <SingleCheckbox
+            style={{ "--background-color": determineBackgroundColor(i + 1) }}
+            key={i}
+            myCheckCount={i + 1}
+            checkCount={currentCount}
+            onMouseEnter={() =>
+              updateSpeculativelyHighlighted({ count: i + 1, kind: kind })
+            }
+            onMouseLeave={() =>
+              updateSpeculativelyHighlighted({ count: 0, kind: null })
+            }
+            onCheck={onCheck}
+            disabled={!enabled(i + 1)}
+          />
+        ))}
+      </CheckboxGroupHolder>
+    </CheckboxContainerWrapper>
+  );
+}
+
+function AllowMorePlayers({
+  allowMorePlayers,
+  setAllowMorePlayers,
+  setNumHumans,
+}) {
+  const onClick = React.useCallback(() => {
+    if (allowMorePlayers) {
+      setNumHumans((prev) => Math.min(prev, 2));
+    }
+    setAllowMorePlayers((prev) => !prev);
+  }, [allowMorePlayers, setAllowMorePlayers, setNumHumans]);
+
+  return (
+    <CheckboxContainerWrapper>
+      <CheckboxContainerLabel>
+        Allow &nbsp; &gt;&nbsp;2 &nbsp; humans
+      </CheckboxContainerLabel>
+      <CheckboxRoot
+        checked={allowMorePlayers}
+        onCheckedChange={onClick}
+        style={{ "--background-color": "white" }}
+      ></CheckboxRoot>
     </CheckboxContainerWrapper>
   );
 }
@@ -126,6 +246,7 @@ const CheckboxContainerWrapper = styled.div`
   gap: 1rem;
   pointer-events: auto;
   align-items: center;
+  justify-content: space-between;
 `;
 
 const CheckboxContainerLabel = styled.span`
@@ -134,7 +255,19 @@ const CheckboxContainerLabel = styled.span`
   color: white;
 `;
 
-function SingleCheckbox({ checkCount, myCheckCount, onCheck }) {
+const CheckboxGroupHolder = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+`;
+
+function SingleCheckbox({
+  checkCount,
+  myCheckCount,
+  onCheck,
+  onHover,
+  ...rest
+}) {
   const onCheckedChange = React.useCallback(
     (e) => {
       if (checkCount >= myCheckCount) {
@@ -149,6 +282,7 @@ function SingleCheckbox({ checkCount, myCheckCount, onCheck }) {
     <CheckboxRoot
       checked={checkCount >= myCheckCount}
       onCheckedChange={onCheckedChange}
+      {...rest}
     ></CheckboxRoot>
   );
 }
@@ -157,11 +291,13 @@ const CheckboxRoot = styled(Checkbox.Root)`
   all: unset;
   width: 24px;
   height: 24px;
-  background-color: white;
+  background-color: var(--background-color);
+  /* background-color: ${(p) => (p.disabled ? "darkgray" : "white")}; */
   pointer-events: auto;
 
   &:hover {
-    background-color: lightgray;
+    /* background-color: ${(p) => (p.disabled ? "darkgray" : "yellow")}; */
+    opacity: ${(p) => (p.disabled ? 1 : 0.9)};
   }
 
   &:active,
@@ -176,18 +312,19 @@ const CheckboxRoot = styled(Checkbox.Root)`
 
 const Wrapper = styled.div`
   position: absolute;
-  display: grid;
-  width: 50%;
+  display: flex;
+  flex-direction: column;
+  width: clamp(350px, 50%, 500px);
   left: 50%;
   top: 0%;
   transform: translateX(-50%);
   gap: 2rem;
   z-index: ${zIndex1};
-  grid-template-areas:
-    "title title"
-    "players cpus"
-    "start start";
-  pointer-events: var(--pointer-events);
+  // blur background
+  backdrop-filter: blur(20px);
+  padding: 20px;
+  border-radius: 20px;
+  border: 4px solid white;
 `;
 
 const Title = styled.h2`
@@ -199,10 +336,6 @@ const Title = styled.h2`
 
 const PlayerSelectWrapper = styled.div`
   display: flex;
-  /* position: absolute; */
-  /* top: 50%; */
-  /* left: 50%; */
-  /* transform: translate(-50%, -50%); */
   flex-direction: column;
   gap: 2rem;
   opacity: ${(props) => (props.$disabled ? 0 : 1)};
@@ -210,28 +343,8 @@ const PlayerSelectWrapper = styled.div`
   grid-area: players;
 `;
 
-const CPUSelectWrapper = styled.div`
-  display: flex;
-  flex-direction: row;
-  gap: 2rem;
-  grid-area: cpus;
-`;
-
 const ButtonWrapper = styled(Button)`
   pointer-events: ${(props) => (props.disabled ? "none" : "auto")};
-`;
-
-const StartGameButton = styled(Button)`
-  /* position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%); */
-  opacity: ${(props) => (props.disabled ? 0 : 1)};
-  pointer-events: ${(props) => (props.disabled ? "none" : "auto")};
-  transition: opacity 0.5s ease-out;
-  grid-area: start;
-  width: fit-content;
-  justify-self: right;
 `;
 
 export default StartScreen;
