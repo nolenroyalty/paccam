@@ -55,12 +55,12 @@ const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
 
 const TUTORIAL_DIRECTIVES = [
   ["left", "wait"],
-  ["up", "wait"],
-  ["right", "wait"],
-  ["down", "wait"],
-  ["left", "chomp"],
-  ["up", "chomp"],
-  ["right", "chomp"],
+  // ["up", "wait"],
+  // ["right", "wait"],
+  // ["down", "wait"],
+  // ["left", "chomp"],
+  // ["up", "chomp"],
+  // ["right", "chomp"],
   ["down", "chomp"],
   ["left", "move"],
   ["up", "move"],
@@ -1324,6 +1324,15 @@ class GameEngine {
     this.updateStatusAndConsumers(RUNNING_TUTORIAL, "beginTutorial");
   }
 
+  endTutorial() {
+    this.time = null;
+    this.updateTimeConsumers();
+    this.setTutorialInstruction(null);
+    this.nullOutNumPlayers();
+    this.resetState();
+    this.moveToWaitingForPlayerSelect();
+  }
+
   handleTutorialStep() {
     // since we're rounding to the nearest 0.5, we use this offset to make sure
     // that we count down for a full second at the first second (and we skip the last
@@ -1362,15 +1371,15 @@ class GameEngine {
       }
     };
 
-    const calcDiff = () =>
-      this.tutorialState.satisfiedDirectiveTime === null
-        ? 0
-        : performance.now() - this.tutorialState.satisfiedDirectiveTime;
-
-    const retryThisDirective = (state, comment) => {
-      this.tutorialState.status = state;
+    const resetDirectiveState = () => {
       this.tutorialState.satisfiedDirectiveTime = null;
       this.tutorialState.actionSatisfactionCount = 0;
+      this.tutorialState.lastMouthState = null;
+    };
+
+    const retryThisDirective = (state, comment) => {
+      resetDirectiveState();
+      this.tutorialState.status = state;
       this.time = comment;
       this.updateTimeConsumers();
     };
@@ -1379,57 +1388,56 @@ class GameEngine {
       return direction === directiveDirection;
     };
 
+    const handleWaitAction = () => {
+      const countingDown = this.tutorialState.satisfiedDirectiveTime !== null;
+      if (!countingDown) {
+        this.tutorialState.satisfiedDirectiveTime = performance.now();
+        return [TIME_TO_SATISFY_DIRECTIVE.toFixed(0), false];
+      }
+      const diff =
+        performance.now() - this.tutorialState.satisfiedDirectiveTime;
+      if (diff > DIFF_CUTOFF) {
+        return ["DONE", true];
+      } else {
+        const ret = (TIME_TO_SATISFY_DIRECTIVE - diff / 1000).toFixed(0);
+        return [ret, false];
+      }
+    };
+
+    const handleMoveOrChompAction = () => {
+      const lastState = this.tutorialState.lastMouthState;
+      this.tutorialState.lastMouthState = playerState.mouthIsOpen;
+      if (lastState === null) {
+        this.tutorialState.actionSatisfactionCount = 0;
+        return [null, false];
+      }
+      if (lastState !== playerState.mouthIsOpen) {
+        this.tutorialState.actionSatisfactionCount += 1;
+        if (directiveAction === "move") {
+          this.addIndividualMovement({
+            playerNum: 1,
+            currentState: playerState,
+          });
+        }
+      }
+      if (this.tutorialState.actionSatisfactionCount === 0) {
+        return [null, false];
+      }
+      const complete =
+        this.tutorialState.actionSatisfactionCount >=
+        REQUIRED_ACTION_SATISFACTION_COUNT;
+      const text = playerState.mouthIsOpen ? "open" : "close";
+      return [text, complete];
+    };
+
     const satisfiesDirectiveAction = (satisfiesDirection) => {
       if (!satisfiesDirection) {
         return [null, false];
       }
       if (directiveAction === "wait") {
-        const diff = calcDiff();
-        const countingDown = this.tutorialState.satisfiedDirectiveTime !== null;
-        if (countingDown && diff > DIFF_CUTOFF) {
-          return ["DONE", true];
-        } else {
-          const remaining = (TIME_TO_SATISFY_DIRECTIVE - diff / 1000).toFixed(
-            0
-          );
-          if (!countingDown) {
-            this.tutorialState.satisfiedDirectiveTime = performance.now();
-          }
-          return [remaining, false];
-        }
+        return handleWaitAction();
       } else if (directiveAction === "chomp" || directiveAction === "move") {
-        const lastState = this.tutorialState.lastMouthState;
-        const currentState = playerState.mouthIsOpen;
-        let text = null;
-        if (lastState === null) {
-          this.tutorialState.lastMouthState = currentState;
-          this.tutorialState.actionSatisfactionCount = 0;
-        } else {
-          this.tutorialState.lastMouthState = currentState;
-          if (lastState !== currentState && lastState !== null) {
-            this.tutorialState.actionSatisfactionCount += 1;
-            if (directiveAction === "move") {
-              this.addIndividualMovement({
-                playerNum: 1,
-                currentState: playerState,
-              });
-            }
-          }
-          if (
-            lastState !== null &&
-            this.tutorialState.actionSatisfactionCount >= 1
-          ) {
-            if (currentState) {
-              text = "open";
-            } else {
-              text = "close";
-            }
-          }
-        }
-        const complete =
-          this.tutorialState.actionSatisfactionCount >=
-          REQUIRED_ACTION_SATISFACTION_COUNT;
-        return [text, complete];
+        return handleMoveOrChompAction();
       }
     };
 
@@ -1437,6 +1445,8 @@ class GameEngine {
 
     if (!faceTrackedThisFrame) {
       // reset?
+      this.setTutorialInstruction("lost track of face".split(" "));
+      retryThisDirective(null, "RETRY");
       return;
     }
 
@@ -1475,18 +1485,11 @@ class GameEngine {
         this.tutorialState.status = null;
         this.time = "DONE";
         this.updateTimeConsumers();
-        this.tutorialState.satisfiedDirectiveTime = null;
+        resetDirectiveState();
         this.tutorialState.directiveIndex += 1;
         if (this.tutorialState.directiveIndex >= TUTORIAL_DIRECTIVES.length) {
-          this.time = null;
-          this.updateTimeConsumers();
-          this.setTutorialInstruction(null);
-          this.nullOutNumPlayers();
-          this.resetState();
-          this.moveToWaitingForPlayerSelect();
+          this.endTutorial();
         }
-        this.tutorialState.lastMouthState = null;
-        this.tutorialState.actionSatisfactionCount = 0;
       } else if (directionSatisfied) {
         this.time = successText;
         this.updateTimeConsumers();
