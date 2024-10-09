@@ -1,65 +1,18 @@
 import React from "react";
 import styled from "styled-components";
-import Button from "../Button";
 
-function VideoFrame({ videoRef, enableVideo }) {
-  const [buttonDisabled, setButtonDisabled] = React.useState(false);
-  const [enabled, setEnabled] = React.useState(false);
-
-  const onClick = React.useCallback(() => {
-    // hook video up to webcam
-    setButtonDisabled(true);
-    navigator.mediaDevices
-      .getUserMedia({ video: true })
-      .then((stream) => {
-        videoRef.current.srcObject = stream;
-        enableVideo(true);
-        setEnabled(true);
-      })
-      .catch((err) => {
-        console.error("Error accessing the camera.", err);
-      });
-  }, [enableVideo, videoRef]);
-
+function VideoFrame({ videoRef, videoEnabled }) {
   return (
     <Wrapper>
-      <EnableVideoButton
-        $disabled={buttonDisabled}
-        disabled={buttonDisabled}
-        onClick={onClick}
-        size="large"
-      >
-        <ButtonText>
-          {"Enable  Webcam"}
-          <br />
-          {"To   Start"}
-        </ButtonText>
-      </EnableVideoButton>
       <Video
         autoPlay
         muted
         ref={videoRef}
-        style={{ "--opacity": enabled ? 0.8 : 0, "--brightness": 0.7 }}
+        style={{ "--opacity": videoEnabled ? 0.8 : 0, "--brightness": 0.7 }}
       />
     </Wrapper>
   );
 }
-
-const ButtonText = styled.pre`
-  white-space: pre-wrap;
-  font-family: inherit;
-`;
-
-const EnableVideoButton = styled(Button)`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-
-  pointer-events: ${(props) => (props.$disabled ? "none" : "auto")};
-  opacity: ${(props) => (props.$disabled ? 0 : 1)};
-  /* transition: opacity 1s; */
-`;
 
 const Wrapper = styled.div`
   position: absolute;

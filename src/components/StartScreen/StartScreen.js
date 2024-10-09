@@ -5,18 +5,24 @@ import { zIndex1 } from "../../zindex";
 import {
   WAITING_FOR_PLAYER_SELECT,
   WAITING_TO_START_ROUND,
+  WAITING_FOR_VIDEO,
 } from "../../STATUS";
 import * as Checkbox from "@radix-ui/react-checkbox";
 
 const MAX_PLAYERS = 4;
 
-function StartScreen({ status, startGame, setNumPlayers }) {
+function StartScreen({
+  status,
+  startGame,
+  setNumPlayers,
+  enableVideo,
+  videoEnabled,
+}) {
   const [numCPUs, setNumCPUs] = React.useState(0);
   const [numHumans, setNumHumans] = React.useState(0);
   const [allowMorePlayers, setAllowMorePlayers] = React.useState(false);
   const [speculativelyHighlighted, _setSpeculativelyHighlighted] =
     React.useState({ CPUs: null, Humans: null });
-  const [doThing, setDoThing] = React.useState(false);
   const [hideVideoButton, setHideVideoButton] = React.useState(false);
 
   const setSpeculativelyHighlighted = React.useCallback(
@@ -78,7 +84,8 @@ function StartScreen({ status, startGame, setNumPlayers }) {
 
   if (
     status !== WAITING_FOR_PLAYER_SELECT &&
-    status !== WAITING_TO_START_ROUND
+    status !== WAITING_TO_START_ROUND &&
+    status !== WAITING_FOR_VIDEO
   ) {
     return null;
   }
@@ -92,6 +99,12 @@ function StartScreen({ status, startGame, setNumPlayers }) {
           </IconLink>
           <IconLink href="https://buymeacoffee.com/eieio" target="_blank">
             <DollarIcon />
+          </IconLink>
+          <IconLink
+            href="https://github.com/nolenroyalty/paccam"
+            target="_blank"
+          >
+            <CodeIcon />
           </IconLink>
         </DonoLinkHolder>
         <Title>PacCam</Title>
@@ -133,10 +146,10 @@ function StartScreen({ status, startGame, setNumPlayers }) {
       />
       <ButtonHolder>
         {<Button size="small">How&nbsp;&nbsp;To&nbsp;&nbsp;Play</Button>}
-        {!doThing && (
+        {!videoEnabled && (
           <FadeOutButton
             onClick={(e) => {
-              setDoThing(true);
+              enableVideo(true);
               setHideVideoButton(true);
             }}
             size="small"
@@ -145,7 +158,7 @@ function StartScreen({ status, startGame, setNumPlayers }) {
             Enable Webcam
           </FadeOutButton>
         )}
-        {doThing && (
+        {videoEnabled && (
           <FadeInButton
             onClick={(e) => {
               startGame();
@@ -170,7 +183,7 @@ const ButtonHolder = styled.div`
   grid-template-columns: 100%;
   grid-template-rows: 1fr 1fr;
   justify-items: stretch;
-  padding: 0 15%;
+  padding: 0 20%;
   gap: 0.5rem;
 
   @media (max-width: 650px) {
@@ -221,6 +234,24 @@ const DollarIcon = () => (
   >
     <line x1="12" y1="1" x2="12" y2="23"></line>
     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+  </svg>
+);
+
+const CodeIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="1rem"
+    height="1rem"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    class="feather feather-code"
+  >
+    <polyline points="16 18 22 12 16 6"></polyline>
+    <polyline points="8 6 2 12 8 18"></polyline>
   </svg>
 );
 

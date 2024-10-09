@@ -58,7 +58,15 @@ function App() {
   );
 
   const enableVideo = React.useCallback(() => {
-    setVideoEnabled(true);
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then((stream) => {
+        videoRef.current.srcObject = stream;
+        setVideoEnabled(true);
+      })
+      .catch((err) => {
+        console.alert("Error accessing the camera. Refresh?", err);
+      });
     gameRef.current.initVideo(videoRef.current);
   }, []);
 
@@ -178,11 +186,13 @@ function App() {
         alt=""
       />
       <GameHolderOverlapping>
-        <VideoFrame videoRef={videoRef} enableVideo={enableVideo} />
+        <VideoFrame videoRef={videoRef} videoEnabled={videoEnabled} />
         <StartScreen
           status={gameState.status}
           startGame={startGame}
           setNumPlayers={setNumPlayers}
+          enableVideo={enableVideo}
+          videoEnabled={videoEnabled}
         />
         <Playfield
           playfieldPadding={playfieldPadding}

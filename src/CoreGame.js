@@ -174,14 +174,6 @@ class GameEngine {
   initVideo(video) {
     this.video = video;
     this.updateStatusAndConsumers(WAITING_FOR_PLAYER_SELECT, "initVideo");
-
-    // enable super on space
-    // document.addEventListener("keydown", (e) => {
-    //   if (e.key === " ") {
-    //     this.enableSuper = this.enableSuper.bind(this);
-    //     this.enableSuper({ playerNum: 0 });
-    //   }
-    // });
   }
 
   initAudio({ sounds }) {
