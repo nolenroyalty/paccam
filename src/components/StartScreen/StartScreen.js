@@ -12,7 +12,7 @@ const MAX_PLAYERS = 4;
 
 function StartScreen({
   status,
-  startGame,
+  startGame: _startGame,
   setNumHumans,
   setNumCPUs,
   numHumans,
@@ -27,7 +27,8 @@ function StartScreen({
   const [hideVideoButton, setHideVideoButton] = React.useState(false);
   const [showingHowToPlay, setShowingHowToPlay] = React.useState(false);
   const [hidingHowToPlay, setHidingHowToPlay] = React.useState(false);
-  const [AboutToRunTutorial, setAboutToRunTutorial] = React.useState(false);
+  const [aboutToRunTutorial, setAboutToRunTutorial] = React.useState(false);
+  const [aboutToStartGame, setAboutToStartGame] = React.useState(false);
 
   const setSpeculativelyHighlighted = React.useCallback(
     ({ count, kind }) => {
@@ -86,20 +87,31 @@ function StartScreen({
     [numHumans, setNumCPUs, setNumHumans, setSpeculativelyHighlighted]
   );
 
+  const startGame = React.useCallback(() => {
+    setAboutToStartGame(true);
+    setTimeout(() => {
+      _startGame();
+      setAboutToStartGame(false);
+    }, 550);
+  }, [_startGame]);
+
   if (status !== WAITING_FOR_PLAYER_SELECT && status !== WAITING_FOR_VIDEO) {
     return null;
   }
 
-  // const dimTheLights =
-  //   AboutToRunTutorial || (showingHowToPlay && !hidingHowToPlay);
-  const opacity = AboutToRunTutorial
+  const opacity = aboutToRunTutorial
     ? 0
     : showingHowToPlay && !hidingHowToPlay
       ? 0.2
       : 1;
 
+  const animation =
+    aboutToStartGame | aboutToRunTutorial
+      ? "scoreWrapperExit"
+      : "scoreWrapperEnter";
+
   return (
-    <Wrapper style={{ "--opacity": opacity }}>
+    <Wrapper style={{ "--opacity": opacity, "--animation": animation }}>
       <TitleSubheadWrapper>
         <Title>PacCam</Title>
         <SubHead>
@@ -222,7 +234,18 @@ const Wrapper = styled.div`
       transform: translate(-50%, 0);
     }
   }
-  animation: scoreWrapperEnter 0.5s ease-out;
+  @keyframes scoreWrapperExit {
+    0% {
+      transform: translate(-50%, 0);
+    }
+
+    100% {
+      transform: translate(-50%, 200%);
+      opacity: 0;
+    }
+  }
+
+  animation: var(--animation) 0.5s ease-out forwards;
   transition: opacity 0.5s ease;
 `;
 
