@@ -1485,7 +1485,7 @@ class GameEngine {
       const inProgress =
         this.tutorialState.satisfiedDirectiveTime !== null ||
         this.tutorialState.actionSatisfactionCount > 0;
-      if (tooFar) {
+      if (tooFar && directionSatisfied) {
         maybePlayErrorSound();
         retryThisDirective(TOO_FAR_RESET, "RETRY");
       } else if (directionSatisfied && actionSatisfied) {
