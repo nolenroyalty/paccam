@@ -8,9 +8,12 @@ function HowToPlay({
   setShowingHowToPlay,
   hidingHowToPlay,
   setHidingHowToPlay,
+  enableVideo,
+  videoEnabled,
+  beginTutorial,
 }) {
   const showWrapper = React.useCallback(
-    (value) => {
+    (value, runThisToo) => {
       if (value) {
         setShowingHowToPlay(true);
       } else {
@@ -18,6 +21,9 @@ function HowToPlay({
         setTimeout(() => {
           setShowingHowToPlay(false);
           setHidingHowToPlay(false);
+          if (runThisToo) {
+            runThisToo();
+          }
         }, 300);
       }
     },
@@ -61,7 +67,10 @@ function HowToPlay({
           <ButtonHolder>
             <Button
               onClick={(e) => {
-                showWrapper(false);
+                if (!videoEnabled) {
+                  enableVideo();
+                }
+                showWrapper(false, beginTutorial);
               }}
               size="small"
               style={{ gridArea: "tutorial" }}

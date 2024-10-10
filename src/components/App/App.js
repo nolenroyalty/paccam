@@ -12,8 +12,11 @@ const DEBUG = false;
 
 function App() {
   const videoRef = React.useRef();
+  const videoActuallyStarted = React.useRef(null);
   const [tutorialInstruction, setTutorialInstruction] = React.useState([]);
-  const gameRef = React.useRef(new GameEngine({ setTutorialInstruction }));
+  const gameRef = React.useRef(
+    new GameEngine({ setTutorialInstruction, videoActuallyStarted })
+  );
   const sounds = React.useRef({});
   const spriteSheets = React.useRef({});
   const [playfieldPadding, setPlayfieldPadding] = React.useState({});
@@ -26,6 +29,18 @@ function App() {
   );
 
   const [debugInfo, setDebugInfo] = React.useState({});
+
+  React.useEffect(() => {
+    const promise = new Promise((resolve) => {
+      const f = () => {
+        console.log("video began");
+        resolve();
+        videoRef.current.onplaying = null;
+      };
+      videoRef.current.onplaying = f;
+    });
+    videoActuallyStarted.current = promise;
+  }, []);
 
   React.useEffect(() => {
     if (!gameRef.current) {
@@ -202,6 +217,7 @@ function App() {
           setNumCPUs={setNumCPUs}
           enableVideo={enableVideo}
           videoEnabled={videoEnabled}
+          beginTutorial={beginTutorial}
         />
         <Playfield
           playfieldPadding={playfieldPadding}

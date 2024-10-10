@@ -19,6 +19,7 @@ function StartScreen({
   numCPUs,
   enableVideo,
   videoEnabled,
+  beginTutorial,
 }) {
   const [allowMorePlayers, setAllowMorePlayers] = React.useState(false);
   const [speculativelyHighlighted, _setSpeculativelyHighlighted] =
@@ -141,6 +142,9 @@ function StartScreen({
             setShowingHowToPlay={setShowingHowToPlay}
             hidingHowToPlay={hidingHowToPlay}
             setHidingHowToPlay={setHidingHowToPlay}
+            enableVideo={enableVideo}
+            videoEnabled={videoEnabled}
+            beginTutorial={beginTutorial}
           />
         }
         {!videoEnabled && (

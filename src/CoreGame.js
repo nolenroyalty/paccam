@@ -110,7 +110,7 @@ function invertLandmarks(landmarks) {
 }
 
 class GameEngine {
-  constructor({ setTutorialInstruction }) {
+  constructor({ setTutorialInstruction, videoActuallyStarted }) {
     this.faceStateConsumers = [];
     this.positionConsumers = [];
     this.pelletConsumers = [];
@@ -135,6 +135,7 @@ class GameEngine {
     this.endLoopThisFrame = false;
     this.resolveEndLoop = null;
     this.loopRunning = false;
+    this.videoActuallyStarted = videoActuallyStarted;
   }
 
   _initTutorialState() {
@@ -1596,6 +1597,13 @@ class GameEngine {
       return;
     }
     this.loopRunning = true;
+    if (this.videoActuallyStarted) {
+      console.log(`WAITING: ${this.videoActuallyStarted}`);
+      await this.videoActuallyStarted.current;
+      console.log(`HERE: videoActuallyStarted`);
+    } else {
+      console.log(`no videoActuallyStarted`);
+    }
 
     const endLoop = () => {
       console.log("Ending game loop");
