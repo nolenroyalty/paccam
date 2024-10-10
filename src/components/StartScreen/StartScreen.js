@@ -5,6 +5,7 @@ import { zIndex1 } from "../../zindex";
 import { WAITING_FOR_PLAYER_SELECT, WAITING_FOR_VIDEO } from "../../STATUS";
 import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import Icons from "../Icons";
 
 const MAX_PLAYERS = 4;
 
@@ -155,15 +156,18 @@ function StartScreen({
         )}
       </ButtonHolder>
       <DonoLinkHolder>
-        <IconLink href="https://eieio.substack.com" target="_blank">
-          <MailIcon />
-        </IconLink>
-        <IconLink href="https://buymeacoffee.com/eieio" target="_blank">
-          <DollarIcon />
-        </IconLink>
-        <IconLink href="https://github.com/nolenroyalty/paccam" target="_blank">
-          <CodeIcon />
-        </IconLink>
+        <Icons.Link href="https://eieio.substack.com" target="_blank">
+          <Icons.Mail size="1rem" />
+        </Icons.Link>
+        <Icons.Link href="https://buymeacoffee.com/eieio" target="_blank">
+          <Icons.Dollar size="1rem" />
+        </Icons.Link>
+        <Icons.Link
+          href="https://github.com/nolenroyalty/paccam"
+          target="_blank"
+        >
+          <Icons.Code size="1rem" />
+        </Icons.Link>
       </DonoLinkHolder>
     </Wrapper>
   );
@@ -195,88 +199,6 @@ const DonoLinkHolder = styled.div`
   align-items: center;
   gap: 0.5rem;
   size: 0.5rem;
-`;
-
-const MailIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="1rem"
-    height="1rem"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-    <polyline points="22,6 12,13 2,6"></polyline>
-  </svg>
-);
-
-const DollarIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="1rem"
-    height="1rem"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="12" y1="1" x2="12" y2="23"></line>
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-  </svg>
-);
-
-const CodeIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="1rem"
-    height="1rem"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="16 18 22 12 16 6"></polyline>
-    <polyline points="8 6 2 12 8 18"></polyline>
-  </svg>
-);
-
-const QuestionIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="1.25rem"
-    height="1.25rem"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10"></circle>
-    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-    <line x1="12" y1="17" x2="12.01" y2="17"></line>
-  </svg>
-);
-
-const IconLink = styled.a`
-  display: inline-flex;
-  vertical-align: middle;
-  color: yellow;
-  text-decoration: none;
-  /* border-radius: 5px; */
-  transition: background-color 0.3s ease;
-
-  &:hover {
-    color: black;
-  }
 `;
 
 function CheckboxContainer({
@@ -386,7 +308,7 @@ function ExplainMorePlayers() {
     <TooltipProvider>
       <TooltipRoot>
         <TooltipTrigger>
-          <QuestionIcon />
+          <Icons.Question size="1.25rem" />
         </TooltipTrigger>
         <TooltipPortal>
           <TooltipContent sideOffset={5}>
