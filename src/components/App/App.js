@@ -7,6 +7,7 @@ import StartScreen from "../StartScreen";
 import TimerDisplay from "../TimerDisplay";
 import ScoreDisplay from "../ScoreDisplay";
 import TutorialHandler from "../TutorialHandler";
+import { WAITING_FOR_VIDEO } from "../../STATUS";
 
 const DEBUG = false;
 
@@ -14,8 +15,19 @@ function App() {
   const videoRef = React.useRef();
   const videoActuallyStarted = React.useRef(null);
   const [tutorialInstruction, setTutorialInstruction] = React.useState([]);
+  const [gameState, setGameState] = React.useState({
+    numPlayers: null, // rename to numHumans
+    numCPUs: null,
+    status: WAITING_FOR_VIDEO,
+  });
+  const startScreenRef = React.useRef();
   const gameRef = React.useRef(
-    new GameEngine({ setTutorialInstruction, videoActuallyStarted })
+    new GameEngine({
+      setTutorialInstruction,
+      videoActuallyStarted,
+      status: gameState.status,
+      startScreenRef,
+    })
   );
   const sounds = React.useRef({});
   const spriteSheets = React.useRef({});
@@ -84,12 +96,6 @@ function App() {
       });
     gameRef.current.initVideo(videoRef.current);
   }, []);
-
-  const [gameState, setGameState] = React.useState({
-    numPlayers: null, // rename to numHumans
-    numCPUs: null,
-    status: null,
-  });
 
   const setNumPlayers = React.useCallback(async (numPlayers) => {
     console.log(`SETNUMPLAYERS: ${numPlayers}`);
@@ -219,6 +225,7 @@ function App() {
           enableVideo={enableVideo}
           videoEnabled={videoEnabled}
           beginTutorial={beginTutorial}
+          startScreenRef={startScreenRef}
         />
         <Playfield
           playfieldPadding={playfieldPadding}

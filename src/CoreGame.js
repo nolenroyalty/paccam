@@ -110,7 +110,12 @@ function invertLandmarks(landmarks) {
 }
 
 class GameEngine {
-  constructor({ setTutorialInstruction, videoActuallyStarted }) {
+  constructor({
+    setTutorialInstruction,
+    videoActuallyStarted,
+    status,
+    startScreenRef,
+  }) {
     this.faceStateConsumers = [];
     this.positionConsumers = [];
     this.pelletConsumers = [];
@@ -126,7 +131,7 @@ class GameEngine {
     this.pelletsByPosition = {};
     this.superStatus = { player: null, endSuperAt: null };
     this.numSlots = null;
-    this.status = WAITING_FOR_VIDEO;
+    this.status = status;
     this.numPlayers = null;
     this.time = null;
     this.ignoreMissingFaces = false;
@@ -138,6 +143,7 @@ class GameEngine {
     this.videoActuallyStarted = videoActuallyStarted;
     this.hasEverTrackedFaces = false;
     this.aboutToEndTutorial = false;
+    this.startScreenRef = startScreenRef;
   }
 
   _initTutorialState() {
@@ -251,6 +257,39 @@ class GameEngine {
 
   /* bug here on small screens? */
   spawnLocation({ playerNum, waiting }) {
+    if (this.status === RUNNING_TUTORIAL) {
+      const x = this.numSlots.horizontal / 4 - PLAYER_SIZE_IN_SLOTS / 2;
+      const y = this.numSlots.vertical / 4 - PLAYER_SIZE_IN_SLOTS / 2;
+      return { x, y };
+    } else if (waiting && this.startScreenRef.current) {
+      console.log(`determining waiting spawn location for player ${playerNum}`);
+      const startScreenRect =
+        this.startScreenRef.current.getBoundingClientRect();
+      const startScreenHeight = startScreenRect.height;
+      const windowHeight = window.innerHeight;
+      const endOfStartScreen = 0.1 * windowHeight + startScreenHeight;
+
+      const slotSize = windowHeight / this.numSlots.vertical;
+      const numSlotsToGetBelowWindow = endOfStartScreen / slotSize;
+      const y =
+        (numSlotsToGetBelowWindow +
+          this.numSlots.vertical -
+          PLAYER_SIZE_IN_SLOTS) /
+        2;
+
+      // 3 gaps between players, half gap at the start and end
+      const leftOffset =
+        this.numSlots.horizontal / 8 - PLAYER_SIZE_IN_SLOTS / 2;
+      const x = leftOffset + (this.numSlots.horizontal / 4) * playerNum;
+      console.log(
+        `spawn location x: ${x} | ${leftOffset} | ${(this.numSlots.horizontal / 4) * playerNum} | ${playerNum}`
+      );
+      return { x, y };
+    } else if (waiting) {
+      console.error(
+        "BUG: spawnLocation called with waiting but no startScreen ref!!"
+      );
+    }
     const xOffset = waiting ? this.numSlots.horizontal / 4 : 0;
     const yOffset = waiting ? this.numSlots.vertical / 4 : 0;
     if (playerNum === 0) {
@@ -1622,11 +1661,11 @@ class GameEngine {
     }
     this.loopRunning = true;
     if (this.videoActuallyStarted) {
-      console.log(`WAITING: ${this.videoActuallyStarted}`);
+      console.log(
+        `waiting for video to actually begin before starting game loop`
+      );
       await this.videoActuallyStarted.current;
-      console.log(`HERE: videoActuallyStarted`);
-    } else {
-      console.log(`no videoActuallyStarted`);
+      console.log(`video began, continuing to start game loop`);
     }
 
     if (this.numPlayers < 1) {

@@ -128,8 +128,6 @@ const DialogOverlay = styled(Dialog.Overlay)`
 `;
 
 const VideoDemo = styled.video`
-  /* aspect-ratio: 1/1; */
-  /* width: clamp(100px, 50%, 150px); */
   width: min(80%, 800px);
   height: auto;
   border-radius: 20px;
@@ -144,9 +142,14 @@ const DialogContent = styled(Dialog.Content)`
   max-height: 80%;
   padding: 2rem 4rem;
   border: 4px solid white;
-  backdrop-filter: blur(20px) contrast(0.8);
+  backdrop-filter: blur(20px) contrast(0.4);
+  box-shadow: 4px 4px 8px 2px rgba(0, 0, 0, 0.3);
   // allow scrolling
   overflow: auto;
+  scrollbar-gutter: stable;
+  scrollbar-color: lightgrey transparent;
+  scrollbar-width: thin;
+  /* background-clip: padding-box; */
   position: fixed;
   top: 5%;
   left: 50%;
@@ -155,12 +158,11 @@ const DialogContent = styled(Dialog.Content)`
   display: grid;
   grid-template-rows: auto 1fr auto;
   transition: opacity 0.35s ease-out;
-  scrollbar-gutter: stable;
   will-change: transform, opacity;
 
   @keyframes HowToDialogEnter {
     from {
-      opacity: 0;
+      opacity: 0.5;
       transform: translate(-50%, -100%);
     }
     to {
@@ -175,8 +177,8 @@ const DialogContent = styled(Dialog.Content)`
       transform: translate(-50%, 0);
     }
     to {
-      opacity: 0;
-      transform: translate(-50%, 100%);
+      opacity: 0.5;
+      transform: translate(-50%, 150%);
     }
   }
 

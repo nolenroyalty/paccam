@@ -20,8 +20,11 @@ function StartScreen({
   enableVideo,
   videoEnabled,
   beginTutorial,
+  startScreenRef,
 }) {
-  const [allowMorePlayers, setAllowMorePlayers] = React.useState(false);
+  const [allowMorePlayers, setAllowMorePlayers] = React.useState(
+    window.localStorage.getItem("allowMorePlayers") === "true"
+  );
   const [speculativelyHighlighted, _setSpeculativelyHighlighted] =
     React.useState({ CPUs: null, Humans: null });
   const [hideVideoButton, setHideVideoButton] = React.useState(false);
@@ -29,6 +32,10 @@ function StartScreen({
   const [hidingHowToPlay, setHidingHowToPlay] = React.useState(false);
   const [aboutToRunTutorial, setAboutToRunTutorial] = React.useState(false);
   const [aboutToStartGame, setAboutToStartGame] = React.useState(false);
+
+  React.useEffect(() => {
+    window.localStorage.setItem("allowMorePlayers", allowMorePlayers);
+  }, [allowMorePlayers]);
 
   const setSpeculativelyHighlighted = React.useCallback(
     ({ count, kind }) => {
@@ -95,23 +102,40 @@ function StartScreen({
     }, 550);
   }, [_startGame]);
 
+  const priorStatus = React.useRef(status);
+  const [shouldSlideIn, setShouldSlideIn] = React.useState(false);
+  React.useEffect(() => {
+    const shouldDisplay = (x) =>
+      x === WAITING_FOR_PLAYER_SELECT || x === WAITING_FOR_VIDEO;
+
+    setShouldSlideIn(
+      shouldDisplay(status) && !shouldDisplay(priorStatus.current)
+    );
+    priorStatus.current = status;
+  }, [setShouldSlideIn, status]);
+
   if (status !== WAITING_FOR_PLAYER_SELECT && status !== WAITING_FOR_VIDEO) {
+    startScreenRef.current = null;
     return null;
   }
 
   const opacity = aboutToRunTutorial
     ? 0
     : showingHowToPlay && !hidingHowToPlay
-      ? 0.2
+      ? 0.8
       : 1;
 
-  const animation =
-    aboutToStartGame | aboutToRunTutorial
+  const animation = shouldSlideIn
+    ? "scoreWrapperEnter"
+    : aboutToStartGame | aboutToRunTutorial
       ? "scoreWrapperExit"
-      : "scoreWrapperEnter";
+      : "scoreWrapperInitial";
 
   return (
-    <Wrapper style={{ "--opacity": opacity, "--animation": animation }}>
+    <Wrapper
+      ref={startScreenRef}
+      style={{ "--opacity": opacity, "--animation": animation }}
+    >
       <TitleSubheadWrapper>
         <Title>PacCam</Title>
         <SubHead>
@@ -154,6 +178,7 @@ function StartScreen({
         setNumHumans={setNumHumans}
         videoEnabled={videoEnabled}
       />
+      <EnableOnlinePlay videoEnabled={videoEnabled} />
       <ButtonHolder>
         {
           <HowToPlay
@@ -219,10 +244,11 @@ const Wrapper = styled.div`
   transform: translateX(-50%);
   gap: 1.5rem;
   z-index: ${zIndex1};
-  backdrop-filter: blur(20px) contrast(0.5);
+  backdrop-filter: blur(20px) contrast(0.4);
   padding: 20px;
   border-radius: 20px;
   border: 4px solid white;
+  box-shadow: 4px 4px 8px 1px rgba(0, 0, 0, 0.3);
 
   opacity: var(--opacity);
   @keyframes scoreWrapperEnter {
@@ -242,6 +268,13 @@ const Wrapper = styled.div`
     100% {
       transform: translate(-50%, 200%);
       opacity: 0;
+    }
+  }
+
+  @keyframes scoreWrapperInitial {
+    0% {
+    }
+    100% {
     }
   }
 
@@ -453,21 +486,75 @@ function AllowMorePlayers({
   );
 }
 
+function EnableOnlinePlay({ videoEnabled }) {
+  return (
+    <CheckboxContainerWrapper $videoEnabled={videoEnabled}>
+      <CheckboxContainerLabel>
+        Play Online <ExplainNoOnlineYet />
+      </CheckboxContainerLabel>
+      <CheckboxRoot
+        checked={false}
+        onCheckedChange={() => {}}
+        style={{ "--background-color": "darkgrey" }}
+        disabled={true}
+      ></CheckboxRoot>
+    </CheckboxContainerWrapper>
+  );
+}
+
 function ExplainMorePlayers() {
   return (
-    <TooltipProvider>
+    <QuestionmarkTooltip>
+      Many computers struggle to track more than 2 faces at a time. And frankly
+      it's hard to fit 4 faces on the screen at once!
+      <br />
+      <br />
+      Feel free to enable this, but beware that it might not work well :)
+    </QuestionmarkTooltip>
+  );
+}
+
+function ExplainNoOnlineYet() {
+  return (
+    <QuestionmarkTooltip>
+      I'd like to add online play (just with your friends! no strangers!) - but
+      it's a ton of work. So I'd like to know people would use the feature
+      before I add it.
+      <br />
+      <br />
+      Want this feature?? Tell me!{" "}
+      <a href="https://x.com/itseieio">Tweet at me</a> or{" "}
+      <a href="https://mastodon.gamedev.place/home">toot(?)</a> at me or send me{" "}
+      <a href="https://buymeacoffee.com/eieio">money</a> or{" "}
+      <a href="mailto:eieiogames@gmail.com?subject=I want online play for paccam and i promise i am serious about this request, really really really">
+        email me
+      </a>{" "}
+      or find me on the street and shout me down.
+    </QuestionmarkTooltip>
+  );
+}
+
+function QuestionmarkTooltip({ children }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <TooltipProvider delayDuration={200} open={open} onOpenChange={setOpen}>
       <TooltipRoot>
-        <TooltipTrigger>
+        <TooltipTrigger
+          onClick={(e) => {
+            e.preventDefault();
+          }}
+        >
           <Icons.Question size="1.25rem" />
         </TooltipTrigger>
         <TooltipPortal>
-          <TooltipContent sideOffset={5}>
+          <TooltipContent
+            sideOffset={5}
+            onPointerDownOutside={(e) => {
+              e.preventDefault();
+            }}
+          >
             <TooltipArrow width={20} height={10} />
-            Many computers struggle to track more than 2 faces at a time. And
-            frankly it's hard to fit 4 faces on the screen at once!
-            <br />
-            <br />
-            Feel free to enable this, but beware that it might not work well :)
+            {children}
           </TooltipContent>
         </TooltipPortal>
       </TooltipRoot>
@@ -489,6 +576,11 @@ const TooltipContent = styled(Tooltip.Content)`
   padding: 1rem;
   max-width: 300px;
   border-radius: 10px;
+
+  a {
+    color: yellow;
+    text-decoration-style: dotted;
+  }
 `;
 const TooltipArrow = styled(Tooltip.Arrow)`
   fill: black;

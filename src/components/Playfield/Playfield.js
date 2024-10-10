@@ -80,6 +80,8 @@ function Playfield({
       });
     }
     setNumSlots(_numSlots);
+
+    console.log(`padding by size: ${JSON.stringify(paddingBySize)}`);
     console.log(`num slots is: ${JSON.stringify(_numSlots)}`);
 
     setInitializedPlayfield(true);
