@@ -4,6 +4,8 @@ import {
   SHOWING_RESULTS,
   COMPLETED_ROUND,
   RUNNING_TUTORIAL,
+  WAITING_FOR_PLAYER_SELECT,
+  WAITING_FOR_VIDEO,
 } from "../../STATUS";
 import { PLAYER_SIZE_IN_SLOTS } from "../../constants";
 import { COLORS } from "../../COLORS";
@@ -108,6 +110,10 @@ function ScoreDisplay({
   }, [gameRef]);
 
   if (status === RUNNING_TUTORIAL) {
+    return null;
+  }
+
+  if (status === WAITING_FOR_PLAYER_SELECT || status === WAITING_FOR_VIDEO) {
     return null;
   }
 

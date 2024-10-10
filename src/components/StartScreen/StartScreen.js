@@ -505,8 +505,7 @@ function EnableOnlinePlay({ videoEnabled }) {
 function ExplainMorePlayers() {
   return (
     <QuestionmarkTooltip>
-      Many computers struggle to track more than 2 faces at a time. And frankly
-      it's hard to fit 4 faces on the screen at once!
+      Your computer may struggle to handle more than 2 faces at a time.
       <br />
       <br />
       Feel free to enable this, but beware that it might not work well :)
@@ -517,9 +516,8 @@ function ExplainMorePlayers() {
 function ExplainNoOnlineYet() {
   return (
     <QuestionmarkTooltip>
-      I'd like to add online play (just with your friends! no strangers!) - but
-      it's a ton of work. So I'd like to know people would use the feature
-      before I add it.
+      I'd like to add online play - but it's a ton of work. So I'd like to know
+      people would use the feature before I add it.
       <br />
       <br />
       Want this feature?? Tell me!{" "}
