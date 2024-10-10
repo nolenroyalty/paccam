@@ -4,6 +4,7 @@ import Button from "../Button";
 import { zIndex1 } from "../../zindex";
 import { WAITING_FOR_PLAYER_SELECT, WAITING_FOR_VIDEO } from "../../STATUS";
 import * as Checkbox from "@radix-ui/react-checkbox";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 const MAX_PLAYERS = 4;
 
@@ -86,20 +87,6 @@ function StartScreen({
   return (
     <Wrapper>
       <TitleSubheadWrapper>
-        <DonoLinkHolder>
-          <IconLink href="https://eieio.substack.com" target="_blank">
-            <MailIcon />
-          </IconLink>
-          <IconLink href="https://buymeacoffee.com/eieio" target="_blank">
-            <DollarIcon />
-          </IconLink>
-          <IconLink
-            href="https://github.com/nolenroyalty/paccam"
-            target="_blank"
-          >
-            <CodeIcon />
-          </IconLink>
-        </DonoLinkHolder>
         <Title>PacCam</Title>
         <SubHead>
           a game by{" "}
@@ -167,23 +154,37 @@ function StartScreen({
           </FadeInButton>
         )}
       </ButtonHolder>
+      <DonoLinkHolder>
+        <IconLink href="https://eieio.substack.com" target="_blank">
+          <MailIcon />
+        </IconLink>
+        <IconLink href="https://buymeacoffee.com/eieio" target="_blank">
+          <DollarIcon />
+        </IconLink>
+        <IconLink href="https://github.com/nolenroyalty/paccam" target="_blank">
+          <CodeIcon />
+        </IconLink>
+      </DonoLinkHolder>
     </Wrapper>
   );
 }
 
 const ButtonHolder = styled.div`
   display: grid;
-  grid-template-columns: 100%;
-  grid-template-rows: 1fr 1fr;
-  justify-items: stretch;
-  padding: 0 20%;
-  gap: 0.5rem;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 100%;
+  /* justify-items: stretch; */
+  justify-content: center;
+  /* padding: 0 */
+  padding: 1rem 0 0;
+  gap: 2rem;
 
   @media (max-width: 650px) {
     grid-template-columns: 100%;
     grid-template-rows: 1fr 1fr;
     justify-items: stretch;
-    padding: 0 10%;
+    padding: 1rem 10% 0;
+    gap: 1rem;
   }
 `;
 
@@ -191,6 +192,7 @@ const DonoLinkHolder = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: right;
+  align-items: center;
   gap: 0.5rem;
   size: 0.5rem;
 `;
@@ -243,6 +245,24 @@ const CodeIcon = () => (
   >
     <polyline points="16 18 22 12 16 6"></polyline>
     <polyline points="8 6 2 12 8 18"></polyline>
+  </svg>
+);
+
+const QuestionIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="1.25rem"
+    height="1.25rem"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10"></circle>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+    <line x1="12" y1="17" x2="12.01" y2="17"></line>
   </svg>
 );
 
@@ -307,7 +327,9 @@ function CheckboxContainer({
 
   return (
     <CheckboxContainerWrapper $videoEnabled={videoEnabled}>
-      <CheckboxContainerLabel>{kind}</CheckboxContainerLabel>
+      <CheckboxContainerLabel>
+        {kind === "CPUs" ? "Bots" : "Humans"}
+      </CheckboxContainerLabel>
       <CheckboxGroupHolder>
         {[...Array(numBoxes)].map((_, i) => (
           <SingleCheckbox
@@ -347,7 +369,7 @@ function AllowMorePlayers({
   return (
     <CheckboxContainerWrapper $videoEnabled={videoEnabled}>
       <CheckboxContainerLabel>
-        Allow &nbsp; &gt;&nbsp;2 &nbsp; humans
+        Allow &nbsp; &gt;&nbsp;2 &nbsp; humans <ExplainMorePlayers />
       </CheckboxContainerLabel>
       <CheckboxRoot
         checked={allowMorePlayers}
@@ -358,6 +380,47 @@ function AllowMorePlayers({
     </CheckboxContainerWrapper>
   );
 }
+
+function ExplainMorePlayers() {
+  return (
+    <TooltipProvider>
+      <TooltipRoot>
+        <TooltipTrigger>
+          <QuestionIcon />
+        </TooltipTrigger>
+        <TooltipPortal>
+          <TooltipContent sideOffset={5}>
+            <TooltipArrow width={20} height={10} />
+            Many computers struggle to track more than 2 faces at a time. And
+            frankly it's hard to fit 4 faces on the screen at once!
+            <br />
+            <br />
+            Feel free to enable this, but beware that it might not work well :)
+          </TooltipContent>
+        </TooltipPortal>
+      </TooltipRoot>
+    </TooltipProvider>
+  );
+}
+
+const TooltipProvider = styled(Tooltip.Provider)``;
+const TooltipRoot = styled(Tooltip.Root)``;
+const TooltipTrigger = styled(Tooltip.Trigger)`
+  all: unset;
+  color: white;
+  cursor: pointer;
+`;
+const TooltipPortal = styled(Tooltip.Portal)``;
+const TooltipContent = styled(Tooltip.Content)`
+  background-color: black;
+  color: white;
+  padding: 1rem;
+  max-width: 300px;
+  border-radius: 10px;
+`;
+const TooltipArrow = styled(Tooltip.Arrow)`
+  fill: black;
+`;
 
 const CheckboxContainerWrapper = styled.div`
   display: flex;
@@ -374,6 +437,10 @@ const CheckboxContainerLabel = styled.span`
   font-size: 1.5rem;
   font-family: "Arcade Classic";
   color: white;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 0.5rem;
 `;
 
 const CheckboxGroupHolder = styled.div`
@@ -437,7 +504,7 @@ const Wrapper = styled.div`
   left: 50%;
   top: 10%;
   transform: translateX(-50%);
-  gap: 2rem;
+  gap: 1.5rem;
   z-index: ${zIndex1};
   backdrop-filter: blur(20px) contrast(0.5);
   padding: 20px;

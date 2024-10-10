@@ -8,8 +8,8 @@ function Button({ children, style = {}, size, disabled, ...props }) {
   let fontSize;
   if (size === "small") {
     borderPx = 2;
-    padding = "1rem 0.5rem";
-    fontSize = "2rem";
+    padding = "1rem 0.25rem";
+    fontSize = "1.5rem";
   } else if (size === "medium") {
     borderPx = 4;
     padding = "1.5rem";
