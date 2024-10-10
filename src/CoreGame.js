@@ -137,6 +137,7 @@ class GameEngine {
     this.loopRunning = false;
     this.videoActuallyStarted = videoActuallyStarted;
     this.hasEverTrackedFaces = false;
+    this.aboutToEndTutorial = false;
   }
 
   _initTutorialState() {
@@ -1338,12 +1339,19 @@ class GameEngine {
     this.time = "DONE";
     this.updateTimeConsumers();
     this.setTutorialInstruction(null);
-    this.nullOutNumPlayers();
-    this.resetState();
-    this.moveToWaitingForPlayerSelect();
+
+    setTimeout(() => {
+      this.nullOutNumPlayers();
+      this.resetState();
+      this.moveToWaitingForPlayerSelect();
+      this.aboutToEndTutorial = false;
+    }, 1000);
   }
 
   handleTutorialStep() {
+    if (this.aboutToEndTutorial) {
+      return;
+    }
     // since we're rounding to the nearest 0.5, we use this offset to make sure
     // that we count down for a full second at the first second (and we skip the last
     // 0.5 seconds of our count)
@@ -1500,6 +1508,7 @@ class GameEngine {
         resetDirectiveState();
         this.tutorialState.directiveIndex += 1;
         if (this.tutorialState.directiveIndex >= TUTORIAL_DIRECTIVES.length) {
+          this.aboutToEndTutorial = true;
           this.endTutorial();
         } else {
           this.time = "GOOD";

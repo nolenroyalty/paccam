@@ -27,7 +27,7 @@ function StartScreen({
   const [hideVideoButton, setHideVideoButton] = React.useState(false);
   const [showingHowToPlay, setShowingHowToPlay] = React.useState(false);
   const [hidingHowToPlay, setHidingHowToPlay] = React.useState(false);
-  const [runningTutorial, setRunningTutorial] = React.useState(false);
+  const [AboutToRunTutorial, setAboutToRunTutorial] = React.useState(false);
 
   const setSpeculativelyHighlighted = React.useCallback(
     ({ count, kind }) => {
@@ -90,11 +90,16 @@ function StartScreen({
     return null;
   }
 
-  const dimTheLights =
-    runningTutorial || (showingHowToPlay && !hidingHowToPlay);
+  // const dimTheLights =
+  //   AboutToRunTutorial || (showingHowToPlay && !hidingHowToPlay);
+  const opacity = AboutToRunTutorial
+    ? 0
+    : showingHowToPlay && !hidingHowToPlay
+      ? 0.2
+      : 1;
 
   return (
-    <Wrapper $dimTheLights={dimTheLights}>
+    <Wrapper style={{ "--opacity": opacity }}>
       <TitleSubheadWrapper>
         <Title>PacCam</Title>
         <SubHead>
@@ -147,7 +152,7 @@ function StartScreen({
             enableVideo={enableVideo}
             videoEnabled={videoEnabled}
             beginTutorial={beginTutorial}
-            setRunningTutorial={setRunningTutorial}
+            setAboutToRunTutorial={setAboutToRunTutorial}
           />
         }
         {!videoEnabled && (
@@ -206,7 +211,18 @@ const Wrapper = styled.div`
   padding: 20px;
   border-radius: 20px;
   border: 4px solid white;
-  opacity: ${(p) => (p.$dimTheLights ? 0.2 : 1)};
+
+  opacity: var(--opacity);
+  @keyframes scoreWrapperEnter {
+    0% {
+      transform: translate(-50%, -200%);
+    }
+
+    100% {
+      transform: translate(-50%, 0);
+    }
+  }
+  animation: scoreWrapperEnter 0.5s ease-out;
   transition: opacity 0.5s ease;
 `;
 

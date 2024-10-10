@@ -11,28 +11,29 @@ function HowToPlay({
   enableVideo,
   videoEnabled,
   beginTutorial,
-  setRunningTutorial,
+  setAboutToRunTutorial,
 }) {
   const showWrapper = React.useCallback(
-    (value, runThisToo) => {
+    (value, runThisEarly, runThisLate) => {
       if (value) {
         setShowingHowToPlay(true);
       } else {
         setHidingHowToPlay(true);
-        if (runThisToo) {
-          setRunningTutorial(true);
+        if (runThisEarly) {
+          runThisEarly();
         }
         setTimeout(() => {
           setShowingHowToPlay(false);
           setHidingHowToPlay(false);
-          if (runThisToo) {
-            setRunningTutorial(false);
-            runThisToo();
+          if (runThisLate) {
+            runThisLate();
+            // setAboutToRunTutorial(false);
+            // runThisToo();
           }
-        }, 300);
+        }, 350);
       }
     },
-    [setHidingHowToPlay, setShowingHowToPlay, setRunningTutorial]
+    [setShowingHowToPlay, setHidingHowToPlay]
   );
 
   return (
@@ -47,6 +48,10 @@ function HowToPlay({
         <DialogContent
           style={{
             "--opacity": hidingHowToPlay ? 0 : 1,
+            "--animation":
+              hidingHowToPlay || !showingHowToPlay
+                ? "HowToDialogExit"
+                : "HowToDialogEnter",
           }}
         >
           <DialogTitle>How to Play PacCam</DialogTitle>
@@ -79,7 +84,14 @@ function HowToPlay({
                 if (!videoEnabled) {
                   enableVideo();
                 }
-                showWrapper(false, beginTutorial);
+                const runThisEarly = () => {
+                  setAboutToRunTutorial(true);
+                };
+                const runThisLate = () => {
+                  setAboutToRunTutorial(false);
+                  beginTutorial();
+                };
+                showWrapper(false, runThisEarly, runThisLate);
               }}
               size="small"
               style={{ gridArea: "tutorial" }}
@@ -142,10 +154,34 @@ const DialogContent = styled(Dialog.Content)`
   color: white;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  transition: opacity 0.25s ease-out;
-  opacity: var(--opacity);
+  transition: opacity 0.35s ease-out;
   scrollbar-gutter: stable;
   will-change: transform, opacity;
+
+  @keyframes HowToDialogEnter {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -100%);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  }
+
+  @keyframes HowToDialogExit {
+    from {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+    to {
+      opacity: 0;
+      transform: translate(-50%, 100%);
+    }
+  }
+
+  animation: var(--animation) 0.35s ease-out forwards;
+  opacity: var(--opacity);
 `;
 
 const DialogTitle = styled(Dialog.Title)`
