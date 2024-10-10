@@ -27,6 +27,7 @@ function StartScreen({
   const [hideVideoButton, setHideVideoButton] = React.useState(false);
   const [showingHowToPlay, setShowingHowToPlay] = React.useState(false);
   const [hidingHowToPlay, setHidingHowToPlay] = React.useState(false);
+  const [runningTutorial, setRunningTutorial] = React.useState(false);
 
   const setSpeculativelyHighlighted = React.useCallback(
     ({ count, kind }) => {
@@ -89,7 +90,8 @@ function StartScreen({
     return null;
   }
 
-  const dimTheLights = showingHowToPlay && !hidingHowToPlay;
+  const dimTheLights =
+    runningTutorial || (showingHowToPlay && !hidingHowToPlay);
 
   return (
     <Wrapper $dimTheLights={dimTheLights}>
@@ -145,6 +147,7 @@ function StartScreen({
             enableVideo={enableVideo}
             videoEnabled={videoEnabled}
             beginTutorial={beginTutorial}
+            setRunningTutorial={setRunningTutorial}
           />
         }
         {!videoEnabled && (

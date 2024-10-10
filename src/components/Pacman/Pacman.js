@@ -281,8 +281,6 @@ function Pacman({
     const faceCapture = tempCanvas.toDataURL("image/png");
     addPacmanResultScreenState({ playerNum, faceCapture });
     largestMouthSaved.current = maxJawState;
-
-    console.debug(`SCREENSHOTTED PLAYER ${playerNum}: ${maxJawState}`);
   }, [
     addPacmanResultScreenState,
     drawPlayerToCanvas,

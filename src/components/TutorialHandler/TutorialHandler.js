@@ -14,7 +14,6 @@ function TutorialHandler({ tutorialInstruction }) {
           <NBSPer key={index * 2 + 1} />,
         ]
   );
-  console.log(`LENGTH OF INTERSPERSED: ${interspersed.length}`);
   return <Instructions>{interspersed}</Instructions>;
 }
 

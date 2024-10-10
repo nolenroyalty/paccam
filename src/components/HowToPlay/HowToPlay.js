@@ -11,6 +11,7 @@ function HowToPlay({
   enableVideo,
   videoEnabled,
   beginTutorial,
+  setRunningTutorial,
 }) {
   const showWrapper = React.useCallback(
     (value, runThisToo) => {
@@ -18,16 +19,20 @@ function HowToPlay({
         setShowingHowToPlay(true);
       } else {
         setHidingHowToPlay(true);
+        if (runThisToo) {
+          setRunningTutorial(true);
+        }
         setTimeout(() => {
           setShowingHowToPlay(false);
           setHidingHowToPlay(false);
           if (runThisToo) {
+            setRunningTutorial(false);
             runThisToo();
           }
         }, 300);
       }
     },
-    [setHidingHowToPlay, setShowingHowToPlay]
+    [setHidingHowToPlay, setShowingHowToPlay, setRunningTutorial]
   );
 
   return (
@@ -45,16 +50,20 @@ function HowToPlay({
           }}
         >
           <DialogTitle>How to Play PacCam</DialogTitle>
-          <DialogDescription>
-            <ul>
-              <li>Look in the direction you want to move</li>
-              <li>Open and close your mouth to go faster</li>
-              <li>Eat dots to score points</li>
-              <li>Eat big dots to eat other players</li>
-            </ul>
-            <br />
-            Protip: the controls are sensitive - only turn your head a little
-            bit
+          <DialogDescription asChild>
+            <div>
+              <ul>
+                <li>Look in the direction you want to move</li>
+                <li>Open and close your mouth to go faster</li>
+                <li>Eat dots to score points</li>
+                <li>Eat big dots to eat other players</li>
+              </ul>
+              <br />
+              <p>
+                Protip: the controls are sensitive - only turn your head a
+                little bit
+              </p>
+            </div>
           </DialogDescription>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <VideoDemo

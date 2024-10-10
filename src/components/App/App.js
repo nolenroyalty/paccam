@@ -92,6 +92,7 @@ function App() {
   });
 
   const setNumPlayers = React.useCallback(async (numPlayers) => {
+    console.log(`SETNUMPLAYERS: ${numPlayers}`);
     await gameRef.current.initNumPlayers(numPlayers);
     setGameState((state) => ({ ...state, numPlayers }));
     gameRef.current.startGameLoop();

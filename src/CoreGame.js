@@ -24,7 +24,7 @@ const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_TRACKING_CONFIDENCE = 0.3;
 const MIN_SUPPRESSION_THRESHOLD = 0.1;
 
-const SECONDS_IN_ROUND = 30; // 30
+const SECONDS_IN_ROUND = 3; // 30
 const COUNT_IN_TIME = 3; // 3
 
 // this was 0.48
@@ -60,11 +60,11 @@ const TUTORIAL_DIRECTIVES = [
   // ["left", "chomp"],
   // ["up", "chomp"],
   // ["right", "chomp"],
-  ["down", "chomp"],
-  ["left", "move"],
-  ["up", "move"],
-  ["right", "move"],
-  ["down", "move"],
+  // ["down", "chomp"],
+  // ["left", "move"],
+  // ["up", "move"],
+  // ["right", "move"],
+  // ["down", "move"],
 ];
 
 const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ numPlayers }) => {
@@ -136,6 +136,7 @@ class GameEngine {
     this.resolveEndLoop = null;
     this.loopRunning = false;
     this.videoActuallyStarted = videoActuallyStarted;
+    this.hasEverTrackedFaces = false;
   }
 
   _initTutorialState() {
@@ -304,7 +305,6 @@ class GameEngine {
       this.endLoopThisFrame = true;
       await loopStopped;
       console.log("initNumPlayers: loop stopped");
-      this.endLoopThisFrame = false;
       this.resolveEndLoop = null;
     }
 
@@ -886,6 +886,8 @@ class GameEngine {
       return;
     }
 
+    this.hasEverTrackedFaces = true;
+
     results.faceLandmarks
       .map((faceLandmarks, index) => {
         const faceBlendshapes = results.faceBlendshapes[index];
@@ -1453,8 +1455,12 @@ class GameEngine {
 
     if (!faceTrackedThisFrame) {
       // reset?
-      this.setTutorialInstruction("lost track of face".split(" "));
-      retryThisDirective(null, "RETRY");
+      if (this.hasEverTrackedFaces) {
+        this.setTutorialInstruction("lost track of face".split(" "));
+      }
+      if (this.tutorialState.status !== null) {
+        retryThisDirective(null, "RETRY");
+      }
       return;
     }
 
@@ -1591,6 +1597,15 @@ class GameEngine {
     });
   }
 
+  endGameLoop(because) {
+    console.log(`Ending game loop because: ${because}`);
+    delete this.landmarker;
+    this.loopRunning = false;
+    if (this.resolveEndLoop) {
+      this.resolveEndLoop();
+    }
+  }
+
   async startGameLoop() {
     if (this.loopRunning) {
       console.error(`BUG: startGameLoop called when loop is running`);
@@ -1605,18 +1620,8 @@ class GameEngine {
       console.log(`no videoActuallyStarted`);
     }
 
-    const endLoop = () => {
-      console.log("Ending game loop");
-      delete this.landmarker;
-      this.loopRunning = false;
-      if (this.resolveEndLoop) {
-        this.resolveEndLoop();
-      }
-    };
-
     if (this.numPlayers < 1) {
-      console.log("No players");
-      endLoop();
+      this.endGameLoop("there are no players");
       return;
     }
 
@@ -1636,8 +1641,9 @@ class GameEngine {
     this.updatePositionConsumers();
     function loop() {
       if (!shouldProcessGameLoop(this.status)) {
-        console.log(`bailing from game loop: ${this.status}`);
-        endLoop();
+        this.endGameLoop(
+          `status is ${this.status}, which is not a game state where we run the loop`
+        );
         return;
       }
       if (this.video.currentTime !== lastVideoTime) {
@@ -1663,7 +1669,8 @@ class GameEngine {
         lastVideoTime = startTime;
       }
       if (this.endLoopThisFrame) {
-        endLoop();
+        this.endGameLoop(`endLoopThisFrame is true`);
+        this.endLoopThisFrame = false;
         return;
       }
       requestAnimationFrame(loop.bind(this));
