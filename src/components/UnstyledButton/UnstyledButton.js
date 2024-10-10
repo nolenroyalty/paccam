@@ -1,9 +1,13 @@
 import React from "react";
 import styled from "styled-components";
 
-function UnstyledButton({ children, ...props }) {
-  return <Button {...props}>{children}</Button>;
-}
+const UnstyledButton = React.forwardRef(({ children, ...props }, ref) => {
+  return (
+    <Button ref={ref} {...props}>
+      {children}
+    </Button>
+  );
+});
 
 const Button = styled.button`
   background-color: transparent;

@@ -5,6 +5,7 @@ import { zIndex1 } from "../../zindex";
 import { WAITING_FOR_PLAYER_SELECT, WAITING_FOR_VIDEO } from "../../STATUS";
 import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import HowToPlay from "../HowToPlay";
 import Icons from "../Icons";
 
 const MAX_PLAYERS = 4;
@@ -23,6 +24,8 @@ function StartScreen({
   const [speculativelyHighlighted, _setSpeculativelyHighlighted] =
     React.useState({ CPUs: null, Humans: null });
   const [hideVideoButton, setHideVideoButton] = React.useState(false);
+  const [showingHowToPlay, setShowingHowToPlay] = React.useState(false);
+  const [hidingHowToPlay, setHidingHowToPlay] = React.useState(false);
 
   const setSpeculativelyHighlighted = React.useCallback(
     ({ count, kind }) => {
@@ -85,8 +88,10 @@ function StartScreen({
     return null;
   }
 
+  const dimTheLights = showingHowToPlay && !hidingHowToPlay;
+
   return (
-    <Wrapper>
+    <Wrapper $dimTheLights={dimTheLights}>
       <TitleSubheadWrapper>
         <Title>PacCam</Title>
         <SubHead>
@@ -130,7 +135,14 @@ function StartScreen({
         videoEnabled={videoEnabled}
       />
       <ButtonHolder>
-        {<Button size="small">How&nbsp;&nbsp;To&nbsp;&nbsp;Play</Button>}
+        {
+          <HowToPlay
+            showingHowToPlay={showingHowToPlay}
+            setShowingHowToPlay={setShowingHowToPlay}
+            hidingHowToPlay={hidingHowToPlay}
+            setHidingHowToPlay={setHidingHowToPlay}
+          />
+        }
         {!videoEnabled && (
           <FadeOutButton
             onClick={(e) => {
@@ -187,6 +199,8 @@ const Wrapper = styled.div`
   padding: 20px;
   border-radius: 20px;
   border: 4px solid white;
+  opacity: ${(p) => (p.$dimTheLights ? 0.2 : 1)};
+  transition: opacity 0.5s ease;
 `;
 
 const TitleSubheadWrapper = styled.div`
@@ -205,6 +219,7 @@ const Title = styled.h2`
 
 const SubHead = styled.h3`
   font-size: 1.5rem;
+  word-spacing: 0.2rem;
   text-align: center;
   font-family: "Arcade Classic";
   color: black;
@@ -302,6 +317,7 @@ const CheckboxContainerWrapper = styled.div`
 const CheckboxContainerLabel = styled.span`
   font-size: 1.5rem;
   font-family: "Arcade Classic";
+  word-spacing: 0.2rem;
   color: white;
   display: flex;
   align-items: center;
@@ -379,7 +395,7 @@ function AllowMorePlayers({
   return (
     <CheckboxContainerWrapper $videoEnabled={videoEnabled}>
       <CheckboxContainerLabel>
-        Allow &nbsp; &gt;&nbsp;2 &nbsp; humans <ExplainMorePlayers />
+        Allow &gt;2 humans <ExplainMorePlayers />
       </CheckboxContainerLabel>
       <CheckboxRoot
         checked={allowMorePlayers}
