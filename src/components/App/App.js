@@ -82,7 +82,7 @@ function App() {
     gameRef.current.startGameLoop();
   }, []);
 
-  const setNumComputers = React.useCallback(async (numCPUs) => {
+  const setNumCPUs = React.useCallback(async (numCPUs) => {
     // await gameRef.current.initNumComputers(numCPUs);
     setGameState((state) => ({ ...state, numCPUs }));
     // gameRef.current.startGameLoop();
@@ -197,9 +197,9 @@ function App() {
           status={gameState.status}
           startGame={startGame}
           numHumans={gameState.numPlayers}
-          numComputers={gameState.numCPUs}
+          numCPUs={gameState.numCPUs}
           setNumHumans={setNumPlayers}
-          setNumComputers={setNumComputers}
+          setNumCPUs={setNumCPUs}
           enableVideo={enableVideo}
           videoEnabled={videoEnabled}
         />

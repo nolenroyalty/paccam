@@ -137,6 +137,7 @@ function StartScreen({
       <AllowMorePlayers
         allowMorePlayers={allowMorePlayers}
         setAllowMorePlayers={setAllowMorePlayers}
+        numHumans={numHumans}
         setNumHumans={setNumHumans}
         videoEnabled={videoEnabled}
       />
@@ -332,15 +333,16 @@ function CheckboxContainer({
 function AllowMorePlayers({
   allowMorePlayers,
   setAllowMorePlayers,
+  numHumans,
   setNumHumans,
   videoEnabled,
 }) {
   const onClick = React.useCallback(() => {
     if (allowMorePlayers) {
-      setNumHumans((prev) => Math.min(prev, 2));
+      setNumHumans(Math.min(numHumans, 2));
     }
     setAllowMorePlayers((prev) => !prev);
-  }, [allowMorePlayers, setAllowMorePlayers, setNumHumans]);
+  }, [allowMorePlayers, setAllowMorePlayers, numHumans, setNumHumans]);
 
   return (
     <CheckboxContainerWrapper $videoEnabled={videoEnabled}>
