@@ -71,18 +71,25 @@ function App() {
   }, []);
 
   const [gameState, setGameState] = React.useState({
-    numPlayers: null,
+    numPlayers: null, // rename to numHumans
+    numCPUs: null,
     status: null,
   });
 
-  const setNumPlayers = React.useCallback((numPlayers) => {
-    gameRef.current.initNumPlayers(numPlayers);
+  const setNumPlayers = React.useCallback(async (numPlayers) => {
+    await gameRef.current.initNumPlayers(numPlayers);
     setGameState((state) => ({ ...state, numPlayers }));
     gameRef.current.startGameLoop();
   }, []);
 
+  const setNumComputers = React.useCallback(async (numCPUs) => {
+    // await gameRef.current.initNumComputers(numCPUs);
+    setGameState((state) => ({ ...state, numCPUs }));
+    // gameRef.current.startGameLoop();
+  }, []);
+
   const nullOutNumPlayers = React.useCallback(() => {
-    setGameState((state) => ({ ...state, numPlayers: null }));
+    setGameState((state) => ({ ...state, numPlayers: 0, numCPUs: 0 }));
   }, []);
 
   const beginTutorial = React.useCallback(() => {
@@ -96,7 +103,6 @@ function App() {
   React.useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === "KeyD" && e.altKey) {
-        console.log("HI");
         beginTutorial();
       }
     };
@@ -128,7 +134,7 @@ function App() {
 
   const moveToWaitingForPlayerSelect = React.useCallback(() => {
     gameRef.current.resetState();
-    setGameState((state) => ({ ...state, numPlayers: null }));
+    setGameState((state) => ({ ...state, numPlayers: 0, numCPUs: null }));
     gameRef.current.moveToWaitingForPlayerSelect();
   }, []);
 
@@ -190,7 +196,10 @@ function App() {
         <StartScreen
           status={gameState.status}
           startGame={startGame}
-          setNumPlayers={setNumPlayers}
+          numHumans={gameState.numPlayers}
+          numComputers={gameState.numCPUs}
+          setNumHumans={setNumPlayers}
+          setNumComputers={setNumComputers}
           enableVideo={enableVideo}
           videoEnabled={videoEnabled}
         />

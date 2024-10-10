@@ -9,7 +9,6 @@ import { range, easeOutPow } from "./utils";
 import {
   WAITING_FOR_VIDEO,
   WAITING_FOR_PLAYER_SELECT,
-  WAITING_TO_START_ROUND,
   COUNTING_IN_ROUND,
   RUNNING_ROUND,
   COMPLETED_ROUND,
@@ -28,7 +27,7 @@ const MIN_SUPPRESSION_THRESHOLD = 0.1;
 const SECONDS_IN_ROUND = 30; // 30
 const COUNT_IN_TIME = 3; // 3
 
-// this is normally 0.48
+// this was 0.48
 const JAW_OPEN_THRESHOLD = 0.36;
 const JAW_CLOSE_THRESHOLD = 0.135;
 const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
@@ -78,6 +77,7 @@ const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ numPlayers }) => {
 let didImmediatelyEat = false;
 
 async function createFaceLandmarker({ numFaces }) {
+  console.log(`create a face landmarker with ${numFaces} faces`);
   const filesetResolver = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
   );
@@ -132,6 +132,9 @@ class GameEngine {
     this.ignoreMissingFaces = false;
     this.setTutorialInstruction = setTutorialInstruction;
     this.tutorialState = null;
+    this.endLoopThisFrame = false;
+    this.resolveEndLoop = null;
+    this.loopRunning = false;
   }
 
   _initTutorialState() {
@@ -290,11 +293,20 @@ class GameEngine {
     };
   }
 
-  initNumPlayers(numPlayers) {
-    if (this.status === RUNNING_TUTORIAL) {
-    } else {
-      this.updateStatusAndConsumers(WAITING_TO_START_ROUND, "initNumPlayers");
+  async initNumPlayers(numPlayers) {
+    console.log(`initNumPlayers: ${numPlayers} status ${this.status}`);
+    if (this.loopRunning) {
+      console.log("initNumPlayers: loop is running, stopping");
+      const loopStopped = new Promise((resolve) => {
+        this.resolveEndLoop = resolve;
+      });
+      this.endLoopThisFrame = true;
+      await loopStopped;
+      console.log("initNumPlayers: loop stopped");
+      this.endLoopThisFrame = false;
+      this.resolveEndLoop = null;
     }
+
     this.numPlayers = numPlayers;
     this.playerStates = range(numPlayers).map((playerNum) => {
       return this.initialState({ playerNum });
@@ -561,6 +573,9 @@ class GameEngine {
     this.satisfiedTutorialDirectiveTime = null;
     this.tutorialState = this._initTutorialState();
     this.time = null;
+    if (this.loopRunning) {
+      this.endLoopThisFrame = true;
+    }
 
     this.updateTimeConsumers();
     this.updatePelletConsumers();
@@ -1576,10 +1591,35 @@ class GameEngine {
   }
 
   async startGameLoop() {
+    if (this.loopRunning) {
+      console.error(`BUG: startGameLoop called when loop is running`);
+      return;
+    }
+    this.loopRunning = true;
+
+    const endLoop = () => {
+      console.log("Ending game loop");
+      delete this.landmarker;
+      this.loopRunning = false;
+      if (this.resolveEndLoop) {
+        this.resolveEndLoop();
+      }
+    };
+
+    if (this.numPlayers < 1) {
+      console.log("No players");
+      endLoop();
+      return;
+    }
+
+    console.log(`Starting game loop with ${this.numPlayers} players`);
     this.landmarker = await createFaceLandmarker({ numFaces: this.numPlayers });
-    if (this.status === RUNNING_TUTORIAL) {
+    if (
+      this.status === RUNNING_TUTORIAL ||
+      this.status === WAITING_FOR_PLAYER_SELECT
+    ) {
       // ok
-    } else if (this.status !== WAITING_TO_START_ROUND) {
+    } else {
       throw new Error(
         `BUG: startGameLoop called when not waiting for video - ${this.status}`
       );
@@ -1589,6 +1629,7 @@ class GameEngine {
     function loop() {
       if (!shouldProcessGameLoop(this.status)) {
         console.log(`bailing from game loop: ${this.status}`);
+        endLoop();
         return;
       }
       if (this.video.currentTime !== lastVideoTime) {
@@ -1612,6 +1653,10 @@ class GameEngine {
         // this should live in the game loop when i'm done testing.
         this.transitionPacmanStates({ startTime });
         lastVideoTime = startTime;
+      }
+      if (this.endLoopThisFrame) {
+        endLoop();
+        return;
       }
       requestAnimationFrame(loop.bind(this));
     }

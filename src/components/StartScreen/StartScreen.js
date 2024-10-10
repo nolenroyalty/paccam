@@ -2,11 +2,7 @@ import React from "react";
 import styled from "styled-components";
 import Button from "../Button";
 import { zIndex1 } from "../../zindex";
-import {
-  WAITING_FOR_PLAYER_SELECT,
-  WAITING_TO_START_ROUND,
-  WAITING_FOR_VIDEO,
-} from "../../STATUS";
+import { WAITING_FOR_PLAYER_SELECT, WAITING_FOR_VIDEO } from "../../STATUS";
 import * as Checkbox from "@radix-ui/react-checkbox";
 
 const MAX_PLAYERS = 4;
@@ -14,12 +10,13 @@ const MAX_PLAYERS = 4;
 function StartScreen({
   status,
   startGame,
-  setNumPlayers,
+  setNumHumans,
+  setNumCPUs,
+  numHumans,
+  numCPUs,
   enableVideo,
   videoEnabled,
 }) {
-  const [numCPUs, setNumCPUs] = React.useState(0);
-  const [numHumans, setNumHumans] = React.useState(0);
   const [allowMorePlayers, setAllowMorePlayers] = React.useState(false);
   const [speculativelyHighlighted, _setSpeculativelyHighlighted] =
     React.useState({ CPUs: null, Humans: null });
@@ -29,7 +26,7 @@ function StartScreen({
     ({ count, kind }) => {
       if (kind === "CPUs") {
         const humans = Math.min(MAX_PLAYERS - count, numHumans);
-        const cpus = count < numCPUs ? count - 1 : count;
+        const cpus = count === numCPUs ? count - 1 : count;
         _setSpeculativelyHighlighted((prev) => ({
           ...prev,
           CPUs: cpus,
@@ -37,7 +34,7 @@ function StartScreen({
         }));
       } else if (kind === "Humans") {
         const cpus = Math.min(MAX_PLAYERS - count, numCPUs);
-        const humans = count < numHumans ? count - 1 : count;
+        const humans = count === numHumans ? count - 1 : count;
         _setSpeculativelyHighlighted((prev) => ({
           ...prev,
           CPUs: cpus,
@@ -55,38 +52,34 @@ function StartScreen({
   );
 
   const checkNumHumans = React.useCallback(
-    (numHumans) => {
-      if (numHumans + numCPUs > MAX_PLAYERS) {
-        setNumCPUs(MAX_PLAYERS - numHumans);
+    (count) => {
+      if (count + numCPUs > MAX_PLAYERS) {
+        setNumCPUs(MAX_PLAYERS - count);
       }
-      setNumHumans(numHumans);
+      setNumHumans(count);
       setSpeculativelyHighlighted((prev) => ({
         ...prev,
         clickedThisCycle: true,
       }));
     },
-    [numCPUs, setSpeculativelyHighlighted]
+    [numCPUs, setNumHumans, setSpeculativelyHighlighted, setNumCPUs]
   );
 
   const checkNumCPUs = React.useCallback(
-    (numCPUs) => {
-      if (numHumans + numCPUs > MAX_PLAYERS) {
-        setNumHumans(MAX_PLAYERS - numCPUs);
+    (count) => {
+      if (numHumans + count > MAX_PLAYERS) {
+        setNumHumans(MAX_PLAYERS - count);
       }
-      setNumCPUs(numCPUs);
+      setNumCPUs(count);
       setSpeculativelyHighlighted((prev) => ({
         ...prev,
         clickedThisCycle: true,
       }));
     },
-    [numHumans, setSpeculativelyHighlighted]
+    [numHumans, setNumCPUs, setNumHumans, setSpeculativelyHighlighted]
   );
 
-  if (
-    status !== WAITING_FOR_PLAYER_SELECT &&
-    status !== WAITING_TO_START_ROUND &&
-    status !== WAITING_FOR_VIDEO
-  ) {
+  if (status !== WAITING_FOR_PLAYER_SELECT && status !== WAITING_FOR_VIDEO) {
     return null;
   }
 
@@ -129,6 +122,7 @@ function StartScreen({
         speculativelyHighlighted={speculativelyHighlighted}
         setSpeculativelyHighlighted={setSpeculativelyHighlighted}
         kind="Humans"
+        videoEnabled={videoEnabled}
       />
       <CheckboxContainer
         numBoxes={4}
@@ -138,11 +132,13 @@ function StartScreen({
         speculativelyHighlighted={speculativelyHighlighted}
         setSpeculativelyHighlighted={setSpeculativelyHighlighted}
         kind="CPUs"
+        videoEnabled={videoEnabled}
       />
       <AllowMorePlayers
         allowMorePlayers={allowMorePlayers}
         setAllowMorePlayers={setAllowMorePlayers}
         setNumHumans={setNumHumans}
+        videoEnabled={videoEnabled}
       />
       <ButtonHolder>
         {<Button size="small">How&nbsp;&nbsp;To&nbsp;&nbsp;Play</Button>}
@@ -176,10 +172,6 @@ function StartScreen({
 
 const ButtonHolder = styled.div`
   display: grid;
-  /* justify-content: space-between;
-  grid-template-columns: 50% 50%;
-  gap: 0.5rem;
-  padding: 0; */
   grid-template-columns: 100%;
   grid-template-rows: 1fr 1fr;
   justify-items: stretch;
@@ -200,7 +192,6 @@ const DonoLinkHolder = styled.div`
   justify-content: right;
   gap: 0.5rem;
   size: 0.5rem;
-  /* margin-bottom: -1rem; */
 `;
 
 const MailIcon = () => (
@@ -245,10 +236,9 @@ const CodeIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    class="feather feather-code"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
   >
     <polyline points="16 18 22 12 16 6"></polyline>
     <polyline points="8 6 2 12 8 18"></polyline>
@@ -276,10 +266,11 @@ function CheckboxContainer({
   allowMoreThan2,
   speculativelyHighlighted,
   setSpeculativelyHighlighted,
+  videoEnabled,
 }) {
   const enabled = React.useCallback(
-    (x) => x <= 2 || allowMoreThan2,
-    [allowMoreThan2]
+    (x) => (x <= 2 || allowMoreThan2) && videoEnabled,
+    [allowMoreThan2, videoEnabled]
   );
 
   const updateSpeculativelyHighlighted = React.useCallback(
@@ -314,7 +305,7 @@ function CheckboxContainer({
   );
 
   return (
-    <CheckboxContainerWrapper>
+    <CheckboxContainerWrapper $videoEnabled={videoEnabled}>
       <CheckboxContainerLabel>{kind}</CheckboxContainerLabel>
       <CheckboxGroupHolder>
         {[...Array(numBoxes)].map((_, i) => (
@@ -342,6 +333,7 @@ function AllowMorePlayers({
   allowMorePlayers,
   setAllowMorePlayers,
   setNumHumans,
+  videoEnabled,
 }) {
   const onClick = React.useCallback(() => {
     if (allowMorePlayers) {
@@ -351,7 +343,7 @@ function AllowMorePlayers({
   }, [allowMorePlayers, setAllowMorePlayers, setNumHumans]);
 
   return (
-    <CheckboxContainerWrapper>
+    <CheckboxContainerWrapper $videoEnabled={videoEnabled}>
       <CheckboxContainerLabel>
         Allow &nbsp; &gt;&nbsp;2 &nbsp; humans
       </CheckboxContainerLabel>
@@ -359,6 +351,7 @@ function AllowMorePlayers({
         checked={allowMorePlayers}
         onCheckedChange={onClick}
         style={{ "--background-color": "white" }}
+        disabled={!videoEnabled}
       ></CheckboxRoot>
     </CheckboxContainerWrapper>
   );
@@ -371,6 +364,8 @@ const CheckboxContainerWrapper = styled.div`
   pointer-events: auto;
   align-items: center;
   justify-content: space-between;
+  opacity: ${(p) => (p.$videoEnabled ? 1 : 0.3)};
+  transition: opacity 0.5s ease;
 `;
 
 const CheckboxContainerLabel = styled.span`
@@ -394,7 +389,7 @@ function SingleCheckbox({
 }) {
   const onCheckedChange = React.useCallback(
     (e) => {
-      if (checkCount >= myCheckCount) {
+      if (checkCount === myCheckCount) {
         onCheck(myCheckCount - 1);
       } else {
         onCheck(myCheckCount);
@@ -483,7 +478,7 @@ const FadeOutButton = styled(Button)`
 
 const FadeInButton = styled(Button)`
   opacity: 0;
-  animation: fadeIn 1s 0.25s forwards;
+  animation: fadeIn 0.5s 0.2s forwards;
 
   @keyframes fadeIn {
     to {
