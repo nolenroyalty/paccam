@@ -173,32 +173,46 @@ function StartScreen({
   );
 }
 
-const ButtonHolder = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 100%;
-  /* justify-items: stretch; */
-  justify-content: center;
-  /* padding: 0 */
-  padding: 1rem 0 0;
-  gap: 2rem;
-
-  @media (max-width: 650px) {
-    grid-template-columns: 100%;
-    grid-template-rows: 1fr 1fr;
-    justify-items: stretch;
-    padding: 1rem 10% 0;
-    gap: 1rem;
-  }
+const Wrapper = styled.div`
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  width: clamp(300px, 70%, 500px);
+  left: 50%;
+  top: 10%;
+  transform: translateX(-50%);
+  gap: 1.5rem;
+  z-index: ${zIndex1};
+  backdrop-filter: blur(20px) contrast(0.5);
+  padding: 20px;
+  border-radius: 20px;
+  border: 4px solid white;
 `;
 
-const DonoLinkHolder = styled.div`
+const TitleSubheadWrapper = styled.div`
   display: flex;
-  flex-direction: row;
-  justify-content: right;
-  align-items: center;
+  flex-direction: column;
   gap: 0.5rem;
-  size: 0.5rem;
+`;
+
+const Title = styled.h2`
+  font-size: 4rem;
+  text-align: center;
+  line-height: 0.5;
+  font-family: "Arcade Classic";
+  color: yellow;
+`;
+
+const SubHead = styled.h3`
+  font-size: 1.5rem;
+  text-align: center;
+  font-family: "Arcade Classic";
+  color: black;
+
+  a {
+    color: yellow;
+    text-decoration-style: dotted;
+  }
 `;
 
 function CheckboxContainer({
@@ -274,76 +288,6 @@ function CheckboxContainer({
   );
 }
 
-function AllowMorePlayers({
-  allowMorePlayers,
-  setAllowMorePlayers,
-  numHumans,
-  setNumHumans,
-  videoEnabled,
-}) {
-  const onClick = React.useCallback(() => {
-    if (allowMorePlayers) {
-      setNumHumans(Math.min(numHumans, 2));
-    }
-    setAllowMorePlayers((prev) => !prev);
-  }, [allowMorePlayers, setAllowMorePlayers, numHumans, setNumHumans]);
-
-  return (
-    <CheckboxContainerWrapper $videoEnabled={videoEnabled}>
-      <CheckboxContainerLabel>
-        Allow &nbsp; &gt;&nbsp;2 &nbsp; humans <ExplainMorePlayers />
-      </CheckboxContainerLabel>
-      <CheckboxRoot
-        checked={allowMorePlayers}
-        onCheckedChange={onClick}
-        style={{ "--background-color": "white" }}
-        disabled={!videoEnabled}
-      ></CheckboxRoot>
-    </CheckboxContainerWrapper>
-  );
-}
-
-function ExplainMorePlayers() {
-  return (
-    <TooltipProvider>
-      <TooltipRoot>
-        <TooltipTrigger>
-          <Icons.Question size="1.25rem" />
-        </TooltipTrigger>
-        <TooltipPortal>
-          <TooltipContent sideOffset={5}>
-            <TooltipArrow width={20} height={10} />
-            Many computers struggle to track more than 2 faces at a time. And
-            frankly it's hard to fit 4 faces on the screen at once!
-            <br />
-            <br />
-            Feel free to enable this, but beware that it might not work well :)
-          </TooltipContent>
-        </TooltipPortal>
-      </TooltipRoot>
-    </TooltipProvider>
-  );
-}
-
-const TooltipProvider = styled(Tooltip.Provider)``;
-const TooltipRoot = styled(Tooltip.Root)``;
-const TooltipTrigger = styled(Tooltip.Trigger)`
-  all: unset;
-  color: white;
-  cursor: pointer;
-`;
-const TooltipPortal = styled(Tooltip.Portal)``;
-const TooltipContent = styled(Tooltip.Content)`
-  background-color: black;
-  color: white;
-  padding: 1rem;
-  max-width: 300px;
-  border-radius: 10px;
-`;
-const TooltipArrow = styled(Tooltip.Arrow)`
-  fill: black;
-`;
-
 const CheckboxContainerWrapper = styled.div`
   display: flex;
   flex-direction: row;
@@ -418,48 +362,100 @@ const CheckboxRoot = styled(Checkbox.Root)`
   }
 `;
 
-const Wrapper = styled.div`
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  width: clamp(300px, 70%, 500px);
-  left: 50%;
-  top: 10%;
-  transform: translateX(-50%);
-  gap: 1.5rem;
-  z-index: ${zIndex1};
-  backdrop-filter: blur(20px) contrast(0.5);
-  padding: 20px;
-  border-radius: 20px;
-  border: 4px solid white;
+function AllowMorePlayers({
+  allowMorePlayers,
+  setAllowMorePlayers,
+  numHumans,
+  setNumHumans,
+  videoEnabled,
+}) {
+  const onClick = React.useCallback(() => {
+    if (allowMorePlayers) {
+      setNumHumans(Math.min(numHumans, 2));
+    }
+    setAllowMorePlayers((prev) => !prev);
+  }, [allowMorePlayers, setAllowMorePlayers, numHumans, setNumHumans]);
+
+  return (
+    <CheckboxContainerWrapper $videoEnabled={videoEnabled}>
+      <CheckboxContainerLabel>
+        Allow &nbsp; &gt;&nbsp;2 &nbsp; humans <ExplainMorePlayers />
+      </CheckboxContainerLabel>
+      <CheckboxRoot
+        checked={allowMorePlayers}
+        onCheckedChange={onClick}
+        style={{ "--background-color": "white" }}
+        disabled={!videoEnabled}
+      ></CheckboxRoot>
+    </CheckboxContainerWrapper>
+  );
+}
+
+function ExplainMorePlayers() {
+  return (
+    <TooltipProvider>
+      <TooltipRoot>
+        <TooltipTrigger>
+          <Icons.Question size="1.25rem" />
+        </TooltipTrigger>
+        <TooltipPortal>
+          <TooltipContent sideOffset={5}>
+            <TooltipArrow width={20} height={10} />
+            Many computers struggle to track more than 2 faces at a time. And
+            frankly it's hard to fit 4 faces on the screen at once!
+            <br />
+            <br />
+            Feel free to enable this, but beware that it might not work well :)
+          </TooltipContent>
+        </TooltipPortal>
+      </TooltipRoot>
+    </TooltipProvider>
+  );
+}
+
+const TooltipProvider = styled(Tooltip.Provider)``;
+const TooltipRoot = styled(Tooltip.Root)``;
+const TooltipTrigger = styled(Tooltip.Trigger)`
+  all: unset;
+  color: white;
+  cursor: pointer;
+`;
+const TooltipPortal = styled(Tooltip.Portal)``;
+const TooltipContent = styled(Tooltip.Content)`
+  background-color: black;
+  color: white;
+  padding: 1rem;
+  max-width: 300px;
+  border-radius: 10px;
+`;
+const TooltipArrow = styled(Tooltip.Arrow)`
+  fill: black;
 `;
 
-const Title = styled.h2`
-  font-size: 4rem;
-  text-align: center;
-  line-height: 0.5;
-  font-family: "Arcade Classic";
-  color: yellow;
-`;
+const ButtonHolder = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 100%;
+  justify-content: center;
+  padding: 1rem 0 0;
+  gap: 2rem;
 
-const SubHead = styled.h3`
-  font-size: 1.5rem;
-  text-align: center;
-  font-family: "Arcade Classic";
-  color: black;
-  /* margin-top: -2rem; */
-
-  a {
-    color: yellow;
-    // dotted underline
-    text-decoration-style: dotted;
+  @media (max-width: 650px) {
+    grid-template-columns: 100%;
+    grid-template-rows: 1fr 1fr;
+    justify-items: stretch;
+    padding: 1rem 10% 0;
+    gap: 1rem;
   }
 `;
 
-const TitleSubheadWrapper = styled.div`
+const DonoLinkHolder = styled.div`
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: right;
+  align-items: center;
   gap: 0.5rem;
+  size: 0.5rem;
 `;
 
 const FadeOutButton = styled(Button)`
