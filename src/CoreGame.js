@@ -335,17 +335,22 @@ class GameEngine {
     };
   }
 
+  async tellLoopToStopReturningWhenStopped() {
+    const loopStopped = new Promise((resolve) => {
+      this.resolveEndLoop = resolve;
+    });
+    this.endLoopThisFrame = true;
+    await loopStopped;
+    this.resolveEndLoop = null;
+    return true;
+  }
+
   async initNumPlayers(numPlayers) {
     console.log(`initNumPlayers: ${numPlayers} status ${this.status}`);
     if (this.loopRunning) {
       console.log("initNumPlayers: loop is running, stopping");
-      const loopStopped = new Promise((resolve) => {
-        this.resolveEndLoop = resolve;
-      });
-      this.endLoopThisFrame = true;
-      await loopStopped;
+      await this.tellLoopToStopReturningWhenStopped();
       console.log("initNumPlayers: loop stopped");
-      this.resolveEndLoop = null;
     }
 
     this.numPlayers = numPlayers;
@@ -1374,19 +1379,30 @@ class GameEngine {
     this.updateStatusAndConsumers(RUNNING_TUTORIAL, "beginTutorial");
   }
 
-  endTutorial() {
+  async endTutorial() {
     this.time = "DONE";
     this.updateTimeConsumers();
     this.setTutorialInstruction(null);
+    let timeToSleep = 1000;
+    if (this.loopRunning) {
+      const then = performance.now();
+      await this.tellLoopToStopReturningWhenStopped();
+      const now = performance.now();
+      const sleptTime = now - then;
+      timeToSleep -= sleptTime;
+      timeToSleep = Math.max(1, timeToSleep);
+    }
 
     setTimeout(() => {
       this.nullOutNumPlayers();
       this.resetState();
       this.moveToWaitingForPlayerSelect();
       this.aboutToEndTutorial = false;
-    }, 1000);
+    }, timeToSleep);
   }
 
+  // https://x.com/itseieio/status/1843801728526995722
+  // sorry, i wrote this while sick of this project
   handleTutorialStep() {
     if (this.aboutToEndTutorial) {
       return;
