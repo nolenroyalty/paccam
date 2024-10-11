@@ -75,22 +75,23 @@ function PlayerResultsBlob({
           />
           <ScoreText style={{ "--color": color }}>{score}</ScoreText>
         </PlayerResultsDisplay>
-      ) : null}
-      <PlayerScoreDisplay
-        style={{
-          "--opacity": showResults ? 0 : 1,
-          "--justify-content": justifyContent,
-          "--align-self": alignSelf,
-          "--grid-area": `p${playerNum + 1}`,
-        }}
-      >
-        <ScoreText
-          $noAnimation={score === 0 || showResults}
-          style={{ "--color": color }}
+      ) : (
+        <PlayerScoreDisplay
+          style={{
+            "--opacity": showResults ? 0 : 1,
+            "--justify-content": justifyContent,
+            "--align-self": alignSelf,
+            "--grid-area": `p${playerNum + 1}`,
+          }}
         >
-          {score}
-        </ScoreText>
-      </PlayerScoreDisplay>
+          <ScoreText
+            $noAnimation={score === 0 || showResults}
+            style={{ "--color": color }}
+          >
+            {score}
+          </ScoreText>
+        </PlayerScoreDisplay>
+      )}
     </>
   );
 }
