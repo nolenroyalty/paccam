@@ -113,6 +113,7 @@ const ButtonHolder = styled.div`
   justify-content: space-between;
   grid-template-columns: minmax(auto, 200px) 1fr minmax(auto, 200px);
   grid-template-areas: "tutorial . close";
+  gap: 1rem;
   margin-top: 2rem;
 `;
 
@@ -137,13 +138,15 @@ const VideoDemo = styled.video`
 const DialogContent = styled(Dialog.Content)`
   z-index: 100;
   border-radius: 20px;
-  width: clamp(550px, 80%, 800px);
-  min-height: min(80%, 800px);
-  max-height: 80%;
+  width: min(800px, 95%);
+  /* min-height: min(95%, 700px); */
+  min-height: 80%;
+  max-height: 90%;
   padding: 2rem 4rem;
   border: 4px solid white;
   backdrop-filter: blur(20px) contrast(0.4);
   box-shadow: 4px 4px 8px 2px rgba(0, 0, 0, 0.3);
+  line-height: 1.2;
   // allow scrolling
   overflow: auto;
   scrollbar-gutter: stable;
@@ -187,7 +190,7 @@ const DialogContent = styled(Dialog.Content)`
 `;
 
 const DialogTitle = styled(Dialog.Title)`
-  font-size: 4rem;
+  font-size: clamp(2.5rem, 9.2vw, 4rem);
   color: yellow;
   font-family: "Arcade Classic";
   word-spacing: 0.5rem;

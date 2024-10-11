@@ -240,7 +240,15 @@ const Wrapper = styled.div`
   flex-direction: column;
   width: clamp(300px, 70%, 500px);
   left: 50%;
-  top: 10%;
+  top: 2%;
+
+  // this could be more precise - this really only matters if we're also
+  // narrow enough that we're stacking our buttons vertically. but this just
+  // makes it more likely that the UI fits on small screens...
+  @media (min-height: 730px) {
+    top: 10%;
+  }
+
   transform: translateX(-50%);
   gap: 1.5rem;
   z-index: ${zIndex1};
