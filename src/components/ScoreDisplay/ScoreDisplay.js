@@ -23,7 +23,7 @@ function PlayerResultsBlob({
   pacmanResultScreenState,
   x,
   y,
-  playerNum,
+  playerNum: myPlayerNum,
   color,
   justifyContent,
   alignSelf,
@@ -31,31 +31,25 @@ function PlayerResultsBlob({
   scores,
   status,
 }) {
-  const playerState = pacmanResultScreenState[`player${playerNum}`];
+  const playerState = pacmanResultScreenState[`player${myPlayerNum}`];
   const haveState = Boolean(playerState);
   const roundOver = status === SHOWING_RESULTS || status === COMPLETED_ROUND;
   const showResults = roundOver && haveState;
   const faceCapture = haveState ? playerState.faceCapture : null;
-  const scoreForPlayer = React.useCallback(
-    (index) => {
-      return scores
-        ? scores.find((score) => score.playerNum === index)?.score
-        : null;
-    },
-    [scores]
-  );
-  const score = scoreForPlayer(playerNum);
+  const myScore = scores[myPlayerNum].score;
 
   let finalOffset;
   if (showResults && scores) {
-    const scoresGreaterThanMine = scores.filter((score) => {
-      const isMe = score.playerNum === playerNum;
-      const isGreater = score.score > scoreForPlayer(playerNum);
-      const isEqual = score.score === scoreForPlayer(playerNum);
-      const isEqualAndBefore = score.playerNum < playerNum && isEqual;
-      return !isMe && (isGreater || isEqualAndBefore);
-    }).length;
-    finalOffset = (scoresGreaterThanMine - playerNum) * 100 + "%";
+    const scoresGreaterThanMine = Object.values(scores).filter(
+      (otherPlayer) => {
+        const isMe = otherPlayer.playerNum === myPlayerNum;
+        const isGreater = otherPlayer.score > myScore;
+        const isEqual = myScore === otherPlayer.score;
+        const isEqualAndBefore = otherPlayer.playerNum < myPlayerNum && isEqual;
+        return !isMe && (isGreater || isEqualAndBefore);
+      }
+    ).length;
+    finalOffset = (scoresGreaterThanMine - myPlayerNum) * 100 + "%";
   }
 
   return (
@@ -63,7 +57,7 @@ function PlayerResultsBlob({
       {showResults ? (
         <PlayerResultsDisplay
           style={{
-            "--grid-area": `result${playerNum + 1}`,
+            "--grid-area": `result${myPlayerNum + 1}`,
             "--x": x,
             "--y": y,
             "--final-offset": finalOffset,
@@ -73,7 +67,7 @@ function PlayerResultsBlob({
             style={{ "--width": slotSizePx * PLAYER_SIZE_IN_SLOTS + "px" }}
             src={faceCapture}
           />
-          <ScoreText style={{ "--color": color }}>{score}</ScoreText>
+          <ScoreText style={{ "--color": color }}>{myScore}</ScoreText>
         </PlayerResultsDisplay>
       ) : (
         <PlayerScoreDisplay
@@ -81,14 +75,14 @@ function PlayerResultsBlob({
             "--opacity": showResults ? 0 : 1,
             "--justify-content": justifyContent,
             "--align-self": alignSelf,
-            "--grid-area": `p${playerNum + 1}`,
+            "--grid-area": `p${myPlayerNum + 1}`,
           }}
         >
           <ScoreText
-            $noAnimation={score === 0 || showResults}
+            $noAnimation={myScore === 0 || showResults}
             style={{ "--color": color }}
           >
-            {score}
+            {myScore}
           </ScoreText>
         </PlayerScoreDisplay>
       )}

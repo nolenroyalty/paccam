@@ -39,7 +39,7 @@ function App() {
   const [pacmanResultScreenState, setPacmanResultScreenState] = React.useState(
     {}
   );
-
+  const [scores, setScores] = React.useState({});
   const [debugInfo, setDebugInfo] = React.useState({});
 
   React.useEffect(() => {
@@ -144,6 +144,7 @@ function App() {
     game.subscribeToStatus((status) => {
       setGameState((state) => ({ ...state, status }));
     });
+    game.subscribeToScores(setScores);
     if (DEBUG) {
       const updateDebugInfo = ({ playerNum, debugState }) => {
         setDebugInfo((state) => {

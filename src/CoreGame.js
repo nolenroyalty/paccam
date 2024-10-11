@@ -571,10 +571,13 @@ class GameEngine {
   }
 
   updateScoreConsumers({ singleCallback = null } = {}) {
-    const scores = this.playerStates.map((playerState) => ({
-      score: playerState.score,
-      playerNum: playerState.playerNum,
-    }));
+    const scores = this.playerStates.reduce((acc, playerState) => {
+      acc[playerState.playerNum] = {
+        score: playerState.score,
+        playerNum: playerState.playerNum,
+      };
+      return acc;
+    }, {});
 
     if (singleCallback) {
       singleCallback(scores);
