@@ -53,8 +53,12 @@ const NoSpacing = styled.span`
 
 const Text = styled.p`
   font-family: "Arcade Classic";
-  /* figure out how to scale this to display size... */
-  font-size: 20rem;
+  // I was originally using 20rem all the time, but this is way too big on smaller screens
+  // To back this value out, I set the screen to 850 px wide and found a font size that looked
+  // ok and didn't produce values larger than the screen for the string "FINISH", which is the
+  // longest string that can we display. That turned out to be 28vw. SO we just use that (which will
+  // never be larger than the screen width, and cap it at 20rem because that's a nice value.
+  font-size: min(28vw, 20rem);
   color: white;
   position: absolute;
   top: 50%;
