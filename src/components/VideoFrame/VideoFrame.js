@@ -8,7 +8,7 @@ function VideoFrame({ videoRef, videoEnabled }) {
         autoPlay
         muted
         ref={videoRef}
-        style={{ "--opacity": videoEnabled ? 0.8 : 0, "--brightness": 0.7 }}
+        style={{ "--opacity": videoEnabled ? 1 : 0, "--brightness": 0.8 }}
       />
     </Wrapper>
   );

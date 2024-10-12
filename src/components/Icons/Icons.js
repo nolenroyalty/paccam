@@ -1,5 +1,6 @@
 import React from "react";
 import styled from "styled-components";
+import { COLORS } from "../../COLORS";
 
 export const Mail = ({ size }) => (
   <svg
@@ -73,12 +74,12 @@ export const Question = ({ size }) => (
 export const Link = styled.a`
   display: inline-flex;
   vertical-align: middle;
-  color: yellow;
+  color: ${COLORS.pacmanYellow};
   text-decoration: none;
   transition: background-color 0.3s ease;
 
   &:hover {
-    color: black;
+    color: ${COLORS.black};
   }
 `;
 

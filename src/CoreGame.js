@@ -7,7 +7,6 @@ import {
 } from "./constants";
 import { range, easeOutPow } from "./utils";
 import {
-  WAITING_FOR_VIDEO,
   WAITING_FOR_PLAYER_SELECT,
   COUNTING_IN_ROUND,
   RUNNING_ROUND,
@@ -1380,6 +1379,12 @@ class GameEngine {
   beginTutorial() {
     this.tutorialState = this._initTutorialState();
     this.updateStatusAndConsumers(RUNNING_TUTORIAL, "beginTutorial");
+    this.skipTutorialStep = false;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        this.skipTutorialStep = true;
+      }
+    });
   }
 
   async endTutorial() {
@@ -1540,7 +1545,11 @@ class GameEngine {
       }
     };
 
-    if (this.tutorialState.status === null) {
+    if (this.skipTutorialStep) {
+      this.skipTutorialStep = false;
+      this.tutorialState.status = null;
+      this.tutorialState.directiveIndex += 1;
+    } else if (this.tutorialState.status === null) {
       this.tutorialState.status = DISPLAYING_DIRECTIVE;
       this.setTutorialInstruction(getInstruction());
     } else if (this.tutorialState.status === TOO_FAR_RESET) {

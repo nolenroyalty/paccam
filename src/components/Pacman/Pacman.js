@@ -4,6 +4,7 @@ import { PLAYER_SIZE_PERCENT } from "../../constants";
 import { zIndex1 } from "../../zindex";
 import { EATEN, GHOST, NORMAL, FADED, SUPER } from "../../PACMANSTATE";
 import { RUNNING_TUTORIAL } from "../../STATUS";
+import { COLORS } from "../../COLORS";
 const PLAYER_CANVAS_SIZE = 128;
 const SPRITE_WIDTH = 32;
 const SPRITE_HEIGHT = 32;
@@ -365,7 +366,7 @@ const DebugWrapper = styled.div`
 
 const DebugLabel = styled.p`
   display: block;
-  color: black;
+  color: ${COLORS.black};
   font-size: 1.25rem;
 `;
 

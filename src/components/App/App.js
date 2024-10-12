@@ -8,6 +8,7 @@ import TimerDisplay from "../TimerDisplay";
 import ScoreDisplay from "../ScoreDisplay";
 import TutorialHandler from "../TutorialHandler";
 import { WAITING_FOR_VIDEO } from "../../STATUS";
+import { COLORS } from "../../colors";
 
 const DEBUG = false;
 
@@ -182,6 +183,7 @@ function App() {
 
   return (
     <Wrapper>
+      <BackgroundGradient />
       <TimerDisplay gameRef={gameRef} />
       <TutorialHandler tutorialInstruction={tutorialInstruction} />
       <HiddenImage
@@ -283,6 +285,17 @@ function App() {
   );
 }
 
+const BackgroundGradient = styled.div`
+  position: absolute;
+  inset: 0;
+
+  // from https://www.magicpattern.design/tools/css-backgrounds
+  background-color: #1c1c5c;
+  opacity: 0.9;
+  background-image: radial-gradient(#c2be70 0.65px, #1c1c5c 0.65px);
+  background-size: 13px 13px;
+`;
+
 const Wrapper = styled.div`
   display: grid;
   place-items: center;
@@ -305,7 +318,7 @@ const IgnoreMissingFacesBanner = styled.h3`
   top: 20%;
   left: 50%;
   transform: translateX(-50%);
-  color: white;
+  color: ${COLORS.white};
   background-color: red;
 `;
 
@@ -318,7 +331,7 @@ const GameHolderOverlapping = styled.div`
   width: 100vw;
   height: 100vh;
   /* aspect-ratio: 1 / 1; */
-  outline: 12px dashed black;
+  outline: 12px dashed ${COLORS.black};
   border-radius: 4px;
   /* prevent scrollbars... */
   overflow: hidden;

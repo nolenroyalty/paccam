@@ -3,6 +3,7 @@ import styled from "styled-components";
 import Button from "../Button";
 import { zIndex1 } from "../../zindex";
 import { WAITING_FOR_PLAYER_SELECT, WAITING_FOR_VIDEO } from "../../STATUS";
+import { COLORS } from "../../COLORS";
 import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import HowToPlay from "../HowToPlay";
@@ -136,6 +137,20 @@ function StartScreen({
       ref={startScreenRef}
       style={{ "--opacity": opacity, "--animation": animation }}
     >
+      <DonoLinkHolder>
+        <Icons.Link href="https://eieio.substack.com" target="_blank">
+          <Icons.Mail size="1rem" />
+        </Icons.Link>
+        <Icons.Link href="https://buymeacoffee.com/eieio" target="_blank">
+          <Icons.Dollar size="1rem" />
+        </Icons.Link>
+        <Icons.Link
+          href="https://github.com/nolenroyalty/paccam"
+          target="_blank"
+        >
+          <Icons.Code size="1rem" />
+        </Icons.Link>
+      </DonoLinkHolder>
       <TitleSubheadWrapper>
         <Title>PacCam</Title>
         <SubHead>
@@ -144,7 +159,7 @@ function StartScreen({
             href="https://eieio.games"
             target="_blank"
             rel="noreferrer"
-            style={{ color: "yellow" }}
+            style={{ color: COLORS.pacmanYellow }}
           >
             eieio
           </a>
@@ -216,20 +231,6 @@ function StartScreen({
           </FadeInButton>
         )}
       </ButtonHolder>
-      <DonoLinkHolder>
-        <Icons.Link href="https://eieio.substack.com" target="_blank">
-          <Icons.Mail size="1rem" />
-        </Icons.Link>
-        <Icons.Link href="https://buymeacoffee.com/eieio" target="_blank">
-          <Icons.Dollar size="1rem" />
-        </Icons.Link>
-        <Icons.Link
-          href="https://github.com/nolenroyalty/paccam"
-          target="_blank"
-        >
-          <Icons.Code size="1rem" />
-        </Icons.Link>
-      </DonoLinkHolder>
     </Wrapper>
   );
 }
@@ -255,7 +256,7 @@ const Wrapper = styled.div`
   backdrop-filter: blur(20px) contrast(0.4);
   padding: 20px;
   border-radius: 20px;
-  border: 4px solid white;
+  border: 2px solid ${COLORS.white};
   box-shadow: 4px 4px 8px 1px rgba(0, 0, 0, 0.3);
 
   opacity: var(--opacity);
@@ -266,6 +267,7 @@ const Wrapper = styled.div`
 
     100% {
       transform: translate(-50%, 0);
+      opacity: 1;
     }
   }
   @keyframes scoreWrapperExit {
@@ -283,6 +285,7 @@ const Wrapper = styled.div`
     0% {
     }
     100% {
+      opacity: 1;
     }
   }
 
@@ -301,18 +304,19 @@ const Title = styled.h2`
   text-align: center;
   line-height: 0.5;
   font-family: "Arcade Classic";
-  color: yellow;
+  color: ${COLORS.pacmanYellow};
 `;
 
 const SubHead = styled.h3`
   font-size: 1.5rem;
   word-spacing: 0.2rem;
+  line-height: 0.85;
   text-align: center;
   font-family: "Arcade Classic";
-  color: black;
+  color: ${COLORS.white};
 
   a {
-    color: yellow;
+    color: ${COLORS.pacmanYellow};
     text-decoration-style: dotted;
   }
 `;
@@ -348,15 +352,15 @@ function CheckboxContainer({
         return "darkgray";
       }
       if (toSpeculativelyHighlight === null) {
-        return count <= currentCount ? "yellow" : "white";
+        return count <= currentCount ? COLORS.pacmanYellow : COLORS.white;
       } else {
         if (
           count <= toSpeculativelyHighlight &&
           !speculativelyHighlighted.clickedThisCycle
         ) {
-          return "yellow";
+          return COLORS.pacmanYellow;
         } else {
-          return isEnabled ? "white" : "darkgray";
+          return isEnabled ? COLORS.white : "darkgray";
         }
       }
     },
@@ -405,7 +409,7 @@ const CheckboxContainerLabel = styled.span`
   font-size: 1.5rem;
   font-family: "Arcade Classic";
   word-spacing: 0.2rem;
-  color: white;
+  color: ${COLORS.white};
   display: flex;
   align-items: center;
   flex-direction: row;
@@ -461,7 +465,7 @@ const CheckboxRoot = styled(Checkbox.Root)`
   }
 
   &[data-state="checked"] {
-    background-color: yellow;
+    background-color: ${COLORS.pacmanYellow};
   }
 `;
 
@@ -487,7 +491,7 @@ function AllowMorePlayers({
       <CheckboxRoot
         checked={allowMorePlayers}
         onCheckedChange={onClick}
-        style={{ "--background-color": "white" }}
+        style={{ "--background-color": COLORS.white }}
         disabled={!videoEnabled}
       ></CheckboxRoot>
     </CheckboxContainerWrapper>
@@ -572,24 +576,24 @@ const TooltipProvider = styled(Tooltip.Provider)``;
 const TooltipRoot = styled(Tooltip.Root)``;
 const TooltipTrigger = styled(Tooltip.Trigger)`
   all: unset;
-  color: white;
+  color: ${COLORS.white};
   cursor: pointer;
 `;
 const TooltipPortal = styled(Tooltip.Portal)``;
 const TooltipContent = styled(Tooltip.Content)`
-  background-color: black;
-  color: white;
+  background-color: ${COLORS.black};
+  color: ${COLORS.white};
   padding: 1rem;
   max-width: 300px;
   border-radius: 10px;
 
   a {
-    color: yellow;
+    color: ${COLORS.pacmanYellow};
     text-decoration-style: dotted;
   }
 `;
 const TooltipArrow = styled(Tooltip.Arrow)`
-  fill: black;
+  fill: ${COLORS.black};
 `;
 
 const ButtonHolder = styled.div`
@@ -612,7 +616,7 @@ const ButtonHolder = styled.div`
 const DonoLinkHolder = styled.div`
   display: flex;
   flex-direction: row;
-  justify-content: right;
+  justify-content: left;
   align-items: center;
   gap: 0.5rem;
   size: 0.5rem;

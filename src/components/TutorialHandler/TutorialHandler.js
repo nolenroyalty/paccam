@@ -1,6 +1,7 @@
 import React from "react";
 import { zIndex1 } from "../../zindex";
 import styled from "styled-components";
+import { COLORS } from "../../COLORS";
 
 function TutorialHandler({ tutorialInstruction }) {
   if (!tutorialInstruction || tutorialInstruction.length === 0) {
@@ -25,7 +26,7 @@ const NBSPer = () => {
 };
 
 const Instructions = styled.h2`
-  color: white;
+  color: ${COLORS.white};
   font-family: "Arcade Classic";
   font-size: 4rem;
   position: absolute;

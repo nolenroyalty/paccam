@@ -1,6 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import UnstyledButton from "../UnstyledButton";
+import { COLORS } from "../../COLORS";
 
 const Button = React.forwardRef(
   ({ children, style = {}, size, disabled, ...props }, ref) => {
@@ -8,7 +9,7 @@ const Button = React.forwardRef(
     let padding;
     let fontSize;
     if (size === "small") {
-      borderPx = 2;
+      borderPx = 4;
       padding = "1rem 0.25rem";
       fontSize = "1.5rem";
     } else if (size === "medium") {
@@ -40,13 +41,13 @@ const Button = React.forwardRef(
 
 const Wrapper = styled(UnstyledButton)`
   /* border: var(--border-size) dashed yellow; */
-  color: ${(p) => (p.disabled ? "lightgrey" : "white")};
+  color: ${(p) => (p.disabled ? "lightgrey" : COLORS.white)};
   font-family: "Arcade Classic";
   white-space: pre-wrap;
   word-spacing: 0.2rem;
   border-radius: var(--border-size);
   font-size: var(--font-size);
-  background-color: ${(p) => (p.disabled ? "darkgrey" : "black")};
+  background-color: ${(p) => (p.disabled ? "darkgrey" : COLORS.black)};
   pointer-events: ${(p) => (p.disabled ? "none" : "auto")};
   transition:
     background-color 0.25s ease,
@@ -55,9 +56,8 @@ const Wrapper = styled(UnstyledButton)`
   padding: var(--padding);
 
   &:hover {
-    background-color: ${(p) => (p.disabled ? "darkgrey" : "white")};
-    color: ${(p) => (p.disabled ? "lightgrey" : "black")};
-    /* border: var(--border-size) dashed white; */
+    background-color: ${(p) => (p.disabled ? "darkgrey" : COLORS.white)};
+    color: ${(p) => (p.disabled ? "lightgrey" : COLORS.black)};
   }
 `;
 

@@ -1,6 +1,7 @@
 import React from "react";
 import styled, { keyframes } from "styled-components";
 import { zIndex1 } from "../../zindex";
+import { COLORS } from "../../COLORS";
 
 function TimerDisplay({ gameRef }) {
   const [time, setTime] = React.useState(null);
@@ -59,7 +60,8 @@ const Text = styled.p`
   // longest string that can we display. That turned out to be 28vw. SO we just use that (which will
   // never be larger than the screen width, and cap it at 20rem because that's a nice value.
   font-size: min(28vw, 20rem);
-  color: white;
+  font-size: min(20vw, 20rem);
+  color: ${COLORS.white};
   position: absolute;
   top: 50%;
   left: 50%;

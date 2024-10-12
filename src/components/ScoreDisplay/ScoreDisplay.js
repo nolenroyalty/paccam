@@ -286,7 +286,7 @@ const PlayerResultsDisplay = styled.div`
   grid-area: var(--grid-area);
   /* height 100% makes the finalOffset trick work */
   height: 100%;
-  animation: ${FadeAndDropIn} 2s ease-out both 1s;
+  animation: ${FadeAndDropIn} 10s ease-out both 1s;
 `;
 
 export default ScoreDisplay;

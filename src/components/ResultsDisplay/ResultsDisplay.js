@@ -1,5 +1,6 @@
 import React from "react";
 import styled from "styled-components";
+import { COLORS } from "../../COLORS";
 
 function ResultsDisplay({ results }) {
   return (
@@ -22,7 +23,7 @@ const ResultList = styled.div`
 `;
 
 const Result = styled.p`
-  color: white;
+  color: ${COLORS.white};
   font-size: 1.5rem;
 `;
 

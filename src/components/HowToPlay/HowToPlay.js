@@ -2,6 +2,7 @@ import React from "react";
 import styled from "styled-components";
 import * as Dialog from "@radix-ui/react-dialog";
 import Button from "../Button";
+import { COLORS } from "../../COLORS";
 
 function HowToPlay({
   showingHowToPlay,
@@ -70,14 +71,15 @@ function HowToPlay({
               </p>
             </div>
           </DialogDescription>
-          <div style={{ display: "flex", justifyContent: "center" }}>
+          <VideoDemoWithCanvas />
+          {/* <div style={{ display: "flex", justifyContent: "center" }}>
             <VideoDemo
-              src="/videos/instructions2.mp4"
+              src="/videos/instructions-greenscreen.mp4"
               muted
               autoPlay
               loop
             ></VideoDemo>
-          </div>
+          </div> */}
           <ButtonHolder>
             <Button
               onClick={(e) => {
@@ -108,13 +110,93 @@ function HowToPlay({
   );
 }
 
+function VideoDemoWithCanvas() {
+  const canvasRef = React.useRef(null);
+  const videoRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const ctx = canvas.getContext("2d");
+    let stopGreenScreen = false;
+
+    const setupGreenscreenOutVideo = () => {
+      const draw = () => {
+        if (stopGreenScreen) {
+          return;
+        }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let data = imageData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          let r = data[i];
+          let g = data[i + 1];
+          let b = data[i + 2];
+          if (g > 200 && r < 100 && b < 100) {
+            data[i + 3] = 0;
+          }
+        }
+        ctx.putImageData(imageData, 0, 0);
+        requestAnimationFrame(draw);
+      };
+      draw();
+    };
+
+    video.addEventListener("play", setupGreenscreenOutVideo);
+
+    return () => {
+      video.removeEventListener("play", setupGreenscreenOutVideo);
+      stopGreenScreen = true;
+    };
+  }, []);
+
+  return (
+    <VideoDemoWrapper>
+      <VideoDemoHiddenVideo
+        ref={videoRef}
+        src="/videos/instructions-greenscreen.mp4"
+        muted
+        autoPlay
+        loop
+      ></VideoDemoHiddenVideo>
+      <VideoDemoCanvas
+        ref={canvasRef}
+        width="1486"
+        height="338"
+      ></VideoDemoCanvas>
+    </VideoDemoWrapper>
+  );
+}
+
+const VideoDemoWrapper = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: column;
+`;
+
+const VideoDemoCanvas = styled.canvas`
+  width: min(80%, 800px);
+  height: auto;
+  margin: auto;
+  border-radius: 20px;
+`;
+
+const VideoDemoHiddenVideo = styled.video`
+  z-index: -1;
+  opacity: 0;
+  position: absolute;
+  width: 0;
+  height: 0;
+`;
+
 const ButtonHolder = styled.div`
   display: grid;
   justify-content: space-between;
   grid-template-columns: minmax(auto, 200px) 1fr minmax(auto, 200px);
   grid-template-areas: "tutorial . close";
   gap: 1rem;
-  margin-top: 2rem;
 `;
 
 const DialogOverlay = styled(Dialog.Overlay)`
@@ -128,13 +210,6 @@ const DialogOverlay = styled(Dialog.Overlay)`
   color: blue;
 `;
 
-const VideoDemo = styled.video`
-  width: min(80%, 800px);
-  height: auto;
-  border-radius: 20px;
-  border: 4px solid white;
-`;
-
 const DialogContent = styled(Dialog.Content)`
   z-index: 100;
   border-radius: 20px;
@@ -143,7 +218,7 @@ const DialogContent = styled(Dialog.Content)`
   min-height: 80%;
   max-height: 90%;
   padding: 2rem 4rem;
-  border: 4px solid white;
+  border: 2px solid ${COLORS.white};
   backdrop-filter: blur(20px) contrast(0.4);
   box-shadow: 4px 4px 8px 2px rgba(0, 0, 0, 0.3);
   line-height: 1.2;
@@ -157,9 +232,9 @@ const DialogContent = styled(Dialog.Content)`
   top: 5%;
   left: 50%;
   transform: translate(-50%, 0);
-  color: white;
+  color: ${COLORS.white};
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto 1fr auto;
   transition: opacity 0.35s ease-out;
   will-change: transform, opacity;
 
@@ -191,7 +266,7 @@ const DialogContent = styled(Dialog.Content)`
 
 const DialogTitle = styled(Dialog.Title)`
   font-size: clamp(2.5rem, 9.2vw, 4rem);
-  color: yellow;
+  color: ${COLORS.pacmanYellow};
   font-family: "Arcade Classic";
   word-spacing: 0.5rem;
   line-height: 1;
@@ -200,7 +275,7 @@ const DialogTitle = styled(Dialog.Title)`
 
 const DialogDescription = styled(Dialog.Description)`
   font-size: 1.5rem;
-  color: white;
+  color: ${COLORS.white};
   font-family: "Arcade Classic";
   word-spacing: 0.25rem;
 `;

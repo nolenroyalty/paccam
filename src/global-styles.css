@@ -18,8 +18,28 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   font-family: "Lato", sans-serif;
-  background: linear-gradient(to right, #1a0315, #291e2d, #1a0315);
-  background: linear-gradient(45deg, #282972, #283061, #282972);
+  --black: #000000;
+  --black: #080814;
+  /* background: linear-gradient(to right, #1a0315, #291e2d, #1a0315); */
+  /* background: linear-gradient(45deg, #282972, #283061, #282972); */
+  /* background-color: #1c1c5c;
+  /* opacity: 0.8; */
+  /* background-image: radial-gradient(#c2be7080 0.5px, #1c1c5c 0.5px);
+  background-color: #1c1c5c;
+  background-size: 10px 10px; */
+
+  /* background-color: #1c1c5c;
+  background-image: radial-gradient(#c2be70 2px, transparent 2px),
+    radial-gradient(#c2be70 2px, #1c1c5c 2px);
+  background-size: 80px 80px;
+  background-position:
+    0 0,
+    40px 40px; */
+
+  /* background-color: #1c1c5c; */
+  /* opacity: 0.5; */
+  /* background-image: radial-gradient(#c2be70 2px, #1c1c5c 2px); */
+  /* background-size: 40px 40px; */
 }
 img,
 picture,
