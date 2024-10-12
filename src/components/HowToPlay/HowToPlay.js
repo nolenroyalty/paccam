@@ -114,6 +114,28 @@ function VideoDemoWithCanvas() {
   const canvasRef = React.useRef(null);
   const videoRef = React.useRef(null);
 
+  const VideoDemoWrapper = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-direction: column;
+  `;
+
+  const VideoDemoCanvas = styled.canvas`
+    width: min(80%, 800px);
+    height: auto;
+    margin: auto;
+    border-radius: 20px;
+  `;
+
+  const VideoDemoHiddenVideo = styled.video`
+    z-index: -1;
+    opacity: 0;
+    position: absolute;
+    width: 0;
+    height: 0;
+  `;
+
   React.useEffect(() => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -168,28 +190,6 @@ function VideoDemoWithCanvas() {
     </VideoDemoWrapper>
   );
 }
-
-const VideoDemoWrapper = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-direction: column;
-`;
-
-const VideoDemoCanvas = styled.canvas`
-  width: min(80%, 800px);
-  height: auto;
-  margin: auto;
-  border-radius: 20px;
-`;
-
-const VideoDemoHiddenVideo = styled.video`
-  z-index: -1;
-  opacity: 0;
-  position: absolute;
-  width: 0;
-  height: 0;
-`;
 
 const ButtonHolder = styled.div`
   display: grid;
