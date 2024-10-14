@@ -8,6 +8,7 @@ import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import HowToPlay from "../HowToPlay";
 import Icons from "../Icons";
+import { motion } from "framer-motion";
 
 const MAX_PLAYERS = 4;
 
@@ -103,39 +104,44 @@ function StartScreen({
     }, 550);
   }, [_startGame]);
 
-  const priorStatus = React.useRef(status);
-  const [shouldSlideIn, setShouldSlideIn] = React.useState(false);
-  React.useEffect(() => {
-    const shouldDisplay = (x) =>
-      x === WAITING_FOR_PLAYER_SELECT || x === WAITING_FOR_VIDEO;
+  const slideOut = React.useMemo(() => {
+    return aboutToStartGame | aboutToRunTutorial;
+  }, [aboutToStartGame, aboutToRunTutorial]);
 
-    setShouldSlideIn(
-      shouldDisplay(status) && !shouldDisplay(priorStatus.current)
-    );
-    priorStatus.current = status;
-  }, [setShouldSlideIn, status]);
+  const endY = slideOut ? "200%" : "0";
+  const startY = slideOut ? "0" : "-100%";
+  const startOpacity = slideOut ? 1 : 0;
+  const endOpacity = slideOut ? 0 : 1;
+
+  const spring = React.useMemo(() => {
+    if (slideOut) {
+      return {
+        type: "spring",
+        stiffness: 100,
+        damping: 10,
+      };
+    } else {
+      return {
+        type: "spring",
+        stiffness: 200, // 225
+        damping: 15, // 15
+      };
+    }
+  }, [slideOut]);
 
   if (status !== WAITING_FOR_PLAYER_SELECT && status !== WAITING_FOR_VIDEO) {
     startScreenRef.current = null;
     return null;
   }
 
-  const opacity = aboutToRunTutorial
-    ? 0
-    : showingHowToPlay && !hidingHowToPlay
-      ? 0.8
-      : 1;
-
-  const animation = shouldSlideIn
-    ? "scoreWrapperEnter"
-    : aboutToStartGame | aboutToRunTutorial
-      ? "scoreWrapperExit"
-      : "scoreWrapperInitial";
+  console.log(startY, endY, JSON.stringify(spring));
 
   return (
     <Wrapper
       ref={startScreenRef}
-      style={{ "--opacity": opacity, "--animation": animation }}
+      initial={{ opacity: startOpacity, y: startY, x: "-50%" }}
+      animate={{ opacity: endOpacity, y: endY, x: "-50%" }}
+      transition={spring}
     >
       <DonoLinkHolder>
         <Icons.Link href="https://eieio.substack.com" target="_blank">
@@ -235,7 +241,7 @@ function StartScreen({
   );
 }
 
-const Wrapper = styled.div`
+const Wrapper = styled(motion.div)`
   position: absolute;
   display: flex;
   flex-direction: column;
@@ -250,7 +256,6 @@ const Wrapper = styled.div`
     top: 10%;
   }
 
-  transform: translateX(-50%);
   gap: 1.5rem;
   z-index: ${zIndex1};
   backdrop-filter: blur(20px) contrast(0.4);
@@ -258,39 +263,6 @@ const Wrapper = styled.div`
   border-radius: 20px;
   border: 2px solid ${COLORS.white};
   box-shadow: 4px 4px 8px 1px rgba(0, 0, 0, 0.3);
-
-  opacity: var(--opacity);
-  @keyframes scoreWrapperEnter {
-    0% {
-      transform: translate(-50%, -200%);
-    }
-
-    100% {
-      transform: translate(-50%, 0);
-      opacity: 1;
-    }
-  }
-  @keyframes scoreWrapperExit {
-    0% {
-      transform: translate(-50%, 0);
-    }
-
-    100% {
-      transform: translate(-50%, 200%);
-      opacity: 0;
-    }
-  }
-
-  @keyframes scoreWrapperInitial {
-    0% {
-    }
-    100% {
-      opacity: 1;
-    }
-  }
-
-  animation: var(--animation) 0.5s ease-out forwards;
-  transition: opacity 0.5s ease;
 `;
 
 const TitleSubheadWrapper = styled.div`

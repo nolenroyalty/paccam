@@ -156,7 +156,23 @@ function App() {
     }
   }, []);
 
-  const moveToWaitingForPlayerSelect = React.useCallback(() => {
+  const moveToWaitingForPlayerSelect = React.useCallback(async () => {
+    // It'd be nice if we could save state between rounds here. Some problems:
+    // 1. we need to await an initNumPlayers call, which is expensive and will
+    // block our intro animation
+    // 2. for some reason doing the naive thing results in the player's position not
+    // being updated??
+    // from further looking, the problem is that we haven't re-added the start
+    // screen when we call initNumPlayers, so we can't figure out where to put
+    // the player faces...
+    //
+    // we want the following code, but we need a "wait for start screen" line
+    // gameRef.current.resetState();
+    // await startScreen.loaded(); // this doesn't exist
+    // await gameRef.current.initNumPlayers(gameState.numPlayers);
+    // gameRef.current.moveToWaitingForPlayerSelect(); // maybe not this
+    // gameRef.current.startGameLoop();
+
     gameRef.current.resetState();
     setGameState((state) => ({ ...state, numPlayers: 0, numCPUs: null }));
     gameRef.current.moveToWaitingForPlayerSelect();

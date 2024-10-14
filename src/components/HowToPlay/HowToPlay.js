@@ -3,6 +3,8 @@ import styled from "styled-components";
 import * as Dialog from "@radix-ui/react-dialog";
 import Button from "../Button";
 import { COLORS } from "../../COLORS";
+import { motion } from "framer-motion";
+import { springOutConfig } from "../../constants";
 
 function HowToPlay({
   showingHowToPlay,
@@ -37,6 +39,25 @@ function HowToPlay({
     [setShowingHowToPlay, setHidingHowToPlay]
   );
 
+  const springInConfig = {
+    type: "spring",
+    stiffness: 350,
+    damping: 35,
+  };
+
+  const springOutConfig = {
+    type: "spring",
+    stiffness: 100,
+    damping: 10,
+  };
+
+  const exiting = !showingHowToPlay || hidingHowToPlay;
+  const spring = exiting ? springOutConfig : springInConfig;
+  const startOpacity = exiting ? 1 : 0.5;
+  const endOpacity = exiting ? 0.5 : 1;
+  const startY = exiting ? "0%" : "-100%";
+  const endY = exiting ? "150%" : "0%";
+
   return (
     <Dialog.Root open={showingHowToPlay} onOpenChange={showWrapper}>
       <Dialog.Trigger asChild>
@@ -46,33 +67,37 @@ function HowToPlay({
       </Dialog.Trigger>
       <Dialog.Portal>
         <DialogOverlay />
-        <DialogContent
-          style={{
-            "--opacity": hidingHowToPlay ? 0 : 1,
-            "--animation":
-              hidingHowToPlay || !showingHowToPlay
-                ? "HowToDialogExit"
-                : "HowToDialogEnter",
-          }}
-        >
-          <DialogTitle>How to Play PacCam</DialogTitle>
-          <DialogDescription asChild>
-            <div>
-              <ul>
-                <li>Look in the direction you want to move</li>
-                <li>Open and close your mouth to go faster</li>
-                <li>Eat dots to score points</li>
-                <li>Eat big dots to eat other players</li>
-              </ul>
-              <br />
-              <p>
-                Protip: the controls are sensitive - only turn your head a
-                little bit
-              </p>
-            </div>
-          </DialogDescription>
-          <VideoDemoWithCanvas />
-          {/* <div style={{ display: "flex", justifyContent: "center" }}>
+        <Dialog.Content>
+          <DialogContent
+            initial={{ opacity: startOpacity, x: "-50%", y: startY }}
+            animate={{ opacity: endOpacity, x: "-50%", y: endY }}
+            transition={spring}
+            // style={{
+            //   "--opacity": hidingHowToPlay ? 0 : 1,
+            //   "--animation":
+            //     hidingHowToPlay || !showingHowToPlay
+            //       ? "HowToDialogExit"
+            //       : "HowToDialogEnter",
+            // }}
+          >
+            <DialogTitle>How to Play PacCam</DialogTitle>
+            <DialogDescription asChild>
+              <div>
+                <ul>
+                  <li>Look in the direction you want to move</li>
+                  <li>Open and close your mouth to go faster</li>
+                  <li>Eat dots to score points</li>
+                  <li>Eat big dots to eat other players</li>
+                </ul>
+                <br />
+                <p>
+                  Protip: the controls are sensitive - only turn your head a
+                  little bit
+                </p>
+              </div>
+            </DialogDescription>
+            <VideoDemoWithCanvas />
+            {/* <div style={{ display: "flex", justifyContent: "center" }}>
             <VideoDemo
               src="/videos/instructions-greenscreen.mp4"
               muted
@@ -80,31 +105,32 @@ function HowToPlay({
               loop
             ></VideoDemo>
           </div> */}
-          <ButtonHolder>
-            <Button
-              onClick={(e) => {
-                if (!videoEnabled) {
-                  enableVideo();
-                }
-                const runThisEarly = () => {
-                  setAboutToRunTutorial(true);
-                };
-                const runThisLate = () => {
-                  setAboutToRunTutorial(false);
-                  beginTutorial();
-                };
-                showWrapper(false, runThisEarly, runThisLate);
-              }}
-              size="small"
-              style={{ gridArea: "tutorial" }}
-            >
-              Play Tutorial
-            </Button>
-            <Dialog.Close asChild style={{ gridArea: "close" }}>
-              <Button size="small">Close</Button>
-            </Dialog.Close>
-          </ButtonHolder>
-        </DialogContent>
+            <ButtonHolder>
+              <Button
+                onClick={(e) => {
+                  if (!videoEnabled) {
+                    enableVideo();
+                  }
+                  const runThisEarly = () => {
+                    setAboutToRunTutorial(true);
+                  };
+                  const runThisLate = () => {
+                    setAboutToRunTutorial(false);
+                    beginTutorial();
+                  };
+                  showWrapper(false, runThisEarly, runThisLate);
+                }}
+                size="small"
+                style={{ gridArea: "tutorial" }}
+              >
+                Play Tutorial
+              </Button>
+              <Dialog.Close asChild style={{ gridArea: "close" }}>
+                <Button size="small">Close</Button>
+              </Dialog.Close>
+            </ButtonHolder>
+          </DialogContent>
+        </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
   );
@@ -155,7 +181,7 @@ function VideoDemoWithCanvas() {
           let r = data[i];
           let g = data[i + 1];
           let b = data[i + 2];
-          if (g > 200 && r < 100 && b < 100) {
+          if (g > 180 && r < 120 && b < 120) {
             data[i + 3] = 0;
           }
         }
@@ -210,7 +236,8 @@ const DialogOverlay = styled(Dialog.Overlay)`
   color: blue;
 `;
 
-const DialogContent = styled(Dialog.Content)`
+// const DialogContent = styled(Dialog.Content)`
+const DialogContent = styled(motion.div)`
   z-index: 100;
   border-radius: 20px;
   width: min(800px, 95%);
