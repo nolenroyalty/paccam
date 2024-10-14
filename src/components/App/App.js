@@ -7,8 +7,9 @@ import StartScreen from "../StartScreen";
 import TimerDisplay from "../TimerDisplay";
 import ScoreDisplay from "../ScoreDisplay";
 import TutorialHandler from "../TutorialHandler";
+import LiveScoreDisplay from "../LiveScoreDisplay";
 import { WAITING_FOR_VIDEO } from "../../STATUS";
-import { COLORS } from "../../colors";
+import { COLORS } from "../../COLORS";
 
 const DEBUG = false;
 
@@ -284,6 +285,11 @@ function App() {
           }}
         />
       </GameHolderOverlapping>
+      <LiveScoreDisplay
+        status={gameState.status}
+        numPlayers={gameState.numPlayers}
+        scores={scores}
+      />
       <ScoreDisplay
         numPlayers={gameState.numPlayers}
         gameRef={gameRef}

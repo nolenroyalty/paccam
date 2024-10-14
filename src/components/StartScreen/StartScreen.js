@@ -134,8 +134,6 @@ function StartScreen({
     return null;
   }
 
-  console.log(startY, endY, JSON.stringify(spring));
-
   return (
     <Wrapper
       ref={startScreenRef}

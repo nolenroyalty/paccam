@@ -69,23 +69,7 @@ function PlayerResultsBlob({
           />
           <ScoreText style={{ "--color": color }}>{myScore}</ScoreText>
         </PlayerResultsDisplay>
-      ) : (
-        <PlayerScoreDisplay
-          style={{
-            "--opacity": showResults ? 0 : 1,
-            "--justify-content": justifyContent,
-            "--align-self": alignSelf,
-            "--grid-area": `p${myPlayerNum + 1}`,
-          }}
-        >
-          <ScoreText
-            $noAnimation={myScore === 0 || showResults}
-            style={{ "--color": color }}
-          >
-            {myScore}
-          </ScoreText>
-        </PlayerScoreDisplay>
-      )}
+      ) : null}
     </>
   );
 }
