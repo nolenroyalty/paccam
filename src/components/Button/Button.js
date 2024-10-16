@@ -40,15 +40,15 @@ const Button = React.forwardRef(
 );
 
 const Wrapper = styled(UnstyledButton)`
-  /* border: var(--border-size) dashed yellow; */
   color: ${(p) => (p.disabled ? "lightgrey" : COLORS.white)};
   font-family: "Arcade Classic";
   white-space: pre-wrap;
   word-spacing: 0.2rem;
   border-radius: var(--border-size);
   font-size: var(--font-size);
-  background-color: ${(p) => (p.disabled ? "darkgrey" : COLORS.black)};
+  background-color: ${(p) => (p.disabled ? COLORS.grey : COLORS.black)};
   pointer-events: ${(p) => (p.disabled ? "none" : "auto")};
+  opacity: ${(p) => (p.disabled ? 0.1 : 1)};
   transition:
     background-color 0.25s ease,
     color 0.25s ease,
@@ -56,7 +56,7 @@ const Wrapper = styled(UnstyledButton)`
   padding: var(--padding);
 
   &:hover {
-    background-color: ${(p) => (p.disabled ? "darkgrey" : COLORS.white)};
+    background-color: ${(p) => (p.disabled ? COLORS.grey : COLORS.white)};
     color: ${(p) => (p.disabled ? "lightgrey" : COLORS.black)};
   }
 `;

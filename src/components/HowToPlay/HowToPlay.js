@@ -74,6 +74,11 @@ function HowToPlay({
             <DialogTitle>How to Play PacCam</DialogTitle>
             <DialogDescription asChild>
               <div>
+                <p>
+                  Paccam is multiplayer pacman using your face. Requires a
+                  webcam to play.
+                </p>
+                <br />
                 <ul>
                   <li>Look in the direction you want to move</li>
                   <li>Open and close your mouth to go faster</li>
@@ -167,6 +172,7 @@ function VideoDemoWithCanvas() {
         src="/videos/instructions-greenscreen.mp4"
         muted
         autoPlay
+        playsInline
         loop
       ></VideoDemoHiddenVideo>
       <VideoDemoCanvas

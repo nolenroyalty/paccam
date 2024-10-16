@@ -5,7 +5,7 @@ import { zIndex1 } from "../../zindex";
 import { WAITING_FOR_PLAYER_SELECT, WAITING_FOR_VIDEO } from "../../STATUS";
 import { COLORS } from "../../COLORS";
 import * as Checkbox from "@radix-ui/react-checkbox";
-import * as Tooltip from "@radix-ui/react-tooltip";
+import * as Popover from "@radix-ui/react-popover";
 import HowToPlay from "../HowToPlay";
 import Icons from "../Icons";
 import { motion } from "framer-motion";
@@ -331,7 +331,7 @@ function CheckboxContainer({
       const toSpeculativelyHighlight = speculativelyHighlighted[kind];
       const isEnabled = enabled(count);
       if (!isEnabled) {
-        return "darkgray";
+        return COLORS.grey;
       }
       if (toSpeculativelyHighlight === null) {
         return count <= currentCount ? COLORS.pacmanYellow : COLORS.white;
@@ -342,7 +342,7 @@ function CheckboxContainer({
         ) {
           return COLORS.pacmanYellow;
         } else {
-          return isEnabled ? COLORS.white : "darkgray";
+          return isEnabled ? COLORS.white : COLORS.grey;
         }
       }
     },
@@ -473,7 +473,9 @@ function AllowMorePlayers({
       <CheckboxRoot
         checked={allowMorePlayers}
         onCheckedChange={onClick}
-        style={{ "--background-color": COLORS.white }}
+        style={{
+          "--background-color": videoEnabled ? COLORS.white : COLORS.grey,
+        }}
         disabled={!videoEnabled}
       ></CheckboxRoot>
     </CheckboxContainerWrapper>
@@ -489,7 +491,7 @@ function EnableOnlinePlay({ videoEnabled }) {
       <CheckboxRoot
         checked={false}
         onCheckedChange={() => {}}
-        style={{ "--background-color": "darkgrey" }}
+        style={{ "--background-color": COLORS.grey }}
         disabled={true}
       ></CheckboxRoot>
     </CheckboxContainerWrapper>
@@ -498,18 +500,18 @@ function EnableOnlinePlay({ videoEnabled }) {
 
 function ExplainMorePlayers() {
   return (
-    <QuestionmarkTooltip>
+    <QuestionmarkPopover>
       Your computer may struggle to handle more than 2 faces at a time.
       <br />
       <br />
       Feel free to enable this, but beware that it might not work well :)
-    </QuestionmarkTooltip>
+    </QuestionmarkPopover>
   );
 }
 
 function ExplainNoOnlineYet() {
   return (
-    <QuestionmarkTooltip>
+    <QuestionmarkPopover>
       I'd like to add online play - but it's a ton of work. So I'd like to know
       people would use the feature before I add it.
       <br />
@@ -522,59 +524,60 @@ function ExplainNoOnlineYet() {
         email me
       </a>{" "}
       or find me on the street and shout me down.
-    </QuestionmarkTooltip>
+    </QuestionmarkPopover>
   );
 }
 
-function QuestionmarkTooltip({ children }) {
-  const [open, setOpen] = React.useState(false);
+function QuestionmarkPopover({ children }) {
+  // https://github.com/radix-ui/primitives/issues/955
+  // Radix folks take a baffling stance on how tooltips are entirely for buttons,
+  // which means that they can only respond to hover and not touch. I dunno man.
+  // So we use a popover instead, which is slightly worse on desktop imo (these should
+  // respond on hover) but all the workarounds are gross. frustrating.
   return (
-    <TooltipProvider delayDuration={200} open={open} onOpenChange={setOpen}>
-      <TooltipRoot>
-        <TooltipTrigger
-          onClick={(e) => {
-            e.preventDefault();
-          }}
-        >
-          <Icons.Question size="1.25rem" />
-        </TooltipTrigger>
-        <TooltipPortal>
-          <TooltipContent
-            sideOffset={5}
-            onPointerDownOutside={(e) => {
-              e.preventDefault();
-            }}
-          >
-            <TooltipArrow width={20} height={10} />
-            {children}
-          </TooltipContent>
-        </TooltipPortal>
-      </TooltipRoot>
-    </TooltipProvider>
+    <PopoverRoot>
+      <PopoverTrigger>
+        <Icons.Question size="1.25rem" />
+      </PopoverTrigger>
+      <PopoverPortal>
+        <PopoverContent sideOffset={5} side="top">
+          <PopoverArrow width={20} height={10} />
+          {children}
+        </PopoverContent>
+      </PopoverPortal>
+    </PopoverRoot>
   );
 }
 
-const TooltipProvider = styled(Tooltip.Provider)``;
-const TooltipRoot = styled(Tooltip.Root)``;
-const TooltipTrigger = styled(Tooltip.Trigger)`
+const PopoverRoot = styled(Popover.Root)``;
+const PopoverTrigger = styled(Popover.Trigger)`
   all: unset;
   color: ${COLORS.white};
   cursor: pointer;
+
+  transition: color 0.2s ease;
+  &:hover {
+    color: ${COLORS.pacmanYellow};
+  }
 `;
-const TooltipPortal = styled(Tooltip.Portal)``;
-const TooltipContent = styled(Tooltip.Content)`
+const PopoverPortal = styled(Popover.Portal)``;
+const PopoverContent = styled(Popover.Content)`
   background-color: ${COLORS.black};
   color: ${COLORS.white};
   padding: 1rem;
   max-width: 300px;
   border-radius: 10px;
 
+  &:focus {
+    outline: none;
+  }
+
   a {
     color: ${COLORS.pacmanYellow};
     text-decoration-style: dotted;
   }
 `;
-const TooltipArrow = styled(Tooltip.Arrow)`
+const PopoverArrow = styled(Popover.Arrow)`
   fill: ${COLORS.black};
 `;
 
