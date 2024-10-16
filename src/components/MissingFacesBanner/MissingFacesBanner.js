@@ -25,7 +25,12 @@ function MissingFacesBanner({ gameRef }) {
   const status = missingFacesStatus.status;
   const shouldShow = status === "missing-over-threshold";
   let showText = null;
+  let opacity = 0;
+  let transition = "opacity 0.2s ease";
+
   if (shouldShow) {
+    opacity = 1;
+    transition = "opacity 0.4s ease";
     if (missingFacesStatus.actualFaces === 0) {
       showText = "No faces detected";
     } else {
@@ -34,39 +39,16 @@ function MissingFacesBanner({ gameRef }) {
     }
   }
 
+  const style = { "--opacity": opacity, "--transition": transition };
+
   return (
-    <Wrapper
-      style={{
-        "--animation": shouldShow
-          ? "missingFacesFadeIn 0.4s both"
-          : "missingFacesFadeOut 0.1s both",
-      }}
-    >
-      {shouldShow ? <p>{showText}</p> : null}
-    </Wrapper>
+    <Wrapper style={style}>{shouldShow ? <p>{showText}</p> : null}</Wrapper>
   );
 }
 
 const Wrapper = styled.div`
-  @keyframes missingFacesFadeOut {
-    from {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-    }
-  }
-
-  @keyframes missingFacesFadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  animation: var(--animation);
+  opacity: var(--opacity);
+  transition: var(--transition);
   position: fixed;
   display: flex;
   top: 0;

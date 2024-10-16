@@ -85,6 +85,7 @@ function HowToPlay({
                   <li>Open and close your mouth to go faster</li>
                   <li>Eat dots to score points</li>
                   <li>Eat big dots to eat other players</li>
+                  <li> Your video is not transmitted or stored</li>
                 </ul>
                 <br />
                 <p>

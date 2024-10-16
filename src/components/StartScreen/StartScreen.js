@@ -502,7 +502,7 @@ function EnableOnlinePlay({ videoEnabled }) {
 function ExplainMorePlayers() {
   return (
     <QuestionmarkPopover>
-      Your computer may struggle to handle more than 2 faces at a time.
+      Your computer may struggle to track more than 2 faces at a time.
       <br />
       <br />
       Feel free to enable this, but beware that it might not work well :)
