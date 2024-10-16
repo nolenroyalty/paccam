@@ -51,6 +51,17 @@ function App() {
         console.log("video began");
         resolve();
         videoRef.current.onplaying = null;
+        const restartIfPaused = () => {
+          console.warn(
+            "Video paused - this can happen if you take your airpods out! Restarting..."
+          );
+          setTimeout(() => {
+            if (videoRef.current && videoRef.current.paused) {
+              videoRef.current.play();
+            }
+          }, 0);
+        };
+        videoRef.current.onpause = restartIfPaused;
       };
       videoRef.current.onplaying = f;
     });
