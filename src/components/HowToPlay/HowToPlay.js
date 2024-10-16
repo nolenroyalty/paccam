@@ -7,8 +7,8 @@ import { motion } from "framer-motion";
 import TranslucentWindow from "../TranslucentWindow";
 
 function HowToPlay({
-  showingHowToPlay,
-  setShowingHowToPlay,
+  // showingHowToPlay,
+  // setShowingHowToPlay,
   hidingHowToPlay,
   setHidingHowToPlay,
   enableVideo,
@@ -16,6 +16,7 @@ function HowToPlay({
   beginTutorial,
   setAboutToRunTutorial,
 }) {
+  const [showingHowToPlay, setShowingHowToPlay] = React.useState(false);
   const showWrapper = React.useCallback(
     (value, runThisEarly, runThisLate) => {
       if (value) {
@@ -245,33 +246,7 @@ const DialogContent = styled(TranslucentWindow)`
   color: ${COLORS.white};
   display: grid;
   grid-template-rows: auto auto 1fr auto;
-  transition: opacity 0.35s ease-out;
   will-change: transform, opacity;
-
-  @keyframes HowToDialogEnter {
-    from {
-      opacity: 0.5;
-      transform: translate(-50%, -100%);
-    }
-    to {
-      opacity: 1;
-      transform: translate(-50%, 0);
-    }
-  }
-
-  @keyframes HowToDialogExit {
-    from {
-      opacity: 1;
-      transform: translate(-50%, 0);
-    }
-    to {
-      opacity: 0.5;
-      transform: translate(-50%, 150%);
-    }
-  }
-
-  animation: var(--animation) 0.35s ease-out forwards;
-  opacity: var(--opacity);
 `;
 
 const DialogTitle = styled(Dialog.Title)`

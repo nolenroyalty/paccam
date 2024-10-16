@@ -31,7 +31,7 @@ function StartScreen({
   const [speculativelyHighlighted, _setSpeculativelyHighlighted] =
     React.useState({ CPUs: null, Humans: null });
   const [hideVideoButton, setHideVideoButton] = React.useState(false);
-  const [showingHowToPlay, setShowingHowToPlay] = React.useState(false);
+  // const [showingHowToPlay, setShowingHowToPlay] = React.useState(false);
   const [hidingHowToPlay, setHidingHowToPlay] = React.useState(false);
   const [aboutToRunTutorial, setAboutToRunTutorial] = React.useState(false);
   const [aboutToStartGame, setAboutToStartGame] = React.useState(false);
@@ -158,16 +158,16 @@ function StartScreen({
     >
       <DonoLinkHolder>
         <Icons.Link href="https://eieio.substack.com" target="_blank">
-          <Icons.Mail size="1rem" />
+          <Icons.Mail size="16px" />
         </Icons.Link>
         <Icons.Link href="https://buymeacoffee.com/eieio" target="_blank">
-          <Icons.Dollar size="1rem" />
+          <Icons.Dollar size="16px" />
         </Icons.Link>
         <Icons.Link
           href="https://github.com/nolenroyalty/paccam"
           target="_blank"
         >
-          <Icons.Code size="1rem" />
+          <Icons.Code size="16px" />
         </Icons.Link>
       </DonoLinkHolder>
       <TitleSubheadWrapper>
@@ -216,8 +216,8 @@ function StartScreen({
       <ButtonHolder>
         {
           <HowToPlay
-            showingHowToPlay={showingHowToPlay}
-            setShowingHowToPlay={setShowingHowToPlay}
+            // showingHowToPlay={showingHowToPlay}
+            // setShowingHowToPlay={setShowingHowToPlay}
             hidingHowToPlay={hidingHowToPlay}
             setHidingHowToPlay={setHidingHowToPlay}
             enableVideo={enableVideo}
@@ -260,16 +260,17 @@ const Wrapper = styled(TranslucentWindow)`
   flex-direction: column;
   width: clamp(300px, 70%, 500px);
   left: 50%;
-  top: 2%;
+  top: 4%;
+  gap: 0.75rem;
 
   // this could be more precise - this really only matters if we're also
   // narrow enough that we're stacking our buttons vertically. but this just
   // makes it more likely that the UI fits on small screens...
   @media (min-height: 730px) {
     top: 10%;
+    gap: 1.5rem;
   }
 
-  gap: 1.5rem;
   z-index: ${zIndex1};
   padding: 20px;
   border-radius: 20px;
@@ -537,7 +538,7 @@ function QuestionmarkPopover({ children }) {
   return (
     <PopoverRoot>
       <PopoverTrigger>
-        <Icons.Question size="1.25rem" />
+        <Icons.Question size="20px" />
       </PopoverTrigger>
       <PopoverPortal>
         <PopoverContent sideOffset={5} side="top">

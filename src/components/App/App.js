@@ -321,7 +321,7 @@ const BackgroundGradient = styled.div`
 const Wrapper = styled.div`
   display: grid;
   place-items: center;
-  height: 100%;
+  height: 100svh;
   font-size: 2rem;
 `;
 
@@ -346,8 +346,8 @@ const IgnoreMissingFacesBanner = styled.h3`
 
 const GameHolderOverlapping = styled.div`
   position: relative;
-  width: 100vw;
-  height: 100vh;
+  width: 100svw;
+  height: 100svh;
   outline: 12px dashed ${COLORS.black};
   border-radius: 4px;
   /* prevent scrollbars... */

@@ -2,7 +2,6 @@
   "name": "paccam",
   "version": "1.0.0",
   "description": "pacman with your face",
-  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "predev": "rimraf .parcel-cache dist",
