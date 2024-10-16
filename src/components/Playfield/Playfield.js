@@ -1,6 +1,10 @@
 import React from "react";
 import styled, { keyframes } from "styled-components";
-import { SLOT_WIDTH_PERCENTAGE } from "../../constants";
+import {
+  NUM_SLOTS_IN_LARGER_DIMENSION,
+  SLOT_WIDTH_PERCENTAGE,
+  pelletSizeInSlots,
+} from "../../constants";
 import { range } from "../../utils";
 import Pacman from "../Pacman";
 import { zIndex2 } from "../../zindex";
@@ -27,7 +31,7 @@ function Playfield({
       return;
     }
 
-    const NUM_SLOTS_IN_LARGER_DIMENSION = 21;
+    // const NUM_SLOTS_IN_LARGER_DIMENSION = 10;
     const width = window.innerWidth;
     const height = window.innerHeight;
 
@@ -65,6 +69,8 @@ function Playfield({
         right: paddingBySize.small.roundedUp,
         top: paddingBySize.large.roundedDown,
         bottom: paddingBySize.large.roundedUp,
+        height: height,
+        width: width,
       });
     } else {
       setSlotSizePx(width / NUM_SLOTS_IN_LARGER_DIMENSION);
@@ -77,6 +83,8 @@ function Playfield({
         right: paddingBySize.large.roundedUp,
         top: paddingBySize.small.roundedDown,
         bottom: paddingBySize.small.roundedUp,
+        height: height,
+        width: width,
       });
     }
     setNumSlots(_numSlots);
@@ -134,15 +142,15 @@ function Playfield({
           })}
       {pellets.map((pellet) => {
         let src;
-        let sizeMult = 1;
+        let sizeInSlots = pelletSizeInSlots(pellet.kind);
         if (pellet.kind === "pellet") {
           src = "/aseprite/pellet.png";
         } else if (pellet.kind === "fruit") {
           src = "/aseprite/strawberry2.png";
-          sizeMult = 1.5;
+          // sizeMult = 1.5;
         } else if (pellet.kind === "power-pellet") {
           src = "/aseprite/powerpellet.png";
-          sizeMult = 1.5;
+          // sizeMult = 1.5;
         } else {
           throw new Error(`Unknown pellet kind: ${pellet.kind}`);
         }
@@ -164,7 +172,7 @@ function Playfield({
               src={src}
               style={{
                 "--delay": pellet.delay + "s",
-                "--size-mult": sizeMult,
+                "--size-in-slots": sizeInSlots,
               }}
             ></Pellet>
           </PelletWrapper>
@@ -211,7 +219,8 @@ const PopIn = keyframes`
 
 const Pellet = styled.img`
   display: inline-block;
-  width: calc(50% * var(--size-mult));
+  width: calc(var(--size-in-slots) * 100%);
+  /* width: calc(50% * var(--size-mult)); */
 
   opacity: var(--opacity);
   transition:

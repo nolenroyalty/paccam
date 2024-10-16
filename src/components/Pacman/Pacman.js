@@ -305,16 +305,30 @@ function Pacman({
 
   const grayScale = pacmanSpriteState === EATEN ? 1 : null;
 
+  const left = () => {
+    const width = padding.width;
+    const pct = (coords.x / numSlots.horizontal) * width;
+    return pct;
+    // return pct + padding.left;
+  };
+
+  const top = () => {
+    const height = padding.height;
+    const pct = (coords.y / numSlots.vertical) * height;
+    return pct;
+    // return pct + padding.top;
+  };
+
   return coords ? (
     <>
       <Player
         ref={myRef}
         data-player={`player-${playerNum}`}
         style={{
-          "--left": `${(coords.x / numSlots.horizontal) * 100}%`,
-          "--top": `${(coords.y / numSlots.vertical) * 100}%`,
-          "--padding-left": `${padding.left}px`,
-          "--padding-top": `${padding.top}px`,
+          "--left": `${left()}px`,
+          "--top": `${top()}px`,
+          // "--padding-left": `${padding.left}px`,
+          // "--padding-top": `${padding.top}px`,
           "--grayscale": grayScale,
         }}
       >
