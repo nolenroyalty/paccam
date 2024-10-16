@@ -1,11 +1,17 @@
 import React from "react";
 import styled from "styled-components";
 import { COLORS } from "../../COLORS";
+import {
+  COMPLETED_ROUND,
+  SHOWING_RESULTS,
+  WAITING_FOR_VIDEO,
+  STOPPED,
+} from "../../STATUS";
 
 /* could do something here where we save off our last-shown text to make it fade out nicer
  but it's probably not necessary? */
 
-function MissingFacesBanner({ gameRef }) {
+function MissingFacesBanner({ gameStatus, gameRef }) {
   const [missingFacesStatus, setMissingFacesStatus] = React.useState(null);
   const id = React.useId();
   React.useEffect(() => {
@@ -22,8 +28,14 @@ function MissingFacesBanner({ gameRef }) {
   if (missingFacesStatus === null) {
     return null;
   }
+  const statusMeansDontShowBanner =
+    gameStatus === STOPPED ||
+    gameStatus === WAITING_FOR_VIDEO ||
+    gameStatus === COMPLETED_ROUND ||
+    gameStatus === SHOWING_RESULTS;
   const status = missingFacesStatus.status;
-  const shouldShow = status === "missing-over-threshold";
+  const shouldShow =
+    status === "missing-over-threshold" && !statusMeansDontShowBanner;
   let showText = null;
   let opacity = 0;
   let transition = "opacity 0.2s ease";

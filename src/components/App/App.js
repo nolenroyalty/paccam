@@ -315,7 +315,7 @@ function App() {
           Ignoring missing faces
         </IgnoreMissingFacesBanner>
       )}
-      <MissingFacesBanner gameRef={gameRef} />
+      <MissingFacesBanner gameStatus={gameState.status} gameRef={gameRef} />
     </Wrapper>
   );
 }

@@ -690,6 +690,7 @@ class GameEngine {
     this.superStatus = { player: null, endSuperAt: null };
     this.numPlayers = null;
     this.satisfiedTutorialDirectiveTime = null;
+    this.missingFacesState = { faceCount: 0, lastOk: null, lastStatus: null };
     this.tutorialState = this._initTutorialState();
     this.time = null;
     if (this.loopRunning) {
@@ -699,6 +700,7 @@ class GameEngine {
     this.updateTimeConsumers();
     this.updatePelletConsumers();
     this.updateScoreConsumers();
+    this.updateMissingFacesState({ faceCount: 0 });
   }
 
   updateStatusAndConsumers(status, tag = "no tag provided") {
