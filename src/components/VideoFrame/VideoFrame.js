@@ -1,7 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 
-function VideoFrame({ videoRef, videoEnabled }) {
+function VideoFrame({ videoRef, videoActuallyStartedState }) {
   return (
     <Wrapper>
       <Video
@@ -9,7 +9,10 @@ function VideoFrame({ videoRef, videoEnabled }) {
         muted
         ref={videoRef}
         playsInline
-        style={{ "--opacity": videoEnabled ? 1 : 0, "--brightness": 0.8 }}
+        style={{
+          "--opacity": videoActuallyStartedState ? 1 : 0,
+          "--brightness": 0.8,
+        }}
       />
     </Wrapper>
   );

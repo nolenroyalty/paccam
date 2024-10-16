@@ -17,6 +17,8 @@ const DEBUG = false;
 function App() {
   const videoRef = React.useRef();
   const videoActuallyStarted = React.useRef(null);
+  const [videoActuallyStartedState, setVideoActuallyStartedState] =
+    React.useState(false);
   const [tutorialInstruction, setTutorialInstruction] = React.useState([]);
   const [gameState, setGameState] = React.useState({
     numPlayers: null, // rename to numHumans
@@ -50,6 +52,7 @@ function App() {
       const f = () => {
         console.log("video began");
         resolve();
+        setVideoActuallyStartedState(true);
         videoRef.current.onplaying = null;
         const restartIfPaused = () => {
           console.warn(
@@ -246,7 +249,10 @@ function App() {
         alt=""
       />
       <GameHolderOverlapping>
-        <VideoFrame videoRef={videoRef} videoEnabled={videoEnabled} />
+        <VideoFrame
+          videoRef={videoRef}
+          videoActuallyStartedState={videoActuallyStartedState}
+        />
         <StartScreen
           status={gameState.status}
           startGame={startGame}

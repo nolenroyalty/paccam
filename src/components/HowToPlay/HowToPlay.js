@@ -195,6 +195,12 @@ const VideoDemoWrapper = styled.div`
 
 const VideoDemoCanvas = styled.canvas`
   width: min(80%, 800px);
+
+  @media (max-width: 600px) {
+    width: 100%;
+    margin: 1rem 0;
+  }
+
   height: auto;
   margin: auto;
   border-radius: 20px;
@@ -230,7 +236,7 @@ const DialogOverlay = styled(Dialog.Overlay)`
 const DialogContent = styled(TranslucentWindow)`
   z-index: 100;
   border-radius: 20px;
-  width: min(800px, 95%);
+  width: clamp(300px, 95%, 800px);
   min-height: 80%;
   max-height: 90%;
   padding: 2rem 4rem;
@@ -243,6 +249,17 @@ const DialogContent = styled(TranslucentWindow)`
   position: fixed;
   top: 5%;
   left: 50%;
+
+  @media (max-width: 600px) {
+    padding: 1rem 2rem;
+    top: 3%;
+    max-height: 94%;
+  }
+
+  @media (max-height: 730px) {
+    top: 3%;
+  }
+
   transform: translate(-50%, 0);
   color: ${COLORS.white};
   display: grid;
