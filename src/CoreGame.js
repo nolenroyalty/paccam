@@ -45,6 +45,7 @@ const IMMEDIATELY_EAT = false;
 const MAX_PLAYERS = 4;
 const TIME_TO_TOGGLE_BETWEEN_GHOST_STATES = 400;
 const SPEED_MULTIPLIER_IF_SUPER = 1.2;
+const MISSING_FACES_ALERT_THRESHOLD = 300;
 
 const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
   lower: 8,
@@ -143,6 +144,8 @@ class GameEngine {
     this.hasEverTrackedFaces = false;
     this.aboutToEndTutorial = false;
     this.startScreenRef = startScreenRef;
+    this.missingFacesState = { faceCount: 0, lastOk: null, lastStatus: null };
+    this.missingFacesConsumers = [];
   }
 
   _initTutorialState() {
@@ -393,6 +396,74 @@ class GameEngine {
     this.debugConsumers.forEach((callback) => {
       callback({ playerNum, debugState: stagedUpdate });
     });
+  }
+
+  _determineMissingFacesStatus() {
+    const lastOk = this.missingFacesState.lastOk;
+    const numPlayers = this.numPlayers;
+    if (numPlayers === null) {
+      return { status: "initial" };
+    }
+
+    const trackCount = this.missingFacesState.faceCount;
+    if (trackCount === this.numPlayers) {
+      return { status: "ok" };
+    }
+    const now = performance.now();
+    const delta = now - lastOk;
+    if (delta < MISSING_FACES_ALERT_THRESHOLD) {
+      return {
+        status: "missing-but-under-threshold",
+        expectedFaces: numPlayers,
+        actualFaces: trackCount,
+      };
+    } else {
+      return {
+        status: "missing-over-threshold",
+        expectedFaces: numPlayers,
+        actualFaces: trackCount,
+      };
+    }
+  }
+
+  subscribeToMissingFaces({ callback, id }) {
+    this.missingFacesConsumers.push({ callback, id });
+    callback(this._determineMissingFacesStatus());
+  }
+
+  unsubscribeFromMissingFaces({ id }) {
+    this.missingFacesConsumers = this.missingFacesConsumers.filter(
+      (consumer) => consumer.id !== id
+    );
+  }
+
+  updateMissingFacesState({ faceCount }) {
+    this.missingFacesState.faceCount = faceCount;
+    if (this.numPlayers === null || this.numPlayers === faceCount) {
+      this.missingFacesState.lastOk = performance.now();
+    }
+    const status = this._determineMissingFacesStatus();
+    const lastStatus = this.missingFacesState.lastStatus;
+    const shallowEqual = (a, b) => {
+      if (a === null || b === null) {
+        return false;
+      }
+      return (
+        a.status === b.status &&
+        a.expectedFaces === b.expectedFaces &&
+        a.actualFaces === b.actualFaces
+      );
+    };
+
+    if (lastStatus === null || !shallowEqual(lastStatus, status)) {
+      console.log(
+        `missing faces status: ${JSON.stringify(status)} | ${JSON.stringify(lastStatus)}`
+      );
+      this.missingFacesState.lastStatus = status;
+      this.missingFacesConsumers.forEach(({ callback }) => {
+        callback(status);
+      });
+    }
   }
 
   subscribeToPacmanState({ playerNum, callback, id }) {
@@ -913,19 +984,17 @@ class GameEngine {
       !results.faceLandmarks ||
       results.faceLandmarks.length === 0
     ) {
-      console.error("NO FACE LANDMARK RESULTS? Bailing.");
       shouldEarlyReturn = true;
+      this.updateMissingFacesState({ faceCount: 0 });
     }
     if (
       results.faceLandmarks.length !== this.numPlayers &&
       !this.ignoreMissingFaces
     ) {
-      console.error(
-        `INCORRECT NUMBER OF FACE LANDMARK RESULTS: ${results.faceLandmarks.length}. Expected num players: ${this.numPlayers} Bailing.`
-      );
       shouldEarlyReturn = true;
     }
 
+    this.updateMissingFacesState({ faceCount: results.faceLandmarks.length });
     if (shouldEarlyReturn) {
       this.playerStates.forEach((playerState) => {
         playerState.trackedFaceThisFrame = false;

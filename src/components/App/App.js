@@ -8,6 +8,7 @@ import TimerDisplay from "../TimerDisplay";
 import TutorialHandler from "../TutorialHandler";
 import LiveScoreDisplay from "../LiveScoreDisplay";
 import ResultsDisplay from "../ResultsDisplay";
+import MissingFacesBanner from "../MissingFacesBanner";
 import { WAITING_FOR_VIDEO } from "../../STATUS";
 import { COLORS } from "../../COLORS";
 
@@ -303,6 +304,7 @@ function App() {
           Ignoring missing faces
         </IgnoreMissingFacesBanner>
       )}
+      <MissingFacesBanner gameRef={gameRef} />
     </Wrapper>
   );
 }
