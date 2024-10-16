@@ -5,9 +5,9 @@ import VideoFrame from "../VideoFrame";
 import GameEngine from "../../CoreGame";
 import StartScreen from "../StartScreen";
 import TimerDisplay from "../TimerDisplay";
-import ScoreDisplay from "../ScoreDisplay";
 import TutorialHandler from "../TutorialHandler";
 import LiveScoreDisplay from "../LiveScoreDisplay";
+import ResultsDisplay from "../ResultsDisplay";
 import { WAITING_FOR_VIDEO } from "../../STATUS";
 import { COLORS } from "../../COLORS";
 
@@ -290,12 +290,12 @@ function App() {
         numPlayers={gameState.numPlayers}
         scores={scores}
       />
-      <ScoreDisplay
-        numPlayers={gameState.numPlayers}
-        gameRef={gameRef}
-        pacmanResultScreenState={pacmanResultScreenState}
-        slotSizePx={slotSizePx}
+      <ResultsDisplay
         status={gameState.status}
+        numPlayers={gameState.numPlayers}
+        scores={scores}
+        resultScreenState={pacmanResultScreenState}
+        slotSizePx={slotSizePx}
         moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
       />
       {ignoreMissingFaces && (
@@ -346,13 +346,8 @@ const IgnoreMissingFacesBanner = styled.h3`
 
 const GameHolderOverlapping = styled.div`
   position: relative;
-  --max-size: min(95vh, 95vw);
-  /* max-width: var(--max-size); */
-  /* max-height: var(--max-size); */
-  /* width: 100%; */
   width: 100vw;
   height: 100vh;
-  /* aspect-ratio: 1 / 1; */
   outline: 12px dashed ${COLORS.black};
   border-radius: 4px;
   /* prevent scrollbars... */

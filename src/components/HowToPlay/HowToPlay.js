@@ -4,7 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import Button from "../Button";
 import { COLORS } from "../../COLORS";
 import { motion } from "framer-motion";
-import { springOutConfig } from "../../constants";
+import TranslucentWindow from "../TranslucentWindow";
 
 function HowToPlay({
   showingHowToPlay,
@@ -30,8 +30,6 @@ function HowToPlay({
           setHidingHowToPlay(false);
           if (runThisLate) {
             runThisLate();
-            // setAboutToRunTutorial(false);
-            // runThisToo();
           }
         }, 350);
       }
@@ -41,13 +39,13 @@ function HowToPlay({
 
   const springInConfig = {
     type: "spring",
-    stiffness: 350,
-    damping: 35,
+    stiffness: 280,
+    damping: 30,
   };
 
   const springOutConfig = {
     type: "spring",
-    stiffness: 100,
+    stiffness: 90,
     damping: 10,
   };
 
@@ -56,7 +54,7 @@ function HowToPlay({
   const startOpacity = exiting ? 1 : 0.5;
   const endOpacity = exiting ? 0.5 : 1;
   const startY = exiting ? "0%" : "-100%";
-  const endY = exiting ? "150%" : "0%";
+  const endY = exiting ? "-150%" : "0%";
 
   return (
     <Dialog.Root open={showingHowToPlay} onOpenChange={showWrapper}>
@@ -72,13 +70,6 @@ function HowToPlay({
             initial={{ opacity: startOpacity, x: "-50%", y: startY }}
             animate={{ opacity: endOpacity, x: "-50%", y: endY }}
             transition={spring}
-            // style={{
-            //   "--opacity": hidingHowToPlay ? 0 : 1,
-            //   "--animation":
-            //     hidingHowToPlay || !showingHowToPlay
-            //       ? "HowToDialogExit"
-            //       : "HowToDialogEnter",
-            // }}
           >
             <DialogTitle>How to Play PacCam</DialogTitle>
             <DialogDescription asChild>
@@ -97,14 +88,6 @@ function HowToPlay({
               </div>
             </DialogDescription>
             <VideoDemoWithCanvas />
-            {/* <div style={{ display: "flex", justifyContent: "center" }}>
-            <VideoDemo
-              src="/videos/instructions-greenscreen.mp4"
-              muted
-              autoPlay
-              loop
-            ></VideoDemo>
-          </div> */}
             <ButtonHolder>
               <Button
                 onClick={(e) => {
@@ -139,28 +122,6 @@ function HowToPlay({
 function VideoDemoWithCanvas() {
   const canvasRef = React.useRef(null);
   const videoRef = React.useRef(null);
-
-  const VideoDemoWrapper = styled.div`
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-direction: column;
-  `;
-
-  const VideoDemoCanvas = styled.canvas`
-    width: min(80%, 800px);
-    height: auto;
-    margin: auto;
-    border-radius: 20px;
-  `;
-
-  const VideoDemoHiddenVideo = styled.video`
-    z-index: -1;
-    opacity: 0;
-    position: absolute;
-    width: 0;
-    height: 0;
-  `;
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -217,6 +178,28 @@ function VideoDemoWithCanvas() {
   );
 }
 
+const VideoDemoWrapper = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: column;
+`;
+
+const VideoDemoCanvas = styled.canvas`
+  width: min(80%, 800px);
+  height: auto;
+  margin: auto;
+  border-radius: 20px;
+`;
+
+const VideoDemoHiddenVideo = styled.video`
+  z-index: -1;
+  opacity: 0;
+  position: absolute;
+  width: 0;
+  height: 0;
+`;
+
 const ButtonHolder = styled.div`
   display: grid;
   justify-content: space-between;
@@ -236,25 +219,19 @@ const DialogOverlay = styled(Dialog.Overlay)`
   color: blue;
 `;
 
-// const DialogContent = styled(Dialog.Content)`
-const DialogContent = styled(motion.div)`
+const DialogContent = styled(TranslucentWindow)`
   z-index: 100;
   border-radius: 20px;
   width: min(800px, 95%);
-  /* min-height: min(95%, 700px); */
   min-height: 80%;
   max-height: 90%;
   padding: 2rem 4rem;
-  border: 2px solid ${COLORS.white};
-  backdrop-filter: blur(20px) contrast(0.4);
-  box-shadow: 4px 4px 8px 2px rgba(0, 0, 0, 0.3);
   line-height: 1.2;
   // allow scrolling
   overflow: auto;
   scrollbar-gutter: stable;
   scrollbar-color: lightgrey transparent;
   scrollbar-width: thin;
-  /* background-clip: padding-box; */
   position: fixed;
   top: 5%;
   left: 50%;

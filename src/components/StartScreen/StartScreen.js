@@ -9,6 +9,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import HowToPlay from "../HowToPlay";
 import Icons from "../Icons";
 import { motion } from "framer-motion";
+import TranslucentWindow from "../TranslucentWindow";
 
 const MAX_PLAYERS = 4;
 
@@ -34,10 +35,19 @@ function StartScreen({
   const [hidingHowToPlay, setHidingHowToPlay] = React.useState(false);
   const [aboutToRunTutorial, setAboutToRunTutorial] = React.useState(false);
   const [aboutToStartGame, setAboutToStartGame] = React.useState(false);
+  // loaded just prevents the animation from starting before we've loaded
+  // everything in
+  const [loaded, setLoaded] = React.useState(false);
 
   React.useEffect(() => {
     window.localStorage.setItem("allowMorePlayers", allowMorePlayers);
   }, [allowMorePlayers]);
+
+  React.useEffect(() => {
+    setTimeout(() => {
+      setLoaded(true);
+    }, 100);
+  }, []);
 
   const setSpeculativelyHighlighted = React.useCallback(
     ({ count, kind }) => {
@@ -108,8 +118,8 @@ function StartScreen({
     return aboutToStartGame | aboutToRunTutorial;
   }, [aboutToStartGame, aboutToRunTutorial]);
 
-  const endY = slideOut ? "200%" : "0";
   const startY = slideOut ? "0" : "-100%";
+  const endY = slideOut ? "-150%" : "0";
   const startOpacity = slideOut ? 1 : 0;
   const endOpacity = slideOut ? 0 : 1;
 
@@ -117,20 +127,25 @@ function StartScreen({
     if (slideOut) {
       return {
         type: "spring",
-        stiffness: 100,
+        stiffness: 90,
         damping: 10,
       };
     } else {
       return {
         type: "spring",
-        stiffness: 200, // 225
-        damping: 15, // 15
+        stiffness: 150, // 225
+        damping: 12, // 15
+        restDelta: 0.005,
       };
     }
   }, [slideOut]);
 
   if (status !== WAITING_FOR_PLAYER_SELECT && status !== WAITING_FOR_VIDEO) {
     startScreenRef.current = null;
+    return null;
+  }
+
+  if (!loaded) {
     return null;
   }
 
@@ -239,7 +254,7 @@ function StartScreen({
   );
 }
 
-const Wrapper = styled(motion.div)`
+const Wrapper = styled(TranslucentWindow)`
   position: absolute;
   display: flex;
   flex-direction: column;
@@ -256,11 +271,8 @@ const Wrapper = styled(motion.div)`
 
   gap: 1.5rem;
   z-index: ${zIndex1};
-  backdrop-filter: blur(20px) contrast(0.4);
   padding: 20px;
   border-radius: 20px;
-  border: 2px solid ${COLORS.white};
-  box-shadow: 4px 4px 8px 1px rgba(0, 0, 0, 0.3);
 `;
 
 const TitleSubheadWrapper = styled.div`

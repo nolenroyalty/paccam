@@ -9,6 +9,11 @@ const PLAYER_CANVAS_SIZE = 128;
 const SPRITE_WIDTH = 32;
 const SPRITE_HEIGHT = 32;
 
+const isSafari = () => {
+  const ua = navigator.userAgent;
+  return /^((?!chrome|android).)*safari/i.test(ua);
+};
+
 function Pacman({
   gameRef,
   videoRef,
@@ -182,7 +187,15 @@ function Pacman({
         ctx.globalAlpha = spriteAlpha;
         drawCurrentSprite({ spriteX, ctx, outline: false, spriteKind });
       }
+      // WORK AROUND A STUPID SAFARI BUG
+      // For a reason I don't understand, source-atop doesn't work when drawing our video
+      // snapshot; we draw a rect instead of a circle. But we can re-crop it here.
+      // only do this on safari...
       ctx.globalAlpha = 1;
+      if (isSafari()) {
+        ctx.globalCompositeOperation = "destination-in";
+        drawCurrentSprite({ spriteX, ctx, outline: false, spriteKind });
+      }
 
       ctx.globalCompositeOperation = "source-over";
       // Make sure we draw this regardless of whether we have

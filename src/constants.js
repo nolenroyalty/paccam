@@ -6,3 +6,4 @@ export const PLAYER_SIZE_PERCENT =
 export const BASE_SLOTS_MOVED_PER_SECOND = 2.5;
 export const BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT = 3.5;
 export const SLOTS_MOVED_PER_MOUTH_MOVE = 1;
+export const MAX_PLAYERS = 4;

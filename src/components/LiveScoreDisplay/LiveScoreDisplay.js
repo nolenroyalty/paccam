@@ -68,8 +68,8 @@ const ScoreBlock = ({ playerNum, numPlayers, color, scores }) => {
   return (
     <Score
       key={scores[playerNum].score}
-      animate={{ y: [-15, 0] }}
-      transition={{ type: "spring", stiffness: 150, damping: 30 }}
+      animate={{ y: [-6, 0] }}
+      transition={{ type: "spring", stiffness: 100, damping: 10 }}
       initial={false}
       style={{ "--color": color }}
     >

@@ -1,3 +1,5 @@
+import { COLORS } from "./COLORS";
+
 export function range(start, end = null) {
   if (end === null) {
     return Array.from({ length: start }, (_, i) => i);
@@ -48,4 +50,18 @@ export function easeOutPow({
   const elapsed = currentTime - startTime;
   const t = elapsed / duration;
   return start + diff * (1 - Math.pow(1 - t, pow));
+}
+
+export function colorForPlayer(num) {
+  if (num === 0) {
+    return COLORS.pacmanYellow;
+  } else if (num === 1) {
+    return COLORS.pacmanPink;
+  } else if (num === 2) {
+    return COLORS.pacmanGreen;
+  } else if (num === 3) {
+    return COLORS.pacmanOrange;
+  } else {
+    throw new Error(`Invalid player number: ${num}`);
+  }
 }
