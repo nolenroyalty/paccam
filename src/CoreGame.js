@@ -401,7 +401,7 @@ class GameEngine {
   _determineMissingFacesStatus() {
     const lastOk = this.missingFacesState.lastOk;
     const numPlayers = this.numPlayers;
-    if (numPlayers === null) {
+    if (numPlayers === null || numPlayers === 0) {
       return { status: "initial" };
     }
 

@@ -6,6 +6,7 @@ const white = `hsl(60deg 10% 85%)`;
 const black = "var(--black)";
 // const grey = `hsl(60deg 5% 45%)`;
 const grey = `hsl(240deg 5% 45%)`;
+const transparentBannerRed = `hsl(0deg 55% 45% / 0.75)`;
 // const grey = `hsl(240deg 5% 35% / 0.8)`;
 
 export const COLORS = {
@@ -16,4 +17,5 @@ export const COLORS = {
   white,
   black,
   grey,
+  transparentBannerRed,
 };

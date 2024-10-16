@@ -1,5 +1,9 @@
 import React from "react";
 import styled from "styled-components";
+import { COLORS } from "../../COLORS";
+
+/* could do something here where we save off our last-shown text to make it fade out nicer
+ but it's probably not necessary? */
 
 function MissingFacesBanner({ gameRef }) {
   const [missingFacesStatus, setMissingFacesStatus] = React.useState(null);
@@ -75,8 +79,8 @@ const Wrapper = styled.div`
   font-family: "Arcade Classic";
   // tweak space between words
   word-spacing: 0.2rem;
-  background-color: red;
-  color: white;
+  background-color: ${COLORS.transparentBannerRed};
+  color: ${COLORS.white};
 `;
 
 export default React.memo(MissingFacesBanner);

@@ -71,7 +71,7 @@ function ResultsDisplay({
         if (i < numPlayers) {
           return (
             <ScoreBlock
-              key={i + 10}
+              key={i}
               myResultScreenState={resultScreenState["player" + i]}
               color={colorForPlayer(i)}
               myScore={scores[i].score}
@@ -82,7 +82,7 @@ function ResultsDisplay({
             />
           );
         } else {
-          return <ScoreSpacer />;
+          return <ScoreSpacer key={i} />;
         }
       })}
       <ButtonWrapper
@@ -117,7 +117,6 @@ function ScoreBlock({
 
   let initialY, finalY, delay, spring;
   if (swapResultsAround) {
-    console.log("TRUE TURE TRUE");
     const scoresGreaterThanMine = Object.values(scores).filter(
       (otherPlayer) => {
         const isMe = otherPlayer.playerNum === myPlayerNum;
@@ -128,7 +127,8 @@ function ScoreBlock({
       }
     ).length;
 
-    // const gap = 16;
+    // forgive me for this lmao
+
     const totalHeight = window.innerHeight * 0.95 - 32;
     const hardcodedButtonHeightPleaseDontMurderMe = 120;
     const availableHeight =
@@ -136,13 +136,11 @@ function ScoreBlock({
     const individualHeight = availableHeight / MAX_PLAYERS;
     initialY = 0;
     finalY = (scoresGreaterThanMine - myPlayerNum) * individualHeight;
-    // delay = 0;
     spring = { type: "spring", stiffness: 40, damping: 12, delay: 0 };
   } else {
     const extra = 4 - myPlayerNum - 1;
     initialY = -110 - extra * 20 + "vh";
     finalY = 0;
-    // delay = myPlayerNum * 0.15;
     spring = {
       type: "spring",
       stiffness: 75,
