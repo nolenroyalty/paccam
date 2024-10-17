@@ -133,7 +133,7 @@ function StartScreen({
     } else {
       return {
         type: "spring",
-        stiffness: 150, // 225
+        stiffness: 100, // 225
         damping: 12, // 15
         restDelta: 0.005,
       };

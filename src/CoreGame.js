@@ -280,10 +280,16 @@ class GameEngine {
           PLAYER_SIZE_IN_SLOTS) /
         2;
 
-      // 3 gaps between players, half gap at the start and end
-      const leftOffset =
-        this.numSlots.horizontal / 8 - PLAYER_SIZE_IN_SLOTS / 2;
-      const x = leftOffset + (this.numSlots.horizontal / 4) * playerNum;
+      // players take up 8 slots
+      const totalGapAmount = this.numSlots.horizontal - 8;
+      // 3 full-length gaps (between players), 2 half-length gaps (start and end)
+      const individualGapAmount = totalGapAmount / 8;
+      const leftOffset = individualGapAmount;
+      const x =
+        leftOffset +
+        individualGapAmount * 2 * playerNum +
+        PLAYER_SIZE_IN_SLOTS * playerNum;
+
       console.log(
         `spawn location x: ${x} | ${leftOffset} | ${(this.numSlots.horizontal / 4) * playerNum} | ${playerNum}`
       );
@@ -554,20 +560,25 @@ class GameEngine {
     let dupeDiagonal = null;
     if (position.x < 0) {
       const dupeX = this.numSlots.horizontal + position.x;
-      dupeHorizontal = { x: dupeX, y: position.y };
+      dupeHorizontal = { x: dupeX, y: position.y, dir: "from-right" };
     } else if (position.x + PLAYER_SIZE_IN_SLOTS > this.numSlots.horizontal) {
       const dupeX = position.x - this.numSlots.horizontal;
-      dupeHorizontal = { x: dupeX, y: position.y };
+      dupeHorizontal = { x: dupeX, y: position.y, dir: "from-left" };
     }
     if (position.y < 0) {
       const dupeY = this.numSlots.vertical + position.y;
-      dupeVertical = { x: position.x, y: dupeY };
+      dupeVertical = { x: position.x, y: dupeY, dir: "from-bottom" };
     } else if (position.y + PLAYER_SIZE_IN_SLOTS > this.numSlots.vertical) {
       const dupeY = position.y - this.numSlots.vertical;
-      dupeVertical = { x: position.x, y: dupeY };
+      dupeVertical = { x: position.x, y: dupeY, dir: "from-top" };
     }
+
     if (dupeVertical !== null && dupeHorizontal !== null) {
-      dupeDiagonal = { x: dupeHorizontal.x, y: dupeVertical.y };
+      dupeDiagonal = {
+        x: dupeHorizontal.x,
+        y: dupeVertical.y,
+        dir: "from-diag",
+      };
     }
 
     return {
@@ -982,6 +993,8 @@ class GameEngine {
     this.maybeUpdateDebugState({
       playerNum,
       messages: [
+        ["posX", this.playerStates[playerNum].position.x],
+        ["posY", this.playerStates[playerNum].position.y],
         ["jawOpenBlend", jawOpenBlend],
         ["jawOpenDiff", jawOpenDiff],
         ["jawOpenMax", jawOpenMax],
@@ -1130,6 +1143,9 @@ class GameEngine {
           startTime,
         });
         if (!isEaten && overlaps && pellet.enabled) {
+          console.log(
+            `EAT ${playerState.position.x}, ${playerState.position.y} | ${pellet.x}, ${pellet.y} (${pellet.kind})`
+          );
           let scoreAmount;
           if (pellet.kind === "fruit") {
             this.sounds.fruit.currentTime = 0;
