@@ -266,20 +266,15 @@ class GameEngine {
       return { x, y };
     } else if (waiting && this.startScreenRef.current) {
       console.log(`determining waiting spawn location for player ${playerNum}`);
+      // This is kind of an awkward calculation, but the more natural way using
+      // window.innerHeight doesn't seem to work well on phones...
       const startScreenRect =
         this.startScreenRef.current.getBoundingClientRect();
-      const startScreenHeight = startScreenRect.height;
-      const windowHeight = window.innerHeight;
-      const endOfStartScreen = 0.1 * windowHeight + startScreenHeight;
+      const startScreenHeight = startScreenRect.bottom;
+      const startScreenSlots = startScreenHeight / this.numSlots.slotSizePx;
+      const midpointSlots = (startScreenSlots + this.numSlots.vertical) / 2;
 
-      const slotSize = windowHeight / this.numSlots.vertical;
-      const numSlotsToGetBelowWindow = endOfStartScreen / slotSize;
-      const y =
-        (numSlotsToGetBelowWindow +
-          this.numSlots.vertical -
-          PLAYER_SIZE_IN_SLOTS) /
-        2;
-
+      const y = midpointSlots - PLAYER_SIZE_IN_SLOTS / 2;
       // players take up 8 slots
       const totalGapAmount = this.numSlots.horizontal - 8;
       // 3 full-length gaps (between players), 2 half-length gaps (start and end)

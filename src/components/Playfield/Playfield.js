@@ -29,6 +29,7 @@ function Playfield({
     shrinkVertical: 0,
     shrinkHorizontal: 0,
   });
+  const selfRef = React.useRef();
 
   React.useEffect(() => {
     if (initializedPlayfield) {
@@ -45,8 +46,9 @@ function Playfield({
     // We shrink our playfield based on that value, and then slightly blur the area outside of
     // the playfield to make it clear what there's a small area that's not in play.
 
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const bb = selfRef.current.getBoundingClientRect();
+    const width = bb.width;
+    const height = bb.height;
 
     const largerDimension = Math.max(width, height);
     const smallerDimension = Math.min(width, height);
@@ -94,6 +96,7 @@ function Playfield({
     gameRef.current.initNumSlots({
       horizontal: _playfieldSize.horizontalSlots,
       vertical: _playfieldSize.verticalSlots,
+      slotSizePx: slotSizePx,
     });
     gameRef.current.subscribeToPellets(setPellets);
   }, [gameRef, initializedPlayfield, playfieldSize]);
@@ -128,6 +131,7 @@ function Playfield({
   return (
     <Wrapper
       style={{ "--opacity": opacity, "--flex-direction": wrapperFlexDirection }}
+      ref={selfRef}
     >
       <BorderBlock style={borderBlockStyle} />
       <InnerRelativeWrapper

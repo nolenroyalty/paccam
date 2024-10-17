@@ -5,6 +5,8 @@ import Button from "../Button";
 import { COLORS } from "../../COLORS";
 import { motion } from "framer-motion";
 import TranslucentWindow from "../TranslucentWindow";
+import UnstyledButton from "../UnstyledButton";
+import { BoxX, X } from "../Icons";
 
 function HowToPlay({
   // showingHowToPlay,
@@ -72,6 +74,13 @@ function HowToPlay({
             animate={{ opacity: endOpacity, x: "-50%", y: endY }}
             transition={spring}
           >
+            <DialogX
+              onClick={(e) => {
+                showWrapper(false);
+              }}
+            >
+              <X size="32px" />
+            </DialogX>
             <DialogTitle>How to Play PacCam</DialogTitle>
             <DialogDescription asChild>
               <div>
@@ -79,6 +88,7 @@ function HowToPlay({
                   Paccam is multiplayer pacman using your face. Requires a
                   webcam to play.
                 </p>
+                <VideoDemoWithCanvas />
                 <br />
                 <ul>
                   <li>Look in the direction you want to move</li>
@@ -94,7 +104,7 @@ function HowToPlay({
                 </p>
               </div>
             </DialogDescription>
-            <VideoDemoWithCanvas />
+
             <ButtonHolder>
               <Button
                 onClick={(e) => {
@@ -202,7 +212,7 @@ const VideoDemoCanvas = styled.canvas`
   }
 
   height: auto;
-  margin: auto;
+  margin: 1rem auto;
   border-radius: 20px;
 `;
 
@@ -220,6 +230,7 @@ const ButtonHolder = styled.div`
   grid-template-columns: minmax(auto, 200px) 1fr minmax(auto, 200px);
   grid-template-areas: "tutorial . close";
   gap: 1rem;
+  margin-top: 2rem;
 `;
 
 const DialogOverlay = styled(Dialog.Overlay)`
@@ -237,8 +248,8 @@ const DialogContent = styled(TranslucentWindow)`
   z-index: 100;
   border-radius: 20px;
   width: clamp(300px, 95%, 800px);
-  min-height: 80%;
-  max-height: 90%;
+  min-height: 50%;
+  max-height: 85%;
   padding: 2rem 4rem;
   line-height: 1.2;
   // allow scrolling
@@ -253,7 +264,6 @@ const DialogContent = styled(TranslucentWindow)`
   @media (max-width: 600px) {
     padding: 1rem 2rem;
     top: 3%;
-    max-height: 94%;
   }
 
   @media (max-height: 730px) {
@@ -263,8 +273,18 @@ const DialogContent = styled(TranslucentWindow)`
   transform: translate(-50%, 0);
   color: ${COLORS.white};
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: repeat(3, auto);
   will-change: transform, opacity;
+`;
+
+const DialogX = styled(UnstyledButton)`
+  position: absolute;
+  right: 0.5rem;
+  top: 1rem;
+  color: ${COLORS.white};
+  /* width: 50px; */
+  /* height: 50px; */
+  /* background-color: green; */
 `;
 
 const DialogTitle = styled(Dialog.Title)`
