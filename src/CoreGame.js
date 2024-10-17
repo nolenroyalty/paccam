@@ -924,10 +924,18 @@ class GameEngine {
     const minX = Math.min(...landmarks.map((landmark) => landmark.x));
     const maxX = Math.max(...landmarks.map((landmark) => landmark.x));
 
-    const jawOpenBlend = faceBlendshapes.categories[25].score;
+    let jawOpenBlend = faceBlendshapes.categories[25].score;
     const topLipCenter = landmarks[12];
     const bottomLipCenter = landmarks[14];
     const jawOpenDiff = (bottomLipCenter.y - topLipCenter.y) * 10;
+    if (jawOpenDiff * 2 < jawOpenBlend && jawOpenDiff < 0.1) {
+      // this comes up occasionally when you're looking straight on or down
+      // mediapipe still thinks your jaw is open
+      // idk this is a hack but it seems to work
+      // mostly happens on mobile?
+      // const oldJawOpenBlend = jawOpenBlend;
+      jawOpenBlend = (jawOpenDiff * 2 + jawOpenBlend) / 3;
+    }
     const jawOpenMax = Math.max(jawOpenBlend, jawOpenDiff);
 
     const ftm = facialTransformationMatrix.data;
@@ -954,7 +962,7 @@ class GameEngine {
       vertical = "down";
       verticalStrength = 1.25 * (pitch - pitchThreshold);
       // harder to track the mouth when you're facing down
-      jawCloseThreshold *= 1.1;
+      // jawCloseThreshold *= 2;
     } else if (pitch < -pitchThreshold) {
       vertical = "up";
       verticalStrength = 1.25 * (-pitch - pitchThreshold);
@@ -992,11 +1000,13 @@ class GameEngine {
     this.maybeUpdateDebugState({
       playerNum,
       messages: [
-        ["posX", this.playerStates[playerNum].position.x],
-        ["posY", this.playerStates[playerNum].position.y],
         ["jawOpenBlend", jawOpenBlend],
         ["jawOpenDiff", jawOpenDiff],
         ["jawOpenMax", jawOpenMax],
+        ["jawOpenThreshold", jawOpenThreshold],
+        ["jawCloseThreshold", jawCloseThreshold],
+        ["posX", this.playerStates[playerNum].position.x],
+        ["posY", this.playerStates[playerNum].position.y],
         ["horizontal", horizontal],
         ["horizontalStrength", horizontalStrength],
         ["vertical", vertical],
@@ -1712,8 +1722,11 @@ class GameEngine {
   countInRound() {
     this.updateStatusAndConsumers(COUNTING_IN_ROUND, "countInRound");
     this.time = "starting";
-    this.sounds.start.currentTime = 0;
-    this.sounds.start.play();
+    console.log(`playing start sound ${this.sounds.start}}`);
+    // this is a hack to get the sound to play repeatedly on mobile, idk why
+    // we need it.
+    const z = new Audio(this.sounds.start.src);
+    z.play();
     this.movePlayersToStartingLocation();
 
     const intervalId = setInterval(() => {
