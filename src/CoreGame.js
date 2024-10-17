@@ -4,6 +4,7 @@ import {
   SLOTS_MOVED_PER_MOUTH_MOVE,
   BASE_SLOTS_MOVED_PER_SECOND,
   BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT,
+  pelletSizeInSlots,
 } from "./constants";
 import { range, easeOutPow } from "./utils";
 import {
@@ -279,10 +280,16 @@ class GameEngine {
           PLAYER_SIZE_IN_SLOTS) /
         2;
 
-      // 3 gaps between players, half gap at the start and end
-      const leftOffset =
-        this.numSlots.horizontal / 8 - PLAYER_SIZE_IN_SLOTS / 2;
-      const x = leftOffset + (this.numSlots.horizontal / 4) * playerNum;
+      // players take up 8 slots
+      const totalGapAmount = this.numSlots.horizontal - 8;
+      // 3 full-length gaps (between players), 2 half-length gaps (start and end)
+      const individualGapAmount = totalGapAmount / 8;
+      const leftOffset = individualGapAmount;
+      const x =
+        leftOffset +
+        individualGapAmount * 2 * playerNum +
+        PLAYER_SIZE_IN_SLOTS * playerNum;
+
       console.log(
         `spawn location x: ${x} | ${leftOffset} | ${(this.numSlots.horizontal / 4) * playerNum} | ${playerNum}`
       );
@@ -553,20 +560,25 @@ class GameEngine {
     let dupeDiagonal = null;
     if (position.x < 0) {
       const dupeX = this.numSlots.horizontal + position.x;
-      dupeHorizontal = { x: dupeX, y: position.y };
+      dupeHorizontal = { x: dupeX, y: position.y, dir: "from-right" };
     } else if (position.x + PLAYER_SIZE_IN_SLOTS > this.numSlots.horizontal) {
       const dupeX = position.x - this.numSlots.horizontal;
-      dupeHorizontal = { x: dupeX, y: position.y };
+      dupeHorizontal = { x: dupeX, y: position.y, dir: "from-left" };
     }
     if (position.y < 0) {
       const dupeY = this.numSlots.vertical + position.y;
-      dupeVertical = { x: position.x, y: dupeY };
+      dupeVertical = { x: position.x, y: dupeY, dir: "from-bottom" };
     } else if (position.y + PLAYER_SIZE_IN_SLOTS > this.numSlots.vertical) {
       const dupeY = position.y - this.numSlots.vertical;
-      dupeVertical = { x: position.x, y: dupeY };
+      dupeVertical = { x: position.x, y: dupeY, dir: "from-top" };
     }
+
     if (dupeVertical !== null && dupeHorizontal !== null) {
-      dupeDiagonal = { x: dupeHorizontal.x, y: dupeVertical.y };
+      dupeDiagonal = {
+        x: dupeHorizontal.x,
+        y: dupeVertical.y,
+        dir: "from-diag",
+      };
     }
 
     return {
@@ -730,9 +742,22 @@ class GameEngine {
 
     const pelletsByPosition = {};
 
+    // it just looks nicer to not spawn pellets at the side on large screens,
+    // but that renders too few pellets on small screens...
+    const startHorizontal = this.numSlots.horizontal < 10 ? 0 : 1;
+    const endHorizontal =
+      this.numSlots.horizontal < 10
+        ? this.numSlots.horizontal
+        : this.numSlots.horizontal - 1;
+    const startVertical = this.numSlots.vertical < 10 ? 0 : 1;
+    const endVertical =
+      this.numSlots.vertical < 10
+        ? this.numSlots.vertical
+        : this.numSlots.vertical - 1;
+
     if (RANDOM_PELLETS) {
-      for (let x = 1; x < this.numSlots.horizontal - 1; x += 1) {
-        for (let y = 1; y < this.numSlots.vertical - 1; y += 1) {
+      for (let x = startHorizontal; x < endHorizontal; x += 1) {
+        for (let y = startVertical; y < endVertical; y += 1) {
           let neighborCount = 0;
           for (let dx = -1; dx <= 1; dx += 2) {
             for (let dy = -1; dy <= 1; dy += 2) {
@@ -968,6 +993,8 @@ class GameEngine {
     this.maybeUpdateDebugState({
       playerNum,
       messages: [
+        ["posX", this.playerStates[playerNum].position.x],
+        ["posY", this.playerStates[playerNum].position.y],
         ["jawOpenBlend", jawOpenBlend],
         ["jawOpenDiff", jawOpenDiff],
         ["jawOpenMax", jawOpenMax],
@@ -1070,23 +1097,32 @@ class GameEngine {
     }
   }
 
+  // candidateSlotSize: how we calculate the shift to apply to center the candidate
+  // within its slot (or slots) - e.g. we shift the center of a pellet by 0.5 because it
+  // occupies one slot
+  //
+  // candidateRadius: the value we use to determine if the player is close enough to the
+  // location we're checking to "eat" it - pellets are small, fruit is larger, players are even
+  // larger. In the player case this should be the same as slot size, but other eatable
+  // objects don't inhabit the entire slot!
   overlaps({
     playerX,
     playerY,
     candidateX,
     candidateY,
-    candidateSize,
+    candidateSlotSize,
+    candidateRadius,
     extraCandidateRadius = 0,
   }) {
     playerX = playerX + PLAYER_SIZE_IN_SLOTS / 2;
     playerY = playerY + PLAYER_SIZE_IN_SLOTS / 2;
-    candidateX = candidateX + candidateSize / 2;
-    candidateY = candidateY + candidateSize / 2;
+    candidateX = candidateX + candidateSlotSize / 2;
+    candidateY = candidateY + candidateSlotSize / 2;
     const distance = Math.sqrt(
       (playerX - candidateX) ** 2 + (playerY - candidateY) ** 2
     );
     // player size in slots is the *diameter*
-    return distance < PLAYER_SIZE_IN_SLOTS / 2 + extraCandidateRadius;
+    return distance < PLAYER_SIZE_IN_SLOTS / 2 + candidateRadius / 2;
   }
 
   updatePelletsForPosition({ startTime }) {
@@ -1099,14 +1135,17 @@ class GameEngine {
           playerY: playerState.position.y,
           candidateX: pellet.x,
           candidateY: pellet.y,
-          candidateSize: 1,
-          extraCandidateRadius: 0.1,
+          candidateSlotSize: 1,
+          candidateRadius: pelletSizeInSlots(pellet.kind),
         });
         const isEaten = this.isEaten({
           playerNum: playerState.playerNum,
           startTime,
         });
         if (!isEaten && overlaps && pellet.enabled) {
+          console.log(
+            `EAT ${playerState.position.x}, ${playerState.position.y} | ${pellet.x}, ${pellet.y} (${pellet.kind})`
+          );
           let scoreAmount;
           if (pellet.kind === "fruit") {
             this.sounds.fruit.currentTime = 0;
@@ -1240,8 +1279,9 @@ class GameEngine {
           playerY: superPlayerState.position.y,
           candidateX: ghostPlayerState.position.x,
           candidateY: ghostPlayerState.position.y,
-          candidateSize: PLAYER_SIZE_IN_SLOTS,
-          extraCandidateRadius: 0.5,
+          candidateSlotSize: PLAYER_SIZE_IN_SLOTS,
+          candidateRadius: PLAYER_SIZE_IN_SLOTS / 2,
+          // extraCandidateRadius: 0.5,
         });
 
         if (overlaps || (IMMEDIATELY_EAT && !didImmediatelyEat)) {

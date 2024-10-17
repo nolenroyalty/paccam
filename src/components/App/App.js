@@ -36,11 +36,9 @@ function App() {
   );
   const sounds = React.useRef({});
   const spriteSheets = React.useRef({});
-  const [playfieldPadding, setPlayfieldPadding] = React.useState({});
   const [ignoreMissingFaces, setIgnoreMissingFaces] = React.useState(false);
 
   const [videoEnabled, setVideoEnabled] = React.useState(false);
-  const [slotSizePx, setSlotSizePx] = React.useState(null);
   const [pacmanResultScreenState, setPacmanResultScreenState] = React.useState(
     {}
   );
@@ -266,15 +264,12 @@ function App() {
           startScreenRef={startScreenRef}
         />
         <Playfield
-          playfieldPadding={playfieldPadding}
-          setPlayfieldPadding={setPlayfieldPadding}
           videoRef={videoRef}
           gameRef={gameRef}
           spriteSheets={spriteSheets}
           numPlayers={gameState.numPlayers}
           status={gameState.status}
           addPacmanResultScreenState={addPacmanResultScreenState}
-          setSlotSizePx={setSlotSizePx}
           debugInfo={debugInfo}
         />
         <audio
@@ -302,6 +297,7 @@ function App() {
             sounds.current["die"] = node;
           }}
         />
+        <MissingFacesBanner gameStatus={gameState.status} gameRef={gameRef} />
       </GameHolderOverlapping>
       <LiveScoreDisplay
         status={gameState.status}
@@ -313,7 +309,6 @@ function App() {
         numPlayers={gameState.numPlayers}
         scores={scores}
         resultScreenState={pacmanResultScreenState}
-        slotSizePx={slotSizePx}
         moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
       />
       {ignoreMissingFaces && (
@@ -321,7 +316,6 @@ function App() {
           Ignoring missing faces
         </IgnoreMissingFacesBanner>
       )}
-      <MissingFacesBanner gameStatus={gameState.status} gameRef={gameRef} />
     </Wrapper>
   );
 }
@@ -335,6 +329,7 @@ const BackgroundGradient = styled.div`
   opacity: 0.9;
   background-image: radial-gradient(#c2be70 0.65px, #1c1c5c 0.65px);
   background-size: 13px 13px;
+  z-index: -2;
 `;
 
 const Wrapper = styled.div`
@@ -361,6 +356,7 @@ const IgnoreMissingFacesBanner = styled.h3`
   transform: translateX(-50%);
   color: ${COLORS.white};
   background-color: red;
+  z-index: 1;
 `;
 
 const GameHolderOverlapping = styled.div`

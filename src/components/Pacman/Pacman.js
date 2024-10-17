@@ -1,6 +1,6 @@
 import React from "react";
 import styled, { keyframes } from "styled-components";
-import { PLAYER_SIZE_PERCENT } from "../../constants";
+import { PLAYER_SIZE_IN_SLOTS } from "../../constants";
 import { zIndex1 } from "../../zindex";
 import { EATEN, GHOST, NORMAL, FADED, SUPER } from "../../PACMANSTATE";
 import { RUNNING_TUTORIAL } from "../../STATUS";
@@ -18,10 +18,9 @@ function Pacman({
   gameRef,
   videoRef,
   spriteSheet,
-  numSlots,
+  slotSizePx,
   playerNum,
   status,
-  padding,
   ghostSpriteSheet,
   superSpriteSheet,
   addPacmanResultScreenState,
@@ -304,6 +303,7 @@ function Pacman({
   ]);
 
   const grayScale = pacmanSpriteState === EATEN ? 1 : null;
+  const widthPx = slotSizePx * PLAYER_SIZE_IN_SLOTS;
 
   return coords ? (
     <>
@@ -311,11 +311,12 @@ function Pacman({
         ref={myRef}
         data-player={`player-${playerNum}`}
         style={{
-          "--left": `${(coords.x / numSlots.horizontal) * 100}%`,
-          "--top": `${(coords.y / numSlots.vertical) * 100}%`,
-          "--padding-left": `${padding.left}px`,
-          "--padding-top": `${padding.top}px`,
+          "--left": `${coords.x * slotSizePx}px`,
+          "--top": `${coords.y * slotSizePx}px`,
+          "--width": `${widthPx}px`,
           "--grayscale": grayScale,
+          "--pacman-x": coords.x,
+          "--pacman-y": coords.y,
         }}
       >
         <InteriorCanvas
@@ -336,13 +337,17 @@ function Pacman({
           if (pos === null) {
             return null;
           }
+
           return (
             <PlayerBase
               key={key}
               style={{
-                "--left": `${(pos.x / numSlots.horizontal) * 100}%`,
-                "--top": `${(pos.y / numSlots.vertical) * 100}%`,
+                "--left": `${pos.x * slotSizePx}px`,
+                "--top": `${pos.y * slotSizePx}px`,
                 "--grayscale": grayScale,
+                "--width": `${widthPx}px`,
+                "--pacman-x": pos.x,
+                "--pacman-y": pos.y,
               }}
             >
               <InteriorCanvas
@@ -386,10 +391,11 @@ const DebugLabel = styled.p`
 const PlayerBase = styled.div`
   position: absolute;
   z-index: ${zIndex1};
-  width: ${PLAYER_SIZE_PERCENT}%;
+  width: var(--width);
   aspect-ratio: 1/1;
-  left: var(--left);
-  top: var(--top);
+  left: 0;
+  top: 0;
+  transform: translate(var(--left), var(--top));
   filter: grayscale(var(--grayscale));
 `;
 
