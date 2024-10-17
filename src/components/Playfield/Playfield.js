@@ -7,7 +7,12 @@ import {
 import { range } from "../../utils";
 import Pacman from "../Pacman";
 import { zIndex2 } from "../../zindex";
-import { SHOWING_RESULTS, COMPLETED_ROUND } from "../../STATUS";
+import {
+  COUNTING_IN_ROUND,
+  RUNNING_ROUND,
+  SHOWING_RESULTS,
+  COMPLETED_ROUND,
+} from "../../STATUS";
 
 function Playfield({
   videoRef,
@@ -21,13 +26,24 @@ function Playfield({
   const [pellets, setPellets] = React.useState([]);
   const [initializedPlayfield, setInitializedPlayfield] = React.useState(false);
   const [playfieldSize, setPlayfieldSize] = React.useState({
-    padding: { left: 0, right: 0, top: 0, bottom: 0 },
+    shrinkVertical: 0,
+    shrinkHorizontal: 0,
   });
 
   React.useEffect(() => {
     if (initializedPlayfield) {
       return;
     }
+
+    // SO the idea is
+    // We want to work on any sized screen. I picked a number of slots (21) that seems
+    // to feel ~ok in the larger dimension for a few different screens. Then we derive
+    // the number of slots for the smaller dimension based on that.
+    //
+    // This means that the number of slots in the smaller direction is not a round number,
+    // so we have some padding that we need to account for (that's represented by smallSidePadding).
+    // We shrink our playfield based on that value, and then slightly blur the area outside of
+    // the playfield to make it clear what there's a small area that's not in play.
 
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -41,24 +57,6 @@ function Playfield({
     const numSlotsSmallRemainder = numSlotsSmallWithRemainder - numSlotsSmall;
     const smallSidePadding = slotSizePx * numSlotsSmallRemainder;
 
-    // const numSlotsSmall = Math.floor(
-    // (NUM_SLOTS_IN_LARGER_DIMENSION * smallerDimension) / largerDimension
-    // );
-    // const slotWidthRemainderLarge =
-    //   largerDimension % NUM_SLOTS_IN_LARGER_DIMENSION;
-    // const slotWidthRemainderSmall = smallerDimension % numSlotsSmall;
-
-    // const paddingBySize = {
-    //   small: {
-    //     roundedDown: Math.floor(slotWidthRemainderSmall / 2),
-    //     roundedUp: Math.ceil(slotWidthRemainderSmall / 2),
-    //   },
-    //   large: {
-    //     roundedDown: Math.floor(slotWidthRemainderLarge / 2),
-    //     roundedUp: Math.ceil(slotWidthRemainderLarge / 2),
-    //   },
-    // };
-
     const _playfieldSize = {
       width: width,
       height: height,
@@ -69,7 +67,6 @@ function Playfield({
       _playfieldSize.verticalSlots = NUM_SLOTS_IN_LARGER_DIMENSION;
       _playfieldSize.shrinkVertical = 0;
       _playfieldSize.shrinkHorizontal = smallSidePadding;
-      // _playfieldSize.slotSizePx = height / NUM_SLOTS_IN_LARGER_DIMENSION;
       _playfieldSize.padding = {
         left: Math.ceil(smallSidePadding),
         right: Math.floor(smallSidePadding),
@@ -81,16 +78,11 @@ function Playfield({
       _playfieldSize.verticalSlots = numSlotsSmall;
       _playfieldSize.shrinkVertical = smallSidePadding;
       _playfieldSize.shrinkHorizontal = 0;
-      // _playfieldSize.slotSizePx = width / NUM_SLOTS_IN_LARGER_DIMENSION;
       _playfieldSize.padding = {
         left: 0,
         right: 0,
         top: Math.ceil(smallSidePadding),
         bottom: Math.floor(smallSidePadding),
-        // left: paddingBySize.large.roundedDown,
-        // right: paddingBySize.large.roundedUp,
-        // top: paddingBySize.small.roundedDown,
-        // bottom: paddingBySize.small.roundedUp,
       };
     }
     setPlayfieldSize(_playfieldSize);
@@ -113,9 +105,37 @@ function Playfield({
   const slotHeight = 100 / playfieldSize.verticalSlots;
   const slotSizePx = playfieldSize.slotSizePx;
 
+  const borderBlockStyle = (() => {
+    const w =
+      playfieldSize.shrinkHorizontal === 0
+        ? "100%"
+        : playfieldSize.shrinkHorizontal / 2 + "px";
+    const h =
+      playfieldSize.shrinkVertical === 0
+        ? "100%"
+        : playfieldSize.shrinkVertical / 2 + "px";
+    const backdropFilter =
+      status === COUNTING_IN_ROUND || status === RUNNING_ROUND
+        ? "brightness(0.95) blur(10px)"
+        : "none";
+
+    return { "--width": w, "--height": h, "--backdrop-filter": backdropFilter };
+  })();
+
+  const wrapperFlexDirection =
+    playfieldSize.shrinkVertical === 0 ? "row" : "column";
+
   return (
-    <Wrapper $padding={playfieldSize.padding} style={{ "--opacity": opacity }}>
-      <InnerRelativeWrapper $padding={playfieldSize.padding}>
+    <Wrapper
+      style={{ "--opacity": opacity, "--flex-direction": wrapperFlexDirection }}
+    >
+      <BorderBlock style={borderBlockStyle} />
+      <InnerRelativeWrapper
+        style={{
+          "--shrink-vertical": playfieldSize.shrinkVertical + "px",
+          "--shrink-horizontal": playfieldSize.shrinkHorizontal + "px",
+        }}
+      >
         {numPlayers === null
           ? null
           : range(numPlayers).map((playerNum) => {
@@ -142,7 +162,6 @@ function Playfield({
                   playerNum={playerNum}
                   addPacmanResultScreenState={addPacmanResultScreenState}
                   status={status}
-                  padding={playfieldSize.padding}
                   debugInfo={debugInfo[playerNum]}
                 />
               );
@@ -163,8 +182,8 @@ function Playfield({
             <PelletWrapper
               key={`${pellet.x}-${pellet.y}`}
               style={{
-                "--left": `${slotSizePx * pellet.x + playfieldSize.padding.left}px`,
-                "--top": `${slotSizePx * pellet.y + playfieldSize.padding.top}px`,
+                "--left": `${slotSizePx * pellet.x}px`,
+                "--top": `${slotSizePx * pellet.y}px`,
                 "--opacity": pellet.enabled ? 1 : 0,
                 "--scale": pellet.enabled ? null : 0,
                 "--pellet-x": pellet.x,
@@ -185,11 +204,11 @@ function Playfield({
           );
         })}
       </InnerRelativeWrapper>
+      <BorderBlock style={borderBlockStyle} />
     </Wrapper>
   );
 }
 
-/* PADDING DOES NOT WORK RIGHT NOW */
 const Wrapper = styled.div`
   width: 100%;
   height: 100%;
@@ -198,16 +217,27 @@ const Wrapper = styled.div`
   z-index: ${zIndex2};
   opacity: var(--opacity);
   transition: opacity 0.5s ease-out;
+  display: flex;
+  flex-direction: var(--flex-direction);
+  justify-content: center;
+  align-items: center;
+`;
+
+const BorderBlock = styled.div`
+  width: var(--width);
+  height: var(--height);
+  z-index: 1;
+  backdrop-filter: var(--backdrop-filter);
+  -webkit-backdrop-filter: var(--backdrop-filter);
+  transition: backdrop-filter 0.5s ease-out;
 `;
 
 const InnerRelativeWrapper = styled.div`
   position: relative;
-  margin: auto;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  padding: ${(p) => p.$padding.top}px ${(p) => p.$padding.right}px
-    ${(p) => p.$padding.bottom}px ${(p) => p.$padding.left}px;
+  width: calc(100% - var(--shrink-horizontal));
+  height: calc(100% - var(--shrink-vertical));
+  z-index: -1;
+  /* overflow: hidden; */
 `;
 
 const PopIn = keyframes`

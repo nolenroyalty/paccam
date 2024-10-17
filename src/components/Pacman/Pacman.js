@@ -21,7 +21,6 @@ function Pacman({
   slotSizePx,
   playerNum,
   status,
-  padding,
   ghostSpriteSheet,
   superSpriteSheet,
   addPacmanResultScreenState,
@@ -314,8 +313,6 @@ function Pacman({
         style={{
           "--left": `${coords.x * slotSizePx}px`,
           "--top": `${coords.y * slotSizePx}px`,
-          "--padding-left": `${padding.left}px`,
-          "--padding-top": `${padding.top}px`,
           "--width": `${widthPx}px`,
           "--grayscale": grayScale,
           "--pacman-x": coords.x,
@@ -340,33 +337,13 @@ function Pacman({
           if (pos === null) {
             return null;
           }
-          let paddingLeft;
-          let paddingTop;
-          if (pos.dir === "from-left") {
-            paddingLeft = padding.left;
-            paddingTop = padding.top;
-          } else if (pos.dir === "from-top") {
-            paddingLeft = padding.left;
-            paddingTop = padding.top;
-            // paddingTop = padding.top - slotSizePx;
-          } else if (pos.dir === "from-right") {
-            paddingLeft = padding.right;
-            paddingTop = padding.top;
-          } else if (pos.dir === "from-bottom") {
-            paddingLeft = padding.left;
-            paddingTop = padding.bottom;
-          } else if (pos.dir === "from-diag") {
-            // CR nroyalty: handle this...
-          }
-          console.log(`DUPE KEY ${key} | ${pos.dir}`);
+
           return (
             <PlayerBase
               key={key}
               style={{
                 "--left": `${pos.x * slotSizePx}px`,
                 "--top": `${pos.y * slotSizePx}px`,
-                "--padding-left": `${paddingLeft}px`,
-                "--padding-top": `${paddingTop}px`,
                 "--grayscale": grayScale,
                 "--width": `${widthPx}px`,
                 "--pacman-x": pos.x,
@@ -416,10 +393,8 @@ const PlayerBase = styled.div`
   z-index: ${zIndex1};
   width: var(--width);
   aspect-ratio: 1/1;
-  left: var(--padding-left);
-  top: var(--padding-top);
-  /* left: 0; */
-  /* top: 0; */
+  left: 0;
+  top: 0;
   transform: translate(var(--left), var(--top));
   filter: grayscale(var(--grayscale));
 `;

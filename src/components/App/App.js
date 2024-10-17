@@ -297,6 +297,7 @@ function App() {
             sounds.current["die"] = node;
           }}
         />
+        <MissingFacesBanner gameStatus={gameState.status} gameRef={gameRef} />
       </GameHolderOverlapping>
       <LiveScoreDisplay
         status={gameState.status}
@@ -315,7 +316,6 @@ function App() {
           Ignoring missing faces
         </IgnoreMissingFacesBanner>
       )}
-      <MissingFacesBanner gameStatus={gameState.status} gameRef={gameRef} />
     </Wrapper>
   );
 }
@@ -329,6 +329,7 @@ const BackgroundGradient = styled.div`
   opacity: 0.9;
   background-image: radial-gradient(#c2be70 0.65px, #1c1c5c 0.65px);
   background-size: 13px 13px;
+  z-index: -2;
 `;
 
 const Wrapper = styled.div`
@@ -355,6 +356,7 @@ const IgnoreMissingFacesBanner = styled.h3`
   transform: translateX(-50%);
   color: ${COLORS.white};
   background-color: red;
+  z-index: 1;
 `;
 
 const GameHolderOverlapping = styled.div`

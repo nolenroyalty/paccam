@@ -7,6 +7,7 @@ import {
   WAITING_FOR_VIDEO,
   STOPPED,
 } from "../../STATUS";
+import { zIndex3 } from "../../zindex";
 
 /* could do something here where we save off our last-shown text to make it fade out nicer
  but it's probably not necessary? */
@@ -61,6 +62,7 @@ function MissingFacesBanner({ gameStatus, gameRef }) {
 const Wrapper = styled.div`
   opacity: var(--opacity);
   transition: var(--transition);
+  z-index: ${zIndex3};
   position: fixed;
   display: flex;
   top: 0;
