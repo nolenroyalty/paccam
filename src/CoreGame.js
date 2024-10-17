@@ -930,15 +930,10 @@ class GameEngine {
     const jawOpenDiff = (bottomLipCenter.y - topLipCenter.y) * 10;
     const jawOpenMax = Math.max(jawOpenBlend, jawOpenDiff);
 
-    let mouthIsOpen;
-
-    if (this.playerStates[playerNum].mouthIsOpen) {
-      mouthIsOpen = jawOpenMax > JAW_CLOSE_THRESHOLD;
-    } else {
-      mouthIsOpen = jawOpenMax > JAW_OPEN_THRESHOLD;
-    }
-
     const ftm = facialTransformationMatrix.data;
+
+    let jawCloseThreshold = JAW_CLOSE_THRESHOLD;
+    let jawOpenThreshold = JAW_OPEN_THRESHOLD;
 
     const [r00, r01, r02, r03] = ftm.slice(0, 4);
     const [r10, r11, r12, r13] = ftm.slice(4, 8);
@@ -958,6 +953,8 @@ class GameEngine {
     if (pitch > pitchThreshold) {
       vertical = "down";
       verticalStrength = 1.25 * (pitch - pitchThreshold);
+      // harder to track the mouth when you're facing down
+      jawCloseThreshold *= 1.1;
     } else if (pitch < -pitchThreshold) {
       vertical = "up";
       verticalStrength = 1.25 * (-pitch - pitchThreshold);
@@ -968,6 +965,13 @@ class GameEngine {
     } else if (yaw < -yawThreshold) {
       horizontal = "right";
       horizontalStrength = -yaw - yawThreshold;
+    }
+
+    let mouthIsOpen;
+    if (this.playerStates[playerNum].mouthIsOpen) {
+      mouthIsOpen = jawOpenMax > jawCloseThreshold;
+    } else {
+      mouthIsOpen = jawOpenMax > jawOpenThreshold;
     }
 
     this.updateIndividualFaceState({
