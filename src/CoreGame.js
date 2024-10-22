@@ -807,7 +807,10 @@ class GameEngine {
     if (currentState.slotsToMove < 2) {
       currentState.slotsToMove += SLOTS_MOVED_PER_MOUTH_MOVE;
     } else {
-      console.debug(`DROPPING MOVEMENT FOR ${playerNum}`);
+      // Don't allow people to rack up too much bonus movement
+      // from chomping their mouth; it produces a weird effect
+      // if they chomp a lot and then stop.
+      // console.debug(`DROPPING MOVEMENT FOR ${playerNum}`);
     }
   }
 
@@ -1121,7 +1124,6 @@ class GameEngine {
     candidateY,
     candidateSlotSize,
     candidateRadius,
-    extraCandidateRadius = 0,
   }) {
     playerX = playerX + PLAYER_SIZE_IN_SLOTS / 2;
     playerY = playerY + PLAYER_SIZE_IN_SLOTS / 2;
@@ -1131,7 +1133,8 @@ class GameEngine {
       (playerX - candidateX) ** 2 + (playerY - candidateY) ** 2
     );
     // player size in slots is the *diameter*
-    return distance < PLAYER_SIZE_IN_SLOTS / 2 + candidateRadius / 2;
+    // return distance < PLAYER_SIZE_IN_SLOTS / 2 + candidateRadius / 2;
+    return distance < PLAYER_SIZE_IN_SLOTS / 2 + candidateRadius;
   }
 
   updatePelletsForPosition({ startTime }) {
@@ -1145,16 +1148,16 @@ class GameEngine {
           candidateX: pellet.x,
           candidateY: pellet.y,
           candidateSlotSize: 1,
-          candidateRadius: pelletSizeInSlots(pellet.kind),
+          candidateRadius: pelletSizeInSlots(pellet.kind) / 2,
         });
         const isEaten = this.isEaten({
           playerNum: playerState.playerNum,
           startTime,
         });
         if (!isEaten && overlaps && pellet.enabled) {
-          console.log(
-            `EAT ${playerState.position.x}, ${playerState.position.y} | ${pellet.x}, ${pellet.y} (${pellet.kind})`
-          );
+          // console.log(
+          //   `EAT ${playerState.position.x}, ${playerState.position.y} | ${pellet.x}, ${pellet.y} (${pellet.kind})`
+          // );
           let scoreAmount;
           if (pellet.kind === "fruit") {
             this.sounds.fruit.currentTime = 0;
@@ -1289,8 +1292,9 @@ class GameEngine {
           candidateX: ghostPlayerState.position.x,
           candidateY: ghostPlayerState.position.y,
           candidateSlotSize: PLAYER_SIZE_IN_SLOTS,
-          candidateRadius: PLAYER_SIZE_IN_SLOTS / 2,
-          // extraCandidateRadius: 0.5,
+          // use a slightly small radius to force a slightly larger overlap, which I think
+          // feels a little better?
+          candidateRadius: PLAYER_SIZE_IN_SLOTS / 2.5,
         });
 
         if (overlaps || (IMMEDIATELY_EAT && !didImmediatelyEat)) {
@@ -1404,8 +1408,8 @@ class GameEngine {
             playerY: playerState.position.y,
             candidateX: x,
             candidateY: y,
-            candidateSize: 1,
-            extraCandidateRadius: 0.5,
+            candidateSlotSize: 1,
+            candidateRadius: pelletSizeInSlots("power-pellet") / 2,
           });
       });
       if (!overlaps && !this.pelletsByPosition[[x, y]]?.enabled) {
