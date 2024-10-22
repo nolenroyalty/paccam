@@ -21,7 +21,7 @@ function App() {
     React.useState(false);
   const [tutorialInstruction, setTutorialInstruction] = React.useState([]);
   const [gameState, setGameState] = React.useState({
-    numPlayers: null, // rename to numHumans
+    numHumans: null,
     numCPUs: null,
     status: WAITING_FOR_VIDEO,
   });
@@ -112,28 +112,48 @@ function App() {
     gameRef.current.initVideo(videoRef.current);
   }, []);
 
-  const setNumPlayers = React.useCallback(async (numPlayers) => {
-    console.log(`SETNUMPLAYERS: ${numPlayers}`);
-    await gameRef.current.initNumPlayers(numPlayers);
-    setGameState((state) => ({ ...state, numPlayers }));
-    gameRef.current.startGameLoop();
-  }, []);
+  const setNumPlayers = React.useCallback(
+    async ({ numHumans, numCPUs }) => {
+      console.log(`SETNUMPLAYERS: ${numHumans} | ${numCPUs}`);
+      const patch = {};
+      let _numHumans = gameState.numHumans;
+      let _numCPUs = gameState.numCPUs;
+      if (numCPUs !== null) {
+        patch.numCPUs = numCPUs;
+        _numCPUs = numCPUs;
+      }
+      if (numHumans !== null) {
+        patch.numHumans = numHumans;
+        _numHumans = numHumans;
+      }
+      await gameRef.current.initNumPlayers({
+        numHumans: _numHumans,
+        numCPUs: _numCPUs,
+      });
+      setGameState((state) => ({
+        ...state,
+        ...patch,
+      }));
+      gameRef.current.startGameLoop();
+    },
+    [gameState.numCPUs, gameState.numHumans]
+  );
 
-  const setNumCPUs = React.useCallback(async (numCPUs) => {
-    // await gameRef.current.initNumComputers(numCPUs);
-    setGameState((state) => ({ ...state, numCPUs }));
-    // gameRef.current.startGameLoop();
-  }, []);
+  // const setNumCPUs = React.useCallback(async (numCPUs) => {
+  //   // await gameRef.current.initNumComputers(numCPUs);
+  //   setGameState((state) => ({ ...state, numCPUs }));
+  //   // gameRef.current.startGameLoop();
+  // }, []);
 
   const nullOutNumPlayers = React.useCallback(() => {
-    setGameState((state) => ({ ...state, numPlayers: 0, numCPUs: 0 }));
+    setGameState((state) => ({ ...state, numHumans: 0, numCPUs: 0 }));
   }, []);
 
   const beginTutorial = React.useCallback(() => {
     gameRef.current.beginTutorial();
     // HACK
     gameRef.current.nullOutNumPlayers = nullOutNumPlayers;
-    setNumPlayers(1);
+    setNumPlayers({ numHumans: 1, numCPUs: 0 });
   }, [nullOutNumPlayers, setNumPlayers]);
 
   // alt-d to begin tutorial
@@ -188,7 +208,7 @@ function App() {
     // gameRef.current.startGameLoop();
 
     gameRef.current.resetState();
-    setGameState((state) => ({ ...state, numPlayers: 0, numCPUs: null }));
+    setGameState((state) => ({ ...state, numHumans: 0, numCPUs: null }));
     gameRef.current.moveToWaitingForPlayerSelect();
   }, []);
 
@@ -210,6 +230,8 @@ function App() {
     s.die.volume = 0.2;
     gameRef.current.initAudio({ sounds });
   }, [videoEnabled]);
+
+  const totalPlayers = gameState.numHumans + gameState.numCPUs;
 
   return (
     <Wrapper>
@@ -254,10 +276,11 @@ function App() {
         <StartScreen
           status={gameState.status}
           startGame={startGame}
-          numHumans={gameState.numPlayers}
+          numHumans={gameState.numHumans}
           numCPUs={gameState.numCPUs}
-          setNumHumans={setNumPlayers}
-          setNumCPUs={setNumCPUs}
+          // setNumHumans={setNumPlayers}
+          // setNumCPUs={setNumCPUs}
+          setNumPlayers={setNumPlayers}
           enableVideo={enableVideo}
           videoEnabled={videoEnabled}
           beginTutorial={beginTutorial}
@@ -267,7 +290,8 @@ function App() {
           videoRef={videoRef}
           gameRef={gameRef}
           spriteSheets={spriteSheets}
-          numPlayers={gameState.numPlayers}
+          // numPlayers={gameState.numPlayers}
+          totalPlayers={totalPlayers}
           status={gameState.status}
           addPacmanResultScreenState={addPacmanResultScreenState}
           debugInfo={debugInfo}
@@ -301,12 +325,14 @@ function App() {
       </GameHolderOverlapping>
       <LiveScoreDisplay
         status={gameState.status}
-        numPlayers={gameState.numPlayers}
+        // numPlayers={gameState.numPlayers}
+        totalPlayers={totalPlayers}
         scores={scores}
       />
       <ResultsDisplay
         status={gameState.status}
-        numPlayers={gameState.numPlayers}
+        // numPlayers={gameState.numPlayers}
+        totalPlayers={totalPlayers}
         scores={scores}
         resultScreenState={pacmanResultScreenState}
         moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}

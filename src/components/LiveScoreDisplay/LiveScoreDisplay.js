@@ -8,7 +8,7 @@ import {
   COMPLETED_ROUND,
 } from "../../STATUS";
 
-function LiveScoreDisplay({ status, scores, numPlayers }) {
+function LiveScoreDisplay({ status, scores, totalPlayers }) {
   let startOpacity, endOpacity;
   if (status === COUNTING_IN_ROUND) {
     startOpacity = 0;
@@ -31,13 +31,13 @@ function LiveScoreDisplay({ status, scores, numPlayers }) {
       <ScoreRow>
         <ScoreBlock
           playerNum={0}
-          numPlayers={numPlayers}
+          totalPlayers={totalPlayers}
           color={COLORS.pacmanYellow}
           scores={scores}
         />
         <ScoreBlock
           playerNum={1}
-          numPlayers={numPlayers}
+          totalPlayers={totalPlayers}
           color={COLORS.pacmanPink}
           scores={scores}
         />
@@ -45,13 +45,13 @@ function LiveScoreDisplay({ status, scores, numPlayers }) {
       <ScoreRow>
         <ScoreBlock
           playerNum={2}
-          numPlayers={numPlayers}
+          totalPlayers={totalPlayers}
           color={COLORS.pacmanGreen}
           scores={scores}
         />
         <ScoreBlock
           playerNum={3}
-          numPlayers={numPlayers}
+          totalPlayers={totalPlayers}
           color={COLORS.pacmanOrange}
           scores={scores}
         />
@@ -60,8 +60,8 @@ function LiveScoreDisplay({ status, scores, numPlayers }) {
   );
 }
 
-const ScoreBlock = ({ playerNum, numPlayers, color, scores }) => {
-  if (playerNum >= numPlayers) {
+const ScoreBlock = ({ playerNum, totalPlayers, color, scores }) => {
+  if (playerNum >= totalPlayers) {
     return null;
   }
 

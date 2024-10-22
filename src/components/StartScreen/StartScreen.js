@@ -16,8 +16,9 @@ const MAX_PLAYERS = 4;
 function StartScreen({
   status,
   startGame: _startGame,
-  setNumHumans,
-  setNumCPUs,
+  setNumPlayers,
+  // setNumHumans,
+  // setNumCPUs,
   numHumans,
   numCPUs,
   enableVideo,
@@ -25,6 +26,7 @@ function StartScreen({
   beginTutorial,
   startScreenRef,
 }) {
+  console.log(`STARTSCREEN: ${numHumans} humans, ${numCPUs} CPUs`);
   const [allowMorePlayers, setAllowMorePlayers] = React.useState(
     window.localStorage.getItem("allowMorePlayers") === "true"
   );
@@ -78,32 +80,38 @@ function StartScreen({
     [numCPUs, numHumans]
   );
 
-  const checkNumHumans = React.useCallback(
+  const numHumansBoxChecked = React.useCallback(
     (count) => {
+      let _numCPUs = null;
       if (count + numCPUs > MAX_PLAYERS) {
-        setNumCPUs(MAX_PLAYERS - count);
+        _numCPUs = MAX_PLAYERS - count;
+        // setNumCPUs(MAX_PLAYERS - count);
       }
-      setNumHumans(count);
+      setNumPlayers({ numHumans: count, numCPUs: _numCPUs });
+      // setNumHumans(count);
       setSpeculativelyHighlighted((prev) => ({
         ...prev,
         clickedThisCycle: true,
       }));
     },
-    [numCPUs, setNumHumans, setSpeculativelyHighlighted, setNumCPUs]
+    [numCPUs, setNumPlayers, setSpeculativelyHighlighted]
   );
 
-  const checkNumCPUs = React.useCallback(
+  const numCPUsBoxChecked = React.useCallback(
     (count) => {
+      let _numHumans = null;
       if (numHumans + count > MAX_PLAYERS) {
-        setNumHumans(MAX_PLAYERS - count);
+        _numHumans = MAX_PLAYERS - count;
+        // setNumHumans(MAX_PLAYERS - count);
       }
-      setNumCPUs(count);
+      // setNumCPUs(count);
+      setNumPlayers({ numHumans: _numHumans, numCPUs: count });
       setSpeculativelyHighlighted((prev) => ({
         ...prev,
         clickedThisCycle: true,
       }));
     },
-    [numHumans, setNumCPUs, setNumHumans, setSpeculativelyHighlighted]
+    [numHumans, setNumPlayers, setSpeculativelyHighlighted]
   );
 
   const startGame = React.useCallback(() => {
@@ -187,7 +195,7 @@ function StartScreen({
 
       <CheckboxContainer
         numBoxes={4}
-        onCheck={checkNumHumans}
+        onCheck={numHumansBoxChecked}
         currentCount={numHumans}
         allowMoreThan2={allowMorePlayers}
         speculativelyHighlighted={speculativelyHighlighted}
@@ -197,7 +205,7 @@ function StartScreen({
       />
       <CheckboxContainer
         numBoxes={4}
-        onCheck={checkNumCPUs}
+        onCheck={numCPUsBoxChecked}
         currentCount={numCPUs}
         allowMoreThan2={true}
         speculativelyHighlighted={speculativelyHighlighted}
@@ -209,7 +217,8 @@ function StartScreen({
         allowMorePlayers={allowMorePlayers}
         setAllowMorePlayers={setAllowMorePlayers}
         numHumans={numHumans}
-        setNumHumans={setNumHumans}
+        setNumPlayers={setNumPlayers}
+        // setNumHumans={setNumHumans}
         videoEnabled={videoEnabled}
       />
       <EnableOnlinePlay videoEnabled={videoEnabled} />
@@ -456,15 +465,16 @@ function AllowMorePlayers({
   allowMorePlayers,
   setAllowMorePlayers,
   numHumans,
-  setNumHumans,
+  setNumPlayers,
   videoEnabled,
 }) {
   const onClick = React.useCallback(() => {
     if (allowMorePlayers) {
-      setNumHumans(Math.min(numHumans, 2));
+      setNumPlayers({ numHumans: Math.min(numHumans, 2), numCPUs: null });
+      // setNumHumans(Math.min(numHumans, 2));
     }
     setAllowMorePlayers((prev) => !prev);
-  }, [allowMorePlayers, setAllowMorePlayers, numHumans, setNumHumans]);
+  }, [allowMorePlayers, setAllowMorePlayers, setNumPlayers, numHumans]);
 
   return (
     <CheckboxContainerWrapper $videoEnabled={videoEnabled}>

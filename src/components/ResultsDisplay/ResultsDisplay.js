@@ -9,7 +9,7 @@ import Button from "../Button";
 import { MAX_PLAYERS } from "../../constants";
 
 function ResultsDisplay({
-  numPlayers,
+  totalPlayers,
   scores,
   resultScreenState,
   status,
@@ -68,7 +68,7 @@ function ResultsDisplay({
   return (
     <Wrapper style={{ "--opacity": fadeOut ? 0 : 1 }}>
       {Array.from({ length: MAX_PLAYERS }, (_, i) => {
-        if (i < numPlayers) {
+        if (i < totalPlayers) {
           return (
             <ScoreBlock
               key={i}
@@ -78,7 +78,7 @@ function ResultsDisplay({
               myPlayerNum={i}
               swapResultsAround={swapResultsAround}
               scores={scores}
-              numPlayers={numPlayers}
+              totalPlayers={totalPlayers}
             />
           );
         } else {
@@ -103,7 +103,7 @@ function ResultsDisplay({
 }
 
 function ScoreBlock({
-  numPlayers,
+  totalPlayers,
   myPlayerNum,
   myResultScreenState,
   color,

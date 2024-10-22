@@ -68,8 +68,8 @@ const TUTORIAL_DIRECTIVES = [
   // ["down", "move"],
 ];
 
-const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ numPlayers }) => {
-  if (numPlayers === 4) {
+const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ playerCount }) => {
+  if (playerCount === 4) {
     return 3;
   }
   return 2;
@@ -247,7 +247,7 @@ class GameEngine {
     this.numSlots = numSlots;
   }
 
-  _initSpawnSupersAfterThisManyEats({ numPlayers }) {
+  _initSpawnSupersAfterThisManyEats() {
     const lower = SPAWN_SUPERS_AFTER_THIS_MANY_EATS.lower;
     const upper = SPAWN_SUPERS_AFTER_THIS_MANY_EATS.upper;
     const range = upper - lower;
@@ -316,7 +316,7 @@ class GameEngine {
     }
   }
 
-  initialState({ playerNum }) {
+  initialState({ playerNum, isHuman }) {
     const { x, y } = this.spawnLocation({ playerNum, waiting: true });
     return {
       position: { x, y },
@@ -328,6 +328,7 @@ class GameEngine {
       slotsToMove: 0,
       score: 0,
       playerNum,
+      isHuman,
       pacmanState: NORMAL,
       eatRecoveryTime: null,
       forceMove: {
@@ -349,22 +350,25 @@ class GameEngine {
     return true;
   }
 
-  async initNumPlayers(numPlayers) {
-    console.log(`initNumPlayers: ${numPlayers} status ${this.status}`);
+  async initNumPlayers({ numHumans, numCPUs }) {
+    const total = numHumans + numCPUs;
+    console.log(
+      `initNumPlayers: ${total} (humans: ${numHumans}, bots: ${numCPUs}) status ${this.status}`
+    );
     if (this.loopRunning) {
       console.log("initNumPlayers: loop is running, stopping");
       await this.tellLoopToStopReturningWhenStopped();
       console.log("initNumPlayers: loop stopped");
     }
 
-    this.numPlayers = numPlayers;
-    this.playerStates = range(numPlayers).map((playerNum) => {
-      return this.initialState({ playerNum });
+    this.numPlayers = { numHumans, numCPUs, total };
+    this.playerStates = range(total).map((playerNum) => {
+      return this.initialState({ playerNum, isHuman: playerNum < numHumans });
     });
     console.log(`INITIALIZED PLAYERS: ${JSON.stringify(this.playerStates)}`);
     this.updatePositionConsumers();
     this.updateScoreConsumers();
-    this._initSpawnSupersAfterThisManyEats({ numPlayers });
+    this._initSpawnSupersAfterThisManyEats();
   }
 
   _updateStatusConsumers() {
@@ -403,12 +407,12 @@ class GameEngine {
   _determineMissingFacesStatus() {
     const lastOk = this.missingFacesState.lastOk;
     const numPlayers = this.numPlayers;
-    if (numPlayers === null || numPlayers === 0) {
+    if (numPlayers === null || numPlayers.numHumans === 0) {
       return { status: "initial" };
     }
 
     const trackCount = this.missingFacesState.faceCount;
-    if (trackCount === this.numPlayers) {
+    if (trackCount === this.numPlayers.numHumans) {
       return { status: "ok" };
     }
     const now = performance.now();
@@ -416,13 +420,13 @@ class GameEngine {
     if (delta < MISSING_FACES_ALERT_THRESHOLD) {
       return {
         status: "missing-but-under-threshold",
-        expectedFaces: numPlayers,
+        expectedFaces: numPlayers.numHumans,
         actualFaces: trackCount,
       };
     } else {
       return {
         status: "missing-over-threshold",
-        expectedFaces: numPlayers,
+        expectedFaces: numPlayers.numHumans,
         actualFaces: trackCount,
       };
     }
@@ -441,7 +445,11 @@ class GameEngine {
 
   updateMissingFacesState({ faceCount }) {
     this.missingFacesState.faceCount = faceCount;
-    if (this.numPlayers === null || this.numPlayers === faceCount) {
+    if (
+      this.numPlayers === null ||
+      this.numPlayers.numHumans === 0 ||
+      this.numPlayers.numHumans === faceCount
+    ) {
       this.missingFacesState.lastOk = performance.now();
     }
     const status = this._determineMissingFacesStatus();
@@ -1029,7 +1037,7 @@ class GameEngine {
       this.updateMissingFacesState({ faceCount: 0 });
     }
     if (
-      results.faceLandmarks.length !== this.numPlayers &&
+      results.faceLandmarks.length !== this.numPlayers.numHumans &&
       !this.ignoreMissingFaces
     ) {
       shouldEarlyReturn = true;
@@ -1075,10 +1083,11 @@ class GameEngine {
       );
 
     if (
-      results.faceLandmarks.length < this.numPlayers &&
+      results.faceLandmarks.length < this.numPlayers.numHumans &&
       this.ignoreMissingFaces
     ) {
-      const missingCount = this.numPlayers - results.faceLandmarks.length;
+      const missingCount =
+        this.numPlayers.numHumans - results.faceLandmarks.length;
       const faceLandmarks = results.faceLandmarks[0];
       const faceBlendshapes = results.faceBlendshapes[0];
       const facialTransformationMatrix =
@@ -1316,7 +1325,7 @@ class GameEngine {
     const bonusMovement =
       secondsOfMovement * BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT;
     let isMoving = false;
-    for (let i = 0; i < this.numPlayers; i++) {
+    for (let i = 0; i < this.numPlayers.total; i++) {
       const isSuper =
         this.superIsActive({ startTime }) && this.superStatus.playerNum === i;
       const mult = isSuper ? SPEED_MULTIPLIER_IF_SUPER : 1;
@@ -1385,7 +1394,7 @@ class GameEngine {
     }
 
     const maxSupers = MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS({
-      numPlayers: this.numPlayers,
+      playerCount: this.numPlayers.total,
     });
 
     const spawnedSupers = this.numberOfSpawnedSuperPellets();
@@ -1823,13 +1832,15 @@ class GameEngine {
       console.log(`video began, continuing to start game loop`);
     }
 
-    if (this.numPlayers < 1) {
+    if (this.numPlayers.total < 1) {
       this.endGameLoop("there are no players");
       return;
     }
 
-    console.log(`Starting game loop with ${this.numPlayers} players`);
-    this.landmarker = await createFaceLandmarker({ numFaces: this.numPlayers });
+    console.log(`Starting game loop with ${this.numPlayers.total} players`);
+    this.landmarker = await createFaceLandmarker({
+      numFaces: this.numPlayers.numHumans,
+    });
     if (
       this.status === RUNNING_TUTORIAL ||
       this.status === WAITING_FOR_PLAYER_SELECT

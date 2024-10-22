@@ -18,7 +18,7 @@ function Playfield({
   videoRef,
   gameRef,
   spriteSheets,
-  numPlayers,
+  totalPlayers,
   status,
   addPacmanResultScreenState,
   debugInfo,
@@ -140,9 +140,9 @@ function Playfield({
           "--shrink-horizontal": playfieldSize.shrinkHorizontal + "px",
         }}
       >
-        {numPlayers === null
+        {totalPlayers === null
           ? null
-          : range(numPlayers).map((playerNum) => {
+          : range(totalPlayers).map((playerNum) => {
               let spriteSheet = spriteSheets.current["yellow"];
               if (playerNum === 1) {
                 spriteSheet = spriteSheets.current["pink"];
