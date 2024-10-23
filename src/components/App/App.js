@@ -21,8 +21,8 @@ function App() {
     React.useState(false);
   const [tutorialInstruction, setTutorialInstruction] = React.useState([]);
   const [gameState, setGameState] = React.useState({
-    numHumans: null,
-    numCPUs: null,
+    numHumans: 0,
+    numBots: 0,
     status: WAITING_FOR_VIDEO,
   });
   const startScreenRef = React.useRef();
@@ -113,14 +113,14 @@ function App() {
   }, []);
 
   const setNumPlayers = React.useCallback(
-    async ({ numHumans, numCPUs }) => {
-      console.log(`SETNUMPLAYERS: ${numHumans} | ${numCPUs}`);
+    async ({ numHumans, numBots }) => {
+      console.log(`SETNUMPLAYERS: ${numHumans} | ${numBots}`);
       const patch = {};
       let _numHumans = gameState.numHumans;
-      let _numCPUs = gameState.numCPUs;
-      if (numCPUs !== null) {
-        patch.numCPUs = numCPUs;
-        _numCPUs = numCPUs;
+      let _numBots = gameState.numBots;
+      if (numBots !== null) {
+        patch.numBots = numBots;
+        _numBots = numBots;
       }
       if (numHumans !== null) {
         patch.numHumans = numHumans;
@@ -128,7 +128,7 @@ function App() {
       }
       await gameRef.current.initNumPlayers({
         numHumans: _numHumans,
-        numCPUs: _numCPUs,
+        numBots: _numBots,
       });
       setGameState((state) => ({
         ...state,
@@ -136,24 +136,24 @@ function App() {
       }));
       gameRef.current.startGameLoop();
     },
-    [gameState.numCPUs, gameState.numHumans]
+    [gameState.numBots, gameState.numHumans]
   );
 
-  // const setNumCPUs = React.useCallback(async (numCPUs) => {
-  //   // await gameRef.current.initNumComputers(numCPUs);
-  //   setGameState((state) => ({ ...state, numCPUs }));
+  // const setnumBots = React.useCallback(async (numBots) => {
+  //   // await gameRef.current.initNumComputers(numBots);
+  //   setGameState((state) => ({ ...state, numBots }));
   //   // gameRef.current.startGameLoop();
   // }, []);
 
   const nullOutNumPlayers = React.useCallback(() => {
-    setGameState((state) => ({ ...state, numHumans: 0, numCPUs: 0 }));
+    setGameState((state) => ({ ...state, numHumans: 0, numBots: 0 }));
   }, []);
 
   const beginTutorial = React.useCallback(() => {
     gameRef.current.beginTutorial();
     // HACK
     gameRef.current.nullOutNumPlayers = nullOutNumPlayers;
-    setNumPlayers({ numHumans: 1, numCPUs: 0 });
+    setNumPlayers({ numHumans: 1, numBots: 0 });
   }, [nullOutNumPlayers, setNumPlayers]);
 
   // alt-d to begin tutorial
@@ -208,7 +208,7 @@ function App() {
     // gameRef.current.startGameLoop();
 
     gameRef.current.resetState();
-    setGameState((state) => ({ ...state, numHumans: 0, numCPUs: null }));
+    setGameState((state) => ({ ...state, numHumans: 0, numBots: null }));
     gameRef.current.moveToWaitingForPlayerSelect();
   }, []);
 
@@ -231,7 +231,7 @@ function App() {
     gameRef.current.initAudio({ sounds });
   }, [videoEnabled]);
 
-  const totalPlayers = gameState.numHumans + gameState.numCPUs;
+  const totalPlayers = gameState.numHumans + gameState.numBots;
 
   return (
     <Wrapper>
@@ -277,9 +277,9 @@ function App() {
           status={gameState.status}
           startGame={startGame}
           numHumans={gameState.numHumans}
-          numCPUs={gameState.numCPUs}
+          numBots={gameState.numBots}
           // setNumHumans={setNumPlayers}
-          // setNumCPUs={setNumCPUs}
+          // setnumBots={setnumBots}
           setNumPlayers={setNumPlayers}
           enableVideo={enableVideo}
           videoEnabled={videoEnabled}

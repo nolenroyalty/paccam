@@ -18,15 +18,14 @@ function StartScreen({
   startGame: _startGame,
   setNumPlayers,
   // setNumHumans,
-  // setNumCPUs,
+  // setnumBots,
   numHumans,
-  numCPUs,
+  numBots,
   enableVideo,
   videoEnabled,
   beginTutorial,
   startScreenRef,
 }) {
-  console.log(`STARTSCREEN: ${numHumans} humans, ${numCPUs} CPUs`);
   const [allowMorePlayers, setAllowMorePlayers] = React.useState(
     window.localStorage.getItem("allowMorePlayers") === "true"
   );
@@ -55,14 +54,14 @@ function StartScreen({
     ({ count, kind }) => {
       if (kind === "CPUs") {
         const humans = Math.min(MAX_PLAYERS - count, numHumans);
-        const cpus = count === numCPUs ? count - 1 : count;
+        const cpus = count === numBots ? count - 1 : count;
         _setSpeculativelyHighlighted((prev) => ({
           ...prev,
           CPUs: cpus,
           Humans: humans,
         }));
       } else if (kind === "Humans") {
-        const cpus = Math.min(MAX_PLAYERS - count, numCPUs);
+        const cpus = Math.min(MAX_PLAYERS - count, numBots);
         const humans = count === numHumans ? count - 1 : count;
         _setSpeculativelyHighlighted((prev) => ({
           ...prev,
@@ -77,35 +76,35 @@ function StartScreen({
         });
       }
     },
-    [numCPUs, numHumans]
+    [numBots, numHumans]
   );
 
   const numHumansBoxChecked = React.useCallback(
     (count) => {
-      let _numCPUs = null;
-      if (count + numCPUs > MAX_PLAYERS) {
-        _numCPUs = MAX_PLAYERS - count;
-        // setNumCPUs(MAX_PLAYERS - count);
+      let _numBots = null;
+      if (count + numBots > MAX_PLAYERS) {
+        _numBots = MAX_PLAYERS - count;
+        // setnumBots(MAX_PLAYERS - count);
       }
-      setNumPlayers({ numHumans: count, numCPUs: _numCPUs });
+      setNumPlayers({ numHumans: count, numBots: _numBots });
       // setNumHumans(count);
       setSpeculativelyHighlighted((prev) => ({
         ...prev,
         clickedThisCycle: true,
       }));
     },
-    [numCPUs, setNumPlayers, setSpeculativelyHighlighted]
+    [numBots, setNumPlayers, setSpeculativelyHighlighted]
   );
 
-  const numCPUsBoxChecked = React.useCallback(
+  const numBotsBoxChecked = React.useCallback(
     (count) => {
       let _numHumans = null;
       if (numHumans + count > MAX_PLAYERS) {
         _numHumans = MAX_PLAYERS - count;
         // setNumHumans(MAX_PLAYERS - count);
       }
-      // setNumCPUs(count);
-      setNumPlayers({ numHumans: _numHumans, numCPUs: count });
+      // setnumBots(count);
+      setNumPlayers({ numHumans: _numHumans, numBots: count });
       setSpeculativelyHighlighted((prev) => ({
         ...prev,
         clickedThisCycle: true,
@@ -205,8 +204,8 @@ function StartScreen({
       />
       <CheckboxContainer
         numBoxes={4}
-        onCheck={numCPUsBoxChecked}
-        currentCount={numCPUs}
+        onCheck={numBotsBoxChecked}
+        currentCount={numBots}
         allowMoreThan2={true}
         speculativelyHighlighted={speculativelyHighlighted}
         setSpeculativelyHighlighted={setSpeculativelyHighlighted}
@@ -252,7 +251,7 @@ function StartScreen({
             onClick={(e) => {
               startGame();
             }}
-            disabled={numHumans + numCPUs === 0}
+            disabled={numHumans + numBots === 0}
             size="small"
           >
             Start Game
@@ -470,7 +469,7 @@ function AllowMorePlayers({
 }) {
   const onClick = React.useCallback(() => {
     if (allowMorePlayers) {
-      setNumPlayers({ numHumans: Math.min(numHumans, 2), numCPUs: null });
+      setNumPlayers({ numHumans: Math.min(numHumans, 2), numBots: null });
       // setNumHumans(Math.min(numHumans, 2));
     }
     setAllowMorePlayers((prev) => !prev);

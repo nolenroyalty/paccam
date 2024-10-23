@@ -19,6 +19,7 @@ import {
   shouldProcessGameLoop,
 } from "./STATUS";
 import { EATEN, GHOST, NORMAL, FADED, SUPER } from "./PACMANSTATE";
+import BotStateMachine from "./BotStateMachine";
 
 const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_TRACKING_CONFIDENCE = 0.3;
@@ -318,9 +319,13 @@ class GameEngine {
 
   initialState({ playerNum, isHuman }) {
     const { x, y } = this.spawnLocation({ playerNum, waiting: true });
+    const direction = isHuman ? "center" : "right";
+    const botState = isHuman
+      ? null
+      : new BotStateMachine({ playerNum, numSlots: this.numSlots });
     return {
       position: { x, y },
-      direction: "center",
+      direction: direction,
       tutorialDirection: "center",
       horizontalStrength: 0,
       verticalStrength: 0,
@@ -329,6 +334,7 @@ class GameEngine {
       score: 0,
       playerNum,
       isHuman,
+      botState,
       pacmanState: NORMAL,
       eatRecoveryTime: null,
       forceMove: {
@@ -350,10 +356,10 @@ class GameEngine {
     return true;
   }
 
-  async initNumPlayers({ numHumans, numCPUs }) {
-    const total = numHumans + numCPUs;
+  async initNumPlayers({ numHumans, numBots }) {
+    const total = numHumans + numBots;
     console.log(
-      `initNumPlayers: ${total} (humans: ${numHumans}, bots: ${numCPUs}) status ${this.status}`
+      `initNumPlayers: ${total} (humans: ${numHumans}, bots: ${numBots}) status ${this.status}`
     );
     if (this.loopRunning) {
       console.log("initNumPlayers: loop is running, stopping");
@@ -361,7 +367,7 @@ class GameEngine {
       console.log("initNumPlayers: loop stopped");
     }
 
-    this.numPlayers = { numHumans, numCPUs, total };
+    this.numPlayers = { numHumans, numBots, total };
     this.playerStates = range(total).map((playerNum) => {
       return this.initialState({ playerNum, isHuman: playerNum < numHumans });
     });
@@ -1026,7 +1032,7 @@ class GameEngine {
     });
   }
 
-  processAllResults({ results, startTime }) {
+  processAllLandmarkResults({ results, startTime }) {
     let shouldEarlyReturn = false;
     if (
       !results ||
@@ -1818,6 +1824,44 @@ class GameEngine {
     }
   }
 
+  processAllBots({ startTime }) {
+    this.playerStates.forEach((playerState) => {
+      const isBot = !playerState.isHuman;
+      if (isBot) {
+        const botState = playerState.botState;
+        botState.maybeUpdatePlan({ now: startTime });
+        const { direction, mouthIsOpen } = botState.getCurrentState();
+        playerState.direction = direction;
+        playerState.mouthIsOpen = mouthIsOpen;
+        this.updateRelevantFaceStateConsumers({
+          playerNum: playerState.playerNum,
+          mouthIsOpen,
+          direction,
+          tutorialDirection: direction,
+          jawOpenAmount: 0,
+          minY: 0,
+          maxY: 0,
+          minX: 0,
+          maxX: 0,
+        });
+        // this.updateIndividualFaceState({
+        //   playerNum: playerState.playerNum,
+        //   mouthIsOpen: false,
+        //   jawOpenAmount: 0,
+        //   vertical: "center",
+        //   verticalStrength: 0,
+        //   horizontal: "right",
+        //   horizontalStrength: 1,
+        //   minY: 0,
+        //   maxY: 0,
+        //   minX: 0,
+        //   maxX: 0,
+        //   startTime,
+        // });
+      }
+    });
+  }
+
   async startGameLoop() {
     if (this.loopRunning) {
       console.error(`BUG: startGameLoop called when loop is running`);
@@ -1838,9 +1882,14 @@ class GameEngine {
     }
 
     console.log(`Starting game loop with ${this.numPlayers.total} players`);
-    this.landmarker = await createFaceLandmarker({
-      numFaces: this.numPlayers.numHumans,
-    });
+    if (this.numPlayers.numHumans > 0) {
+      this.landmarker = await createFaceLandmarker({
+        numFaces: this.numPlayers.numHumans,
+      });
+    } else {
+      console.log(`No humans; not creating landmarker...`);
+      this.landmarker = null;
+    }
     if (
       this.status === RUNNING_TUTORIAL ||
       this.status === WAITING_FOR_PLAYER_SELECT
@@ -1862,8 +1911,14 @@ class GameEngine {
       }
       if (this.video.currentTime !== lastVideoTime) {
         const startTime = performance.now();
-        const results = this.landmarker.detectForVideo(this.video, startTime);
-        this.processAllResults({ results, startTime });
+        if (this.numPlayers.numHumans > 0) {
+          // Avoid firing in bot-only games
+          const results = this.landmarker.detectForVideo(this.video, startTime);
+          this.processAllLandmarkResults({ results, startTime });
+        }
+        if (this.numPlayers.numBots > 0) {
+          this.processAllBots({ startTime });
+        }
         const tickTimeMs = lastVideoTime === -1 ? 0 : startTime - lastVideoTime;
         if (this.status === RUNNING_TUTORIAL) {
           const shouldMove = this.handleTutorialStep();
