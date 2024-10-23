@@ -26,6 +26,9 @@ const UPDATE_PLAN_EVERY_MS = (plan) => {
   if (plan === PLAN.WAITING_FOR_START) {
     base = 800;
     jitterPct = 0.5;
+  } else if (plan === PLAN.FLEEING) {
+    base = 600;
+    jitterPct = 0.4;
   }
   if (jitterPct !== null) {
     const rand = 2 * (Math.random() - 0.5);
@@ -36,7 +39,7 @@ const UPDATE_PLAN_EVERY_MS = (plan) => {
 };
 
 const EXECUTE_PLAN_EVERY_MS = (plan) => {
-  let base = 100;
+  let base = 50;
   let jitterPct = 0.05;
   if (plan === PLAN.WAITING_FOR_START) {
     base = 800;
@@ -63,6 +66,40 @@ function randomDirection() {
   }
 }
 
+function computeDistance({ myLoc, theirLoc, numSlots }) {
+  const left =
+    myLoc.x > theirLoc.x
+      ? myLoc.x - theirLoc.x
+      : numSlots.horizontal - theirLoc.x + myLoc.x;
+
+  const right =
+    myLoc.x < theirLoc.x
+      ? theirLoc.x - myLoc.x
+      : numSlots.horizontal - myLoc.x + theirLoc.x;
+
+  const up =
+    myLoc.y > theirLoc.y
+      ? myLoc.y - theirLoc.y
+      : numSlots.vertical - theirLoc.y + myLoc.y;
+
+  const down =
+    myLoc.y < theirLoc.y
+      ? theirLoc.y - myLoc.y
+      : numSlots.vertical - myLoc.y + theirLoc.y;
+
+  // const right =
+  //   myLoc.x < theirLoc.x
+  //   ? theirLoc.x - myLoc.x
+  //   :
+
+  // numSlots.horizontal - left;
+  // const up = myLoc.y - theirLoc.y;
+  // const down = numSlots.vertical - up;
+  const horizontalSmall = left < right ? "left" : "right";
+  const verticalSmall = up < down ? "up" : "down";
+  return { left, right, up, down, horizontalSmall, verticalSmall };
+}
+
 class BotStateMachine {
   constructor({ playerNum, numSlots }) {
     this.playerNum = playerNum;
@@ -80,7 +117,7 @@ class BotStateMachine {
   }
 
   moveToHuntOrRandom() {
-    const mercyNumber = 0.1;
+    const mercyNumber = 0.05;
     const rand = Math.random();
     if (rand < mercyNumber) {
       this.plan = PLAN.MOVING_RANDOMLY;
@@ -90,7 +127,7 @@ class BotStateMachine {
   }
 
   moveToFleeOrRandom() {
-    const stupidNumber = 0.1;
+    const stupidNumber = 0.01;
     const rand = Math.random();
     if (rand < stupidNumber) {
       this.plan = PLAN.MOVING_RANDOMLY;
@@ -156,7 +193,73 @@ class BotStateMachine {
     }
   }
 
-  maybeExecutePlan({ now }) {
+  executePlanFlee({ position, playerPositions, superPlayerNum }) {
+    console.log("FLEEING");
+    const superPlayerPosition = playerPositions[superPlayerNum].position;
+    // if we want to be smart we can account for their direction, but maybe it's more fun
+    // if sometimes you can chase them?
+    const superPlayerDirection = playerPositions[superPlayerNum].direction;
+    const dist = computeDistance({
+      myLoc: position,
+      theirLoc: superPlayerPosition,
+      numSlots: this.numSlots,
+    });
+    const { horizontalSmall, verticalSmall } = dist;
+    const horizontalIsSmaller =
+      Math.min(dist.left, dist.right) < Math.min(dist.up, dist.down);
+    if (horizontalIsSmaller) {
+      if (horizontalSmall === "left") {
+        this.direction = DIRECTION.RIGHT;
+      } else {
+        this.direction = DIRECTION.LEFT;
+      }
+    } else {
+      if (verticalSmall === "up") {
+        this.direction = DIRECTION.DOWN;
+      } else {
+        this.direction = DIRECTION.UP;
+      }
+    }
+    console.log(
+      `EXEXCUTED FLEE: ${this.direction}, horizontalIsSmaller: ${horizontalIsSmaller}, horizontalSmall: ${horizontalSmall}, verticalSmall: ${verticalSmall}`
+    );
+    function tv(e) {
+      const ret = {};
+      Object.entries(e).forEach(([k, v]) => {
+        if (typeof v === "number") {
+          ret[k] = v.toFixed(2);
+        } else {
+          ret[k] = v;
+        }
+      });
+      return JSON.stringify(ret);
+    }
+    console.log(`FLEESTATE: ${tv(position)} ${tv(superPlayerPosition)}`);
+    console.log(`DIST: ${tv(dist)}`);
+    // const horizontalOrVertical =
+    //   Math.random() < 0.5 ? "horizontal" : "vertical";
+    // if (horizontalOrVertical === "horizontal") {
+    //   if (horizontalSmall === "left") {
+    //     this.direction = DIRECTION.RIGHT;
+    //   } else {
+    //     this.direction = DIRECTION.LEFT;
+    //   }
+    // } else {
+    //   if (verticalSmall === "up") {
+    //     this.direction = DIRECTION.DOWN;
+    //   } else {
+    //     this.direction = DIRECTION.UP;
+    //   }
+    // }
+  }
+
+  maybeExecutePlan({
+    now,
+    pellets,
+    position,
+    playerPositions,
+    superPlayerNum,
+  }) {
     let shouldExecute = this.lastExecutedPlan === null;
     if (this.lastExecutedPlan !== null) {
       const elapsed = now - this.lastExecutedPlan;
@@ -171,6 +274,15 @@ class BotStateMachine {
 
     if (this.plan === PLAN.WAITING_FOR_START) {
       this.executePlanWaitingForStart();
+    } else if (this.plan === PLAN.MOVING_RANDOMLY) {
+      this.direction = randomDirection();
+    } else if (this.plan === PLAN.EATING_DOTS) {
+    } else if (this.plan === PLAN.FLEEING) {
+      this.executePlanFlee({ position, playerPositions, superPlayerNum });
+    } else if (this.plan === PLAN.HUNTING) {
+    } else if (this.plan === PLAN.NOTHING) {
+    } else {
+      console.warn("Unhandled state", this.plan);
     }
   }
 
@@ -178,8 +290,10 @@ class BotStateMachine {
     now,
     pellets,
     position,
+    playerPositions,
     thisBotIsSuper,
     superIsActive,
+    superPlayerNum,
   }) {
     const superState = thisBotIsSuper
       ? "am-super"
@@ -187,7 +301,13 @@ class BotStateMachine {
         ? "other-bot-is-super"
         : "not-super";
     this.maybeUpdatePlan({ now, superState });
-    this.maybeExecutePlan({ now });
+    this.maybeExecutePlan({
+      now,
+      pellets,
+      position,
+      playerPositions,
+      superPlayerNum,
+    });
   }
 
   advanceToGameStart() {

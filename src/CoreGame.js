@@ -25,7 +25,7 @@ const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_TRACKING_CONFIDENCE = 0.3;
 const MIN_SUPPRESSION_THRESHOLD = 0.1;
 
-const SECONDS_IN_ROUND = 15; // 30
+const SECONDS_IN_ROUND = 30; // 30
 const COUNT_IN_TIME = 3; // 3
 
 // this was 0.48
@@ -1839,13 +1839,19 @@ class GameEngine {
         const superIsActive = this.superIsActive({ startTime });
         const thisBotIsSuper =
           playerState.playerNum === this.superStatus.playerNum;
+        const playerPositions = this.playerStates.map((x) => ({
+          position: x.position,
+          direction: x.direction,
+        }));
 
         botState.maybeUpdateAndExecutePlan({
           now: startTime,
           pellets: this.pelletsByPosition,
           position: playerState.position,
+          playerPositions,
           thisBotIsSuper,
           superIsActive,
+          superPlayerNum: this.superStatus.playerNum,
         });
         const { direction, mouthIsOpen } = botState.getCurrentState();
         playerState.direction = direction;
