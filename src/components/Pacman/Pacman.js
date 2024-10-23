@@ -24,6 +24,7 @@ function Pacman({
   ghostSpriteSheet,
   superSpriteSheet,
   addPacmanResultScreenState,
+  isHuman,
   debugInfo,
 }) {
   const canvasRef = React.useRef();
@@ -55,8 +56,10 @@ function Pacman({
         setDirection(direction);
       }
       setMouthState(mouthIsOpen ? "open" : "closed");
-      setVideoCoordinates({ minY, maxY, minX, maxX });
-      setMaxJawState((prev) => Math.max(prev, jawOpenAmount));
+      if (isHuman) {
+        setVideoCoordinates({ minY, maxY, minX, maxX });
+        setMaxJawState((prev) => Math.max(prev, jawOpenAmount));
+      }
     };
 
     if (!gameRef.current) {
@@ -102,7 +105,7 @@ function Pacman({
       game.unsubscribeFromPosition({ playerNum, id });
       game.unsubscribeFromPacmanState({ playerNum, id });
     };
-  }, [gameRef, id, playerNum, status]);
+  }, [gameRef, id, isHuman, playerNum, status]);
 
   const drawCurrentSprite = React.useCallback(
     ({ outline, ctx, spriteX, spriteKind }) => {
@@ -180,7 +183,7 @@ function Pacman({
       ctx.imageSmoothingEnabled = false;
       drawCurrentSprite({ outline: false, ctx, spriteX, spriteKind });
 
-      if (videoCoordinates) {
+      if (videoCoordinates && isHuman) {
         drawVideoSnapshot({ ctx, videoCoordinates });
         ctx.globalCompositeOperation = "overlay";
         ctx.globalAlpha = spriteAlpha;
@@ -202,7 +205,7 @@ function Pacman({
       drawCurrentSprite({ spriteX, ctx, outline: true, spriteKind });
       ctx.restore();
     },
-    [drawCurrentSprite, drawVideoSnapshot]
+    [drawCurrentSprite, drawVideoSnapshot, isHuman]
   );
 
   React.useEffect(() => {

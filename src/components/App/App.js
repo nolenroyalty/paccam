@@ -290,8 +290,8 @@ function App() {
           videoRef={videoRef}
           gameRef={gameRef}
           spriteSheets={spriteSheets}
-          // numPlayers={gameState.numPlayers}
           totalPlayers={totalPlayers}
+          numHumans={gameState.numHumans}
           status={gameState.status}
           addPacmanResultScreenState={addPacmanResultScreenState}
           debugInfo={debugInfo}

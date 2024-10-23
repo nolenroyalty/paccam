@@ -19,6 +19,7 @@ function Playfield({
   gameRef,
   spriteSheets,
   totalPlayers,
+  numHumans,
   status,
   addPacmanResultScreenState,
   debugInfo,
@@ -167,6 +168,7 @@ function Playfield({
                   addPacmanResultScreenState={addPacmanResultScreenState}
                   status={status}
                   debugInfo={debugInfo[playerNum]}
+                  isHuman={playerNum < numHumans}
                 />
               );
             })}

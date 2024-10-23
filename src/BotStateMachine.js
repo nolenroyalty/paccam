@@ -14,10 +14,18 @@ const DIRECTION = {
 };
 
 const UPDATE_PLAN_EVERY_MS = (plan) => {
+  let base = 100;
+  let jitterPct = 0.05;
   if (plan === PLAN.WAITING_FOR_START) {
-    return 800;
+    base = 800;
+    jitterPct = 0.5;
   }
-  return 100;
+  if (jitterPct !== null) {
+    const rand = 2 * (Math.random() - 0.5);
+    return base * (1 + jitterPct * rand);
+  } else {
+    return base;
+  }
 };
 
 function randomDirection() {
