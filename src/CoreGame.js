@@ -1839,16 +1839,13 @@ class GameEngine {
         const superIsActive = this.superIsActive({ startTime });
         const thisBotIsSuper =
           playerState.playerNum === this.superStatus.playerNum;
-        const superState = thisBotIsSuper
-          ? "am-super"
-          : superIsActive
-            ? "other-bot-is-super"
-            : "not-super";
+
         botState.maybeUpdateAndExecutePlan({
           now: startTime,
           pellets: this.pelletsByPosition,
           position: playerState.position,
-          superState,
+          thisBotIsSuper,
+          superIsActive,
         });
         const { direction, mouthIsOpen } = botState.getCurrentState();
         playerState.direction = direction;

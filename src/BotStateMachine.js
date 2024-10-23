@@ -4,6 +4,7 @@ const PLAN = {
   FLEEING: "fleeing",
   HUNTING: "hunting",
   MOVING_RANDOMLY: "moving-randomly",
+  NOTHING: "nothing",
 };
 
 const DIRECTION = {
@@ -78,7 +79,36 @@ class BotStateMachine {
     return { direction: this.direction, mouthIsOpen: this.mouthIsOpen };
   }
 
-  maybeUpdatePlan({ now }) {
+  moveToHuntOrRandom() {
+    const mercyNumber = 0.1;
+    const rand = Math.random();
+    if (rand < mercyNumber) {
+      this.plan = PLAN.MOVING_RANDOMLY;
+    } else {
+      this.plan = PLAN.HUNTING;
+    }
+  }
+
+  moveToFleeOrRandom() {
+    const stupidNumber = 0.1;
+    const rand = Math.random();
+    if (rand < stupidNumber) {
+      this.plan = PLAN.MOVING_RANDOMLY;
+    } else {
+      this.plan = PLAN.FLEEING;
+    }
+  }
+
+  moveToEatOrRandom({ howLikelyToRandom }) {
+    const rand = Math.random();
+    if (rand < howLikelyToRandom) {
+      this.plan = PLAN.MOVING_RANDOMLY;
+    } else {
+      this.plan = PLAN.EATING_DOTS;
+    }
+  }
+
+  maybeUpdatePlan({ now, superState }) {
     let shouldUpdate = this.lastUpdatedPlan === null;
     if (this.lastUpdatedPlan !== null) {
       const elapsed = now - this.lastUpdatedPlan;
@@ -97,7 +127,25 @@ class BotStateMachine {
       } else {
         this.plan = PLAN.WAITING_FOR_START;
       }
+    } else if (this.gameState === GAME_STATE.OVER) {
+      // I think this doesn't ever come up, but whatever
+      this.plan = PLAN.NOTHING;
+    } else if (superState === "am-super") {
+      this.moveToHuntOrRandom();
+    } else if (superState === "other-bot-is-super") {
+      this.moveToFleeOrRandom();
+    } else if (superState === "not-super" && this.plan === PLAN.HUNTING) {
+      this.moveToEatOrRandom({ howLikelyToRandom: 0.2 });
+    } else if (superState === "not-super" && this.plan === PLAN.FLEEING) {
+      this.moveToEatOrRandom({ howLikelyToRandom: 0.5 });
+    } else if (this.plan === PLAN.MOVING_RANDOMLY) {
+      this.moveToEatOrRandom({ howLikelyToRandom: 0.05 });
+    } else if (this.plan === PLAN.EATING_DOTS) {
+      this.moveToEatOrRandom({ howLikelyToRandom: 0.1 });
+    } else {
+      console.warn("Unhandled state", this.plan, superState);
     }
+    console.log("PLAN", this.plan);
   }
 
   executePlanWaitingForStart() {
@@ -126,8 +174,19 @@ class BotStateMachine {
     }
   }
 
-  maybeUpdateAndExecutePlan({ now, pellets, position, superState }) {
-    this.maybeUpdatePlan({ now });
+  maybeUpdateAndExecutePlan({
+    now,
+    pellets,
+    position,
+    thisBotIsSuper,
+    superIsActive,
+  }) {
+    const superState = thisBotIsSuper
+      ? "am-super"
+      : superIsActive
+        ? "other-bot-is-super"
+        : "not-super";
+    this.maybeUpdatePlan({ now, superState });
     this.maybeExecutePlan({ now });
   }
 
