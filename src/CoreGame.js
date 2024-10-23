@@ -1738,10 +1738,17 @@ class GameEngine {
     }
   }
 
+  advanceBotsToGameStart() {
+    this.playerStates.forEach((playerState) => {
+      if (!playerState.isHuman) {
+        playerState.botState.advanceToGameStart();
+      }
+    });
+  }
+
   countInRound() {
     this.updateStatusAndConsumers(COUNTING_IN_ROUND, "countInRound");
     this.time = "starting";
-    console.log(`playing start sound ${this.sounds.start}}`);
     // this is a hack to get the sound to play repeatedly on mobile, idk why
     // we need it.
     const z = new Audio(this.sounds.start.src);
@@ -1761,6 +1768,7 @@ class GameEngine {
         this.updateTimeConsumers();
         this.updateStatusAndConsumers(RUNNING_ROUND, "countInRound");
         this.countDownRound();
+        this.advanceBotsToGameStart();
       } else {
         this.updateTimeConsumers();
       }
@@ -1829,7 +1837,7 @@ class GameEngine {
       const isBot = !playerState.isHuman;
       if (isBot) {
         const botState = playerState.botState;
-        botState.maybeUpdatePlan({ now: startTime });
+        botState.maybeUpdateAndExecutePlan({ now: startTime });
         const { direction, mouthIsOpen } = botState.getCurrentState();
         playerState.direction = direction;
         playerState.mouthIsOpen = mouthIsOpen;

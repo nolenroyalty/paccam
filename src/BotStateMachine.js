@@ -13,7 +13,28 @@ const DIRECTION = {
   RIGHT: "right",
 };
 
+const GAME_STATE = {
+  WAITING_FOR_START: "waiting-for-start",
+  RUNNING: "running",
+  OVER: "over",
+};
+
 const UPDATE_PLAN_EVERY_MS = (plan) => {
+  let base = 100;
+  let jitterPct = 0.05;
+  if (plan === PLAN.WAITING_FOR_START) {
+    base = 800;
+    jitterPct = 0.5;
+  }
+  if (jitterPct !== null) {
+    const rand = 2 * (Math.random() - 0.5);
+    return base * (1 + jitterPct * rand);
+  } else {
+    return base;
+  }
+};
+
+const EXECUTE_PLAN_EVERY_MS = (plan) => {
   let base = 100;
   let jitterPct = 0.05;
   if (plan === PLAN.WAITING_FOR_START) {
@@ -47,8 +68,10 @@ class BotStateMachine {
     this.plan = PLAN.WAITING_FOR_START;
     this.direction = DIRECTION.RIGHT;
     this.lastUpdatedPlan = null;
+    this.lastExecutedPlan = null;
     this.mouthIsOpen = false;
     this.numSlots = numSlots;
+    this.gameState = GAME_STATE.WAITING_FOR_START;
   }
 
   getCurrentState() {
@@ -68,12 +91,16 @@ class BotStateMachine {
     }
     this.lastUpdatedPlan = now;
 
-    if (this.plan === PLAN.WAITING_FOR_START) {
-      this.updatePlanWaitingForStart();
+    if (this.gameState === GAME_STATE.WAITING_FOR_START) {
+      if (this.plan === PLAN.WAITING_FOR_START) {
+        // nothing...
+      } else {
+        this.plan = PLAN.WAITING_FOR_START;
+      }
     }
   }
 
-  updatePlanWaitingForStart() {
+  executePlanWaitingForStart() {
     this.direction = randomDirection();
     const rand = Math.random();
     if (rand < 0.4) {
@@ -81,13 +108,37 @@ class BotStateMachine {
     }
   }
 
+  maybeExecutePlan({ now }) {
+    let shouldExecute = this.lastExecutedPlan === null;
+    if (this.lastExecutedPlan !== null) {
+      const elapsed = now - this.lastExecutedPlan;
+      const span = EXECUTE_PLAN_EVERY_MS(this.plan);
+      shouldExecute = elapsed > span;
+    }
+
+    if (!shouldExecute) {
+      return;
+    }
+    this.lastExecutedPlan = now;
+
+    if (this.plan === PLAN.WAITING_FOR_START) {
+      this.executePlanWaitingForStart();
+    }
+  }
+
+  maybeUpdateAndExecutePlan({ now }) {
+    this.maybeUpdatePlan({ now });
+    this.maybeExecutePlan({ now });
+  }
+
   advanceToGameStart() {
     const rand = Math.random();
     if (rand < 0.2) {
-      this.state = PLAN.MOVING_RANDOMLY;
+      this.plan = PLAN.MOVING_RANDOMLY;
     } else {
-      this.state = PLAN.EATING_DOTS;
+      this.plan = PLAN.EATING_DOTS;
     }
+    this.gameState = GAME_STATE.RUNNING;
   }
 }
 
