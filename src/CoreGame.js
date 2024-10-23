@@ -131,7 +131,7 @@ class GameEngine {
     this.satisfiedTutorialDirectiveTime = null;
     this.tutorialState = null;
     this.pelletsByPosition = {};
-    this.superStatus = { player: null, endSuperAt: null };
+    this.superStatus = { playerNum: null, endSuperAt: null };
     this.numSlots = null;
     this.status = status;
     this.numPlayers = null;
@@ -707,8 +707,7 @@ class GameEngine {
   resetState() {
     this.pelletsByPosition = {};
     this.playerStates = [];
-    // CR nroyalty: this should be playerNum?
-    this.superStatus = { player: null, endSuperAt: null };
+    this.superStatus = { playerNum: null, endSuperAt: null };
     this.numPlayers = null;
     this.satisfiedTutorialDirectiveTime = null;
     this.missingFacesState = { faceCount: 0, lastOk: null, lastStatus: null };
@@ -1837,7 +1836,20 @@ class GameEngine {
       const isBot = !playerState.isHuman;
       if (isBot) {
         const botState = playerState.botState;
-        botState.maybeUpdateAndExecutePlan({ now: startTime });
+        const superIsActive = this.superIsActive({ startTime });
+        const thisBotIsSuper =
+          playerState.playerNum === this.superStatus.playerNum;
+        const superState = thisBotIsSuper
+          ? "am-super"
+          : superIsActive
+            ? "other-bot-is-super"
+            : "not-super";
+        botState.maybeUpdateAndExecutePlan({
+          now: startTime,
+          pellets: this.pelletsByPosition,
+          position: playerState.position,
+          superState,
+        });
         const { direction, mouthIsOpen } = botState.getCurrentState();
         playerState.direction = direction;
         playerState.mouthIsOpen = mouthIsOpen;
@@ -1852,20 +1864,6 @@ class GameEngine {
           minX: 0,
           maxX: 0,
         });
-        // this.updateIndividualFaceState({
-        //   playerNum: playerState.playerNum,
-        //   mouthIsOpen: false,
-        //   jawOpenAmount: 0,
-        //   vertical: "center",
-        //   verticalStrength: 0,
-        //   horizontal: "right",
-        //   horizontalStrength: 1,
-        //   minY: 0,
-        //   maxY: 0,
-        //   minX: 0,
-        //   maxX: 0,
-        //   startTime,
-        // });
       }
     });
   }

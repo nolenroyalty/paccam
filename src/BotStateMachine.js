@@ -126,7 +126,7 @@ class BotStateMachine {
     }
   }
 
-  maybeUpdateAndExecutePlan({ now }) {
+  maybeUpdateAndExecutePlan({ now, pellets, position, superState }) {
     this.maybeUpdatePlan({ now });
     this.maybeExecutePlan({ now });
   }
