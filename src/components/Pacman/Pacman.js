@@ -305,8 +305,37 @@ function Pacman({
     videoCoordinates,
   ]);
 
+  const savedBotState = React.useRef(false);
+  React.useEffect(() => {
+    if (isHuman || savedBotState.current) {
+      return;
+    }
+    savedBotState.current = true;
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = PLAYER_CANVAS_SIZE;
+    tempCanvas.height = PLAYER_CANVAS_SIZE;
+    const ctx = tempCanvas.getContext("2d");
+    const hardcodedRightOpen = 6;
+    drawPlayerToCanvas({
+      ctx,
+      spriteX: hardcodedRightOpen * 32,
+      videoCoordinates,
+      spriteAlpha: 1,
+      spriteKind: NORMAL,
+    });
+    const faceCapture = tempCanvas.toDataURL("image/png");
+    addPacmanResultScreenState({ playerNum, faceCapture });
+  }, [
+    addPacmanResultScreenState,
+    drawPlayerToCanvas,
+    isHuman,
+    playerNum,
+    videoCoordinates,
+  ]);
+
   const grayScale = pacmanSpriteState === EATEN ? 1 : null;
   const widthPx = slotSizePx * PLAYER_SIZE_IN_SLOTS;
+  const opacity = pacmanSpriteState === GHOST && !isHuman ? 0.9 : 1;
 
   return coords ? (
     <>
@@ -320,6 +349,7 @@ function Pacman({
           "--grayscale": grayScale,
           "--pacman-x": coords.x,
           "--pacman-y": coords.y,
+          "--opacity": opacity,
         }}
       >
         <InteriorCanvas
@@ -351,6 +381,7 @@ function Pacman({
                 "--width": `${widthPx}px`,
                 "--pacman-x": pos.x,
                 "--pacman-y": pos.y,
+                "--opacity": opacity,
               }}
             >
               <InteriorCanvas
@@ -400,6 +431,7 @@ const PlayerBase = styled.div`
   top: 0;
   transform: translate(var(--left), var(--top));
   filter: grayscale(var(--grayscale));
+  opacity: var(--opacity);
 `;
 
 const Player = styled(PlayerBase)`
@@ -409,6 +441,7 @@ const Player = styled(PlayerBase)`
 const InteriorCanvas = styled.canvas`
   width: 100%;
   height: 100%;
+  opacity: var(--opacity);
 `;
 
 export default React.memo(Pacman);

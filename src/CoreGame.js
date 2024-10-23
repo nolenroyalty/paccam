@@ -1882,6 +1882,7 @@ class GameEngine {
     }
 
     console.log(`Starting game loop with ${this.numPlayers.total} players`);
+
     if (this.numPlayers.numHumans > 0) {
       this.landmarker = await createFaceLandmarker({
         numFaces: this.numPlayers.numHumans,
