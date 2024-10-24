@@ -287,51 +287,42 @@ class BotStateMachine {
   // Compute the distance between us and the super player and choose a
   // random direction, heavily weighted towards the direction that will
   // increase the distance.
-  setFleeDirection({ position, playerPositions, superPlayerNum }) {
+  determineFleeDirection({ position: me, playerPositions, superPlayerNum }) {
     // maybe this should account for the direction the player is facing?
-    const superPlayerPosition = playerPositions[superPlayerNum].position;
+    const them = playerPositions[superPlayerNum].position;
     const superPlayerDirection = playerPositions[superPlayerNum].direction;
     const horizontalFactor =
       superPlayerDirection === "left" || superPlayerDirection === "right"
-        ? 1.25
+        ? 1.15
         : 1;
     const verticalFactor =
       superPlayerDirection === "up" || superPlayerDirection === "down"
-        ? 1.25
+        ? 1.15
         : 1;
-    const rightDist = this.rightDistance({
-      me: position,
-      them: superPlayerPosition,
-    });
-    const leftDist = this.leftDistance({
-      me: position,
-      them: superPlayerPosition,
-    });
-    const upDist = this.upDistance({
-      me: position,
-      them: superPlayerPosition,
-    });
-    const downDist = this.downDistance({
-      me: position,
-      them: superPlayerPosition,
-    });
-    // CR nroyalty: rewrite using helper
-    const leftWeight = leftDist ** 2.5 * horizontalFactor;
-    const rightWeight = rightDist ** 2.5 * horizontalFactor;
-    const upWeight = upDist ** 2.5 * verticalFactor;
-    const downWeight = downDist ** 2.5 * verticalFactor;
-    const total = leftWeight + rightWeight + upWeight + downWeight;
-    const rand = Math.random() * total;
 
-    if (rand < leftWeight) {
-      this.direction = DIRECTION.LEFT;
-    } else if (rand < leftWeight + rightWeight) {
-      this.direction = DIRECTION.RIGHT;
-    } else if (rand < leftWeight + rightWeight + upWeight) {
-      this.direction = DIRECTION.UP;
-    } else {
-      this.direction = DIRECTION.DOWN;
-    }
+    const keys = [
+      {
+        direction: DIRECTION.LEFT,
+        score: this.leftDistance({ me, them }) * horizontalFactor,
+      },
+      {
+        direction: DIRECTION.RIGHT,
+        score: this.rightDistance({ me, them }) * horizontalFactor,
+      },
+      {
+        direction: DIRECTION.UP,
+        score: this.upDistance({ me, them }) * verticalFactor,
+      },
+      {
+        direction: DIRECTION.DOWN,
+        score: this.downDistance({ me, them }) * verticalFactor,
+      },
+    ];
+    return this.weightedRandomChoiceFromList({
+      list: keys,
+      logKey: "setFleeDirection",
+      scoreScaleFactor: 2.5,
+    }).direction;
   }
 
   manhattanDistance(a, b) {
@@ -506,9 +497,6 @@ class BotStateMachine {
           them: target,
         }) &&
           directionVertical(chosenDirection));
-      console.log(
-        `PICKNEW: ${pickNew} ${JSON.stringify(position)} ${JSON.stringify(target)} ${chosenDirection}`
-      );
     }
     if (pickNew) {
       chosenDirection = this.determineDirectionToTarget({
@@ -678,7 +666,11 @@ class BotStateMachine {
         stateKey: "lastFleeDirectionChange",
         targetFrequency: 510,
         runOnSuccess: () => {
-          this.setFleeDirection({ position, playerPositions, superPlayerNum });
+          this.direction = this.determineFleeDirection({
+            position,
+            playerPositions,
+            superPlayerNum,
+          });
         },
       });
     } else if (this.plan === PLAN.HUNTING) {
@@ -714,12 +706,17 @@ class BotStateMachine {
         const player = playerPositions.find(
           (p) => p.playerNum === this.huntingState.target
         );
+        const canReorient = this.smoothlyRandom({
+          currentTime: now,
+          stateKey: "lastHuntReorient",
+          targetFrequency: 500,
+        });
         this.orientTowardsTarget({
           position,
           target: player.position,
-          distanceScaleFactor: 1,
+          distanceScaleFactor: 2.5,
           targetState: this.huntingState,
-          pickNewEvenIfAlreadyChoseDirection: false,
+          pickNewEvenIfAlreadyChoseDirection: canReorient,
         });
       }
     } else if (this.plan === PLAN.NOTHING) {
