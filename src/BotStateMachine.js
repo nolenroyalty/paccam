@@ -66,35 +66,44 @@ function randomDirection() {
   }
 }
 
+const leftDistance = ({ me, them, numSlots }) => {
+  // if we're to their right, the distance is just our loc minus their loc
+  // them . . . . . me
+  // if we're to their left, the distance is our loc to 0 + (end - them)
+  // . me . . them . .
+  return me.x > them.x ? me.x - them.x : numSlots.horizontal - them.x + me.x;
+};
+
+const rightDistance = ({ me, them, numSlots }) => {
+  return leftDistance({ me: them, them: me, numSlots });
+};
+
+const upDistance = ({ me, them, numSlots }) => {
+  // if we're below them, the distance is just our loc minus their loc
+  // them
+  // .
+  // .
+  // me
+  // if we're above them, the distance is our loc to 0 + (end - them)
+  // .
+  // me
+  // .
+  // .
+  // them
+  // .
+  return me.y > them.y ? me.y - them.y : numSlots.vertical - them.y + me.y;
+};
+
+const downDistance = ({ me, them, numSlots }) => {
+  return upDistance({ me: them, them: me, numSlots });
+};
+
 function computeDistance({ myLoc, theirLoc, numSlots }) {
-  const left =
-    myLoc.x > theirLoc.x
-      ? myLoc.x - theirLoc.x
-      : numSlots.horizontal - theirLoc.x + myLoc.x;
+  const left = leftDistance({ me: myLoc, them: theirLoc, numSlots });
+  const right = rightDistance({ me: myLoc, them: theirLoc, numSlots });
+  const up = upDistance({ me: myLoc, them: theirLoc, numSlots });
+  const down = downDistance({ me: myLoc, them: theirLoc, numSlots });
 
-  const right =
-    myLoc.x < theirLoc.x
-      ? theirLoc.x - myLoc.x
-      : numSlots.horizontal - myLoc.x + theirLoc.x;
-
-  const up =
-    myLoc.y > theirLoc.y
-      ? myLoc.y - theirLoc.y
-      : numSlots.vertical - theirLoc.y + myLoc.y;
-
-  const down =
-    myLoc.y < theirLoc.y
-      ? theirLoc.y - myLoc.y
-      : numSlots.vertical - myLoc.y + theirLoc.y;
-
-  // const right =
-  //   myLoc.x < theirLoc.x
-  //   ? theirLoc.x - myLoc.x
-  //   :
-
-  // numSlots.horizontal - left;
-  // const up = myLoc.y - theirLoc.y;
-  // const down = numSlots.vertical - up;
   const horizontalSmall = left < right ? "left" : "right";
   const verticalSmall = up < down ? "up" : "down";
   return { left, right, up, down, horizontalSmall, verticalSmall };
