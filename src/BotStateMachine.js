@@ -241,14 +241,27 @@ class BotStateMachine {
     jitterFactor = 0.25,
     runOnSuccess = () => {},
   }) {
-    const lastTimeSomethingHappened = this.smoothRandomState[stateKey] || 0;
+    if (!this.smoothRandomState[stateKey]) {
+      this.smoothRandomState[stateKey] = {
+        lastTimeSomethingHappened: 0,
+        targetDelta: null,
+      };
+    }
+    const lastTimeSomethingHappened =
+      this.smoothRandomState[stateKey].lastTimeSomethingHappened;
+
+    if (this.smoothRandomState[stateKey].targetDelta === null) {
+      let threshold = targetFrequency;
+      const smoothVariation = Math.sin(currentTime / 1000) * jitterFactor;
+      const randomVariation = (Math.random() * 2 - 1) * jitterFactor;
+      threshold *= 1 + (smoothVariation + randomVariation) / 2;
+      this.smoothRandomState[stateKey].targetDelta = threshold;
+    }
+
     const delta = currentTime - lastTimeSomethingHappened;
-    let threshold = targetFrequency;
-    const smoothVariation = Math.sin(currentTime / 1000) * jitterFactor;
-    const randomVariation = (Math.random() * 2 - 1) * jitterFactor;
-    threshold *= 1 + (smoothVariation + randomVariation) / 2;
-    if (delta > threshold) {
-      this.smoothRandomState[stateKey] = currentTime;
+    if (delta > this.smoothRandomState[stateKey].targetDelta) {
+      this.smoothRandomState[stateKey].lastTimeSomethingHappened = currentTime;
+      this.smoothRandomState[stateKey].targetDelta = null;
       runOnSuccess();
       return true;
     }
@@ -259,13 +272,14 @@ class BotStateMachine {
     now,
     jitterFactor = 0.25,
     targetFrequency = TARGET_TIME_BETWEEN_CHOMPS,
+    chompKey = "playing",
   }) {
     const runOnSuccess = () => {
       this.mouthIsOpen = !this.mouthIsOpen;
     };
     this.smoothlyRandom({
       currentTime: now,
-      stateKey: "lastChompTime",
+      stateKey: `${chompKey}-lastChompTime`,
       targetFrequency,
       jitterFactor,
       runOnSuccess,
@@ -424,25 +438,26 @@ class BotStateMachine {
     playerPositions,
     superPlayerNum,
   }) {
-    // let shouldExecute = this.lastExecutedPlan === null;
-    // if (this.lastExecutedPlan !== null) {
-    //   const elapsed = now - this.lastExecutedPlan;
-    //   const span = EXECUTE_PLAN_EVERY_MS(this.plan);
-    //   shouldExecute = elapsed > span;
-    // }
-
-    // if (!shouldExecute) {
-    //   return;
-    // }
-    // this.lastExecutedPlan = now;
-
     if (this.plan === PLAN.WAITING_FOR_START) {
-      // this.executePlanWaitingForStart();
-      this.maybeChomp({ now });
+      this.smoothlyRandom({
+        currentTime: now,
+        stateKey: "lastWaitDirectionChange",
+        targetFrequency: 2200,
+        runOnSuccess: () => {
+          this.direction = randomDirection();
+        },
+      });
+      this.maybeChomp({ now, targetFrequency: 750, chompKey: "waiting" });
     } else if (this.plan === PLAN.MOVING_RANDOMLY) {
-      // this.maybeOpenOrCloseMouth({ chance: 0.5 });
       this.maybeChomp({ now });
-      // this.direction = randomDirection();
+      this.smoothlyRandom({
+        currentTime: now,
+        stateKey: "lastWaitDirectionChange",
+        targetFrequency: 3500,
+        runOnSuccess: () => {
+          this.direction = randomDirection();
+        },
+      });
     } else if (this.plan === PLAN.EATING_DOTS) {
       this.maybeChomp({ now });
       const hasPellet = () => {
@@ -490,6 +505,11 @@ class BotStateMachine {
         },
       });
     } else if (this.plan === PLAN.HUNTING) {
+      this.maybeChomp({
+        now,
+        targetFrequency: TARGET_TIME_BETWEEN_CHOMPS_AGGRESSIVE,
+        chompKey: "hunting",
+      });
     } else if (this.plan === PLAN.NOTHING) {
     } else {
       console.warn("Unhandled state", this.plan);
