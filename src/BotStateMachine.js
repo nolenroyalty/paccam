@@ -145,32 +145,18 @@ class BotStateMachine {
     return { direction: this.direction, mouthIsOpen: this.mouthIsOpen };
   }
 
-  moveToHuntOrRandom() {
-    const mercyNumber = 0.05;
-    const rand = Math.random();
-    if (rand < mercyNumber) {
-      this.plan = PLAN.MOVING_RANDOMLY;
-    } else {
-      this.plan = PLAN.HUNTING;
-    }
-  }
-
-  moveToFleeOrRandom() {
-    const stupidNumber = 0.01;
-    const rand = Math.random();
-    if (rand < stupidNumber) {
-      this.plan = PLAN.MOVING_RANDOMLY;
-    } else {
-      this.plan = PLAN.FLEEING;
-    }
-  }
-
-  moveToEatOrRandom({ howLikelyToRandom }) {
+  stateOrRandom({ state, howLikelyToRandom }) {
     const rand = Math.random();
     if (rand < howLikelyToRandom) {
-      this.plan = PLAN.MOVING_RANDOMLY;
+      return PLAN.MOVING_RANDOMLY;
     } else {
-      this.plan = PLAN.EATING_DOTS;
+      return state;
+    }
+  }
+
+  clearStateForOldPlan({ oldPlan }) {
+    if (oldPlan === PLAN.EATING_DOTS) {
+      this.targetPelletState = null;
     }
   }
 
@@ -186,34 +172,59 @@ class BotStateMachine {
       return;
     }
     this.lastUpdatedPlan = now;
+    const currentPlan = this.plan;
+    let newPlan = null;
 
     if (this.gameState === GAME_STATE.WAITING_FOR_START) {
       if (this.plan === PLAN.WAITING_FOR_START) {
         // nothing...
       } else {
-        this.plan = PLAN.WAITING_FOR_START;
+        // this.plan = PLAN.WAITING_FOR_START;
+        newPlan = PLAN.WAITING_FOR_START;
       }
     } else if (this.gameState === GAME_STATE.OVER) {
       // I think this doesn't ever come up, but whatever
-      this.plan = PLAN.NOTHING;
+      // this.plan = PLAN.NOTHING;
+      newPlan = PLAN.NOTHING;
     } else if (superState === "am-super") {
       console.log("AM HUNTING");
-      this.moveToHuntOrRandom();
+      newPlan = this.stateOrRandom({
+        state: PLAN.HUNTING,
+        howLikelyToRandom: 0.05,
+      });
     } else if (superState === "other-bot-is-super") {
       // this.moveToFleeOrRandom();
-      this.plan = PLAN.FLEEING;
+      newPlan = PLAN.FLEEING;
     } else if (superState === "not-super" && this.plan === PLAN.HUNTING) {
-      this.moveToEatOrRandom({ howLikelyToRandom: 0.2 });
+      // this.moveToEatOrRandom({ howLikelyToRandom: 0.2 });
+      newPlan = this.stateOrRandom({
+        state: PLAN.EATING_DOTS,
+        howLikelyToRandom: 0.05,
+      });
     } else if (superState === "not-super" && this.plan === PLAN.FLEEING) {
-      this.moveToEatOrRandom({ howLikelyToRandom: 0.5 });
+      newPlan = this.stateOrRandom({
+        state: PLAN.EATING_DOTS,
+        howLikelyToRandom: 0.05,
+      });
     } else if (this.plan === PLAN.MOVING_RANDOMLY) {
-      this.moveToEatOrRandom({ howLikelyToRandom: 0.05 });
+      newPlan = this.stateOrRandom({
+        state: PLAN.EATING_DOTS,
+        howLikelyToRandom: 0.05,
+      });
     } else if (this.plan === PLAN.EATING_DOTS) {
-      this.moveToEatOrRandom({ howLikelyToRandom: 0.1 });
+      newPlan = this.stateOrRandom({
+        state: PLAN.EATING_DOTS,
+        howLikelyToRandom: 0.05,
+      });
     } else {
-      console.warn("Unhandled state", this.plan, superState);
+      console.warn("Unhandled state", this.plan, superState, newPlan);
     }
-    console.log("PLAN", this.plan);
+    if (newPlan !== null && newPlan !== this.plan) {
+      console.log(`UPDATING PLAN: ${this.plan} -> ${newPlan}`);
+      this.clearStateForOldPlan({ oldPlan: currentPlan });
+      this.plan = newPlan;
+    }
+    // console.log("PLAN", this.plan);
   }
 
   maybeOpenOrCloseMouth({ chance }) {
@@ -446,21 +457,21 @@ class BotStateMachine {
         this.smoothlyRandom({
           currentTime: now,
           stateKey: "lastEatTargetChoice",
-          targetFrequency: 200,
+          targetFrequency: 400,
           runOnSuccess: () => {
-            console.log("PICKING TARGET");
+            // console.log("PICKING TARGET");
             const target = this.determineEatTarget({ position, pellets });
-            console.log(
-              `TARGET: ${JSON.stringify(target)} | ${JSON.stringify(pellets[target.key])}`
-            );
+            // console.log(
+            //   `TARGET: ${JSON.stringify(target)} | ${JSON.stringify(pellets[target.key])}`
+            // );
             this.targetPelletState = { target, chosenDirection: null };
           },
         });
       } else {
-        console.log(`HAS PELLET: ${JSON.stringify(this.targetPelletState)}
-        | ${JSON.stringify(pellets[this.targetPelletState.target.key])}
-        | ${JSON.stringify(position)}
-        `);
+        // console.log(`HAS PELLET: ${JSON.stringify(this.targetPelletState)}
+        // | ${JSON.stringify(pellets[this.targetPelletState.target.key])}
+        // | ${JSON.stringify(position)}
+        // `);
       }
       if (hasPellet()) {
         this.moveTowardsPellet({
