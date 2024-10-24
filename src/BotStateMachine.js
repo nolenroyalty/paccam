@@ -1,6 +1,10 @@
 import {
   BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT,
   PLAYER_SIZE_IN_SLOTS,
+  BASE_SLOTS_MOVED_PER_SECOND,
+  BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT,
+  SPEED_MULTIPLIER_IF_SUPER,
+  DEFAULT_SUPER_DURATION,
 } from "./constants";
 
 // You need to open / close your mouth 3.5 times per second to get the full bonus.
@@ -11,7 +15,7 @@ const TARGET_TIME_BETWEEN_CHOMPS =
 const TARGET_TIME_BETWEEN_CHOMPS_AGGRESSIVE =
   1000 / (BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT * 1.1);
 
-const PLAYER_RADIUS = PLAYER_SIZE_IN_SLOTS / 16;
+const OVERLAP_THRESHOLD = PLAYER_SIZE_IN_SLOTS / 16;
 
 const PLAN = {
   WAITING_FOR_START: "waiting-for-start",
@@ -58,21 +62,6 @@ const UPDATE_PLAN_EVERY_MS = (plan) => {
   }
 };
 
-const EXECUTE_PLAN_EVERY_MS = (plan) => {
-  let base = 50;
-  let jitterPct = 0.05;
-  if (plan === PLAN.WAITING_FOR_START) {
-    base = 800;
-    jitterPct = 0.5;
-  }
-  if (jitterPct !== null) {
-    const rand = 2 * (Math.random() - 0.5);
-    return base * (1 + jitterPct * rand);
-  } else {
-    return base;
-  }
-};
-
 function randomDirection() {
   const rand = Math.random();
   if (rand < 0.25) {
@@ -99,6 +88,7 @@ class BotStateMachine {
     this.lastChompTime = 0;
     this.smoothRandomState = {};
     this.targetPelletState = null;
+    this.huntingState = null;
   }
 
   leftDistance({ me, them }) {
@@ -157,20 +147,22 @@ class BotStateMachine {
   clearStateForOldPlan({ oldPlan }) {
     if (oldPlan === PLAN.EATING_DOTS) {
       this.targetPelletState = null;
+    } else if (oldPlan === PLAN.HUNTING) {
+      this.huntingState = null;
     }
   }
 
-  maybeUpdatePlan({ now, superState }) {
-    let shouldUpdate = this.lastUpdatedPlan === null;
-    if (this.lastUpdatedPlan !== null) {
-      const elapsed = now - this.lastUpdatedPlan;
-      const span = UPDATE_PLAN_EVERY_MS(this.plan);
-      shouldUpdate = elapsed > span;
-    }
+  maybeUpdatePlan({ now, superState, positions, playerPositions }) {
+    // let shouldUpdate = this.lastUpdatedPlan === null;
+    // if (this.lastUpdatedPlan !== null) {
+    //   const elapsed = now - this.lastUpdatedPlan;
+    //   const span = UPDATE_PLAN_EVERY_MS(this.plan);
+    //   shouldUpdate = elapsed > span;
+    // }
 
-    if (!shouldUpdate) {
-      return;
-    }
+    // if (!shouldUpdate) {
+    //   return;
+    // }
     this.lastUpdatedPlan = now;
     const currentPlan = this.plan;
     let newPlan = null;
@@ -179,43 +171,45 @@ class BotStateMachine {
       if (this.plan === PLAN.WAITING_FOR_START) {
         // nothing...
       } else {
-        // this.plan = PLAN.WAITING_FOR_START;
         newPlan = PLAN.WAITING_FOR_START;
       }
     } else if (this.gameState === GAME_STATE.OVER) {
       // I think this doesn't ever come up, but whatever
-      // this.plan = PLAN.NOTHING;
       newPlan = PLAN.NOTHING;
     } else if (superState === "am-super") {
-      console.log("AM HUNTING");
-      newPlan = this.stateOrRandom({
-        state: PLAN.HUNTING,
-        howLikelyToRandom: 0.05,
-      });
+      // ideal logic here is like:
+      // if I'm hunting and already have a target, stay with it for ~2.5 seconds
+      // if I'm not hunting, aim to start hunting within a second
+      // if I'm hunting and there's no good target, consider eating rando dots
+      newPlan = PLAN.HUNTING;
     } else if (superState === "other-bot-is-super") {
       // this.moveToFleeOrRandom();
       newPlan = PLAN.FLEEING;
     } else if (superState === "not-super" && this.plan === PLAN.HUNTING) {
+      newPlan = PLAN.EATING_DOTS;
       // this.moveToEatOrRandom({ howLikelyToRandom: 0.2 });
-      newPlan = this.stateOrRandom({
-        state: PLAN.EATING_DOTS,
-        howLikelyToRandom: 0.05,
-      });
+      // newPlan = this.stateOrRandom({
+      //   state: PLAN.EATING_DOTS,
+      //   howLikelyToRandom: 0.05,
+      // });
     } else if (superState === "not-super" && this.plan === PLAN.FLEEING) {
-      newPlan = this.stateOrRandom({
-        state: PLAN.EATING_DOTS,
-        howLikelyToRandom: 0.05,
-      });
+      newPlan = PLAN.EATING_DOTS;
+      // newPlan = this.stateOrRandom({
+      //   state: PLAN.EATING_DOTS,
+      //   howLikelyToRandom: 0.05,
+      // });
     } else if (this.plan === PLAN.MOVING_RANDOMLY) {
-      newPlan = this.stateOrRandom({
-        state: PLAN.EATING_DOTS,
-        howLikelyToRandom: 0.05,
-      });
+      newPlan = PLAN.EATING_DOTS;
+      // newPlan = this.stateOrRandom({
+      //   state: PLAN.EATING_DOTS,
+      //   howLikelyToRandom: 0.05,
+      // });
     } else if (this.plan === PLAN.EATING_DOTS) {
-      newPlan = this.stateOrRandom({
-        state: PLAN.EATING_DOTS,
-        howLikelyToRandom: 0.05,
-      });
+      newPlan = PLAN.EATING_DOTS;
+      // newPlan = this.stateOrRandom({
+      // state: PLAN.EATING_DOTS,
+      // howLikelyToRandom: 0.05,
+      // });
     } else {
       console.warn("Unhandled state", this.plan, superState, newPlan);
     }
@@ -224,7 +218,6 @@ class BotStateMachine {
       this.clearStateForOldPlan({ oldPlan: currentPlan });
       this.plan = newPlan;
     }
-    // console.log("PLAN", this.plan);
   }
 
   maybeOpenOrCloseMouth({ chance }) {
@@ -322,6 +315,7 @@ class BotStateMachine {
       me: position,
       them: superPlayerPosition,
     });
+    // CR nroyalty: rewrite using helper
     const leftWeight = leftDist ** 2.5 * horizontalFactor;
     const rightWeight = rightDist ** 2.5 * horizontalFactor;
     const upWeight = upDist ** 2.5 * verticalFactor;
@@ -393,7 +387,189 @@ class BotStateMachine {
     }
   }
 
-  moveTowardsPellet({ position, pelletPosition }) {
+  getMyDistanceToOtherPlayers({ playerPositions, position }) {
+    return Object.values(playerPositions)
+      .filter((p) => p.playerNum !== this.playerNum)
+      .map((p) => {
+        return {
+          ...p,
+          distance: this.manhattanDistance(position, p.position),
+        };
+      });
+  }
+
+  weightedRandomChoiceFromList({ list, logKey, scoreScaleFactor = 1 }) {
+    if (list.length === 0) {
+      console.warn(
+        `Asked to choose a direction but no valid choices (key: ${logKey})`
+      );
+      return null;
+    }
+    const scaled = list.map((item) => ({
+      ...item,
+      score: item.score ** scoreScaleFactor,
+    }));
+    const total = scaled.reduce((acc, item) => acc + item.score, 0);
+    const rand = Math.random() * total;
+    let runningTotal = 0;
+    for (let i = 0; i < list.length; i++) {
+      runningTotal += scaled[i].score;
+      if (rand < runningTotal) {
+        return list[i];
+      }
+    }
+  }
+
+  alreadyOverlapsHorizontally({ me, them }) {
+    const left = this.leftDistance({ me, them });
+    const right = this.rightDistance({ me, them });
+    return Math.min(left, right) <= OVERLAP_THRESHOLD;
+  }
+
+  alreadyOverlapsVertically({ me, them }) {
+    const up = this.upDistance({ me, them });
+    const down = this.downDistance({ me, them });
+    return Math.min(up, down) <= OVERLAP_THRESHOLD;
+  }
+
+  determineDirectionToTarget({ position, target, distanceScaleFactor }) {
+    const left = this.leftDistance({ me: position, them: target });
+    const right = this.rightDistance({ me: position, them: target });
+    const up = this.upDistance({ me: position, them: target });
+    const down = this.downDistance({ me: position, them: target });
+
+    // We want directions that will get us to the target most quickly (closer)
+    // to be more desirable, so our score inverts the distance.
+    // We don't want to move in a direction if we already overlap with the target,
+    // so filter things out (there we respect the smaller of the two directions)
+    const keys = [
+      {
+        key: DIRECTION.LEFT,
+        filterValue: Math.min(left, right),
+        score: this.numSlots.horizontal - left,
+      },
+      {
+        key: DIRECTION.RIGHT,
+        filterValue: Math.min(left, right),
+        score: this.numSlots.horizontal - right,
+      },
+      {
+        key: DIRECTION.UP,
+        filterValue: Math.min(up, down),
+        score: this.numSlots.vertical - up,
+      },
+      {
+        key: DIRECTION.DOWN,
+        filterValue: Math.min(up, down),
+        score: this.numSlots.vertical - down,
+      },
+    ].filter((d) => d.filterValue > OVERLAP_THRESHOLD);
+
+    if (keys.length === 0) {
+      console.warn(
+        `Asked to choose a direction to target but we should already overlap! ${JSON.stringify(position)} ${JSON.stringify(target)}`
+      );
+      return null;
+    } else if (keys.length === 1) {
+      return keys[0].key;
+    } else {
+      // Higher distance is a less desirable target, so our score is the square
+      // of the *other* distance
+      return this.weightedRandomChoiceFromList({
+        list: keys,
+        logKey: "determineDirectionToTarget",
+        scoreScaleFactor: distanceScaleFactor,
+      }).key;
+    }
+  }
+
+  orientTowardsTarget({
+    position,
+    target,
+    distanceScaleFactor,
+    targetState,
+    pickNewEvenIfAlreadyChoseDirection,
+  }) {
+    let { chosenDirection } = targetState;
+    let pickNew =
+      chosenDirection === null || pickNewEvenIfAlreadyChoseDirection;
+    let wasFirst = chosenDirection === null;
+    if (chosenDirection !== null) {
+      pickNew =
+        (this.alreadyOverlapsHorizontally({
+          me: position,
+          them: target,
+        }) &&
+          directionHorizontal(chosenDirection)) ||
+        (this.alreadyOverlapsVertically({
+          me: position,
+          them: target,
+        }) &&
+          directionVertical(chosenDirection));
+      console.log(
+        `PICKNEW: ${pickNew} ${JSON.stringify(position)} ${JSON.stringify(target)} ${chosenDirection}`
+      );
+    }
+    if (pickNew) {
+      chosenDirection = this.determineDirectionToTarget({
+        position,
+        target,
+        distanceScaleFactor,
+      });
+      if (chosenDirection === null) {
+        targetState.chosenDirection = null;
+        return "already-overlaps";
+      } else {
+        targetState.chosenDirection = chosenDirection;
+        this.direction = chosenDirection;
+        return wasFirst ? "chose-first-direction" : "chose-new-direction";
+      }
+    }
+  }
+
+  determineHuntingTarget({ position, playerPositions }) {
+    const maxTargetMovementDuringSuper =
+      DEFAULT_SUPER_DURATION *
+      (BASE_SLOTS_MOVED_PER_SECOND +
+        BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT);
+    const maxMyMovementDuringSuper =
+      maxTargetMovementDuringSuper * SPEED_MULTIPLIER_IF_SUPER;
+    const reasonableTargetDistance =
+      5 * (maxMyMovementDuringSuper - maxTargetMovementDuringSuper);
+
+    const dd = this.getMyDistanceToOtherPlayers({
+      playerPositions,
+      position,
+    });
+    const distances = this.getMyDistanceToOtherPlayers({
+      playerPositions,
+      position,
+    }).filter((d) => d.distance < reasonableTargetDistance);
+
+    const scores = distances.map((d) => {
+      const score = (reasonableTargetDistance - d.distance) ** 2;
+      return { ...d, score };
+    });
+    console.log(
+      `JS: ${JSON.stringify(scores)} || ${JSON.stringify(dd)} || ${reasonableTargetDistance}`
+    );
+    const total = scores.reduce((acc, s) => acc + s.score, 0);
+    const rand = Math.random() * total;
+    let runningTotal = 0;
+    for (let i = 0; i < scores.length; i++) {
+      runningTotal += scores[i].score;
+      if (rand < runningTotal) {
+        console.log(`CHOSE TARGET: ${JSON.stringify(scores[i])}`);
+        return scores[i].playerNum;
+      }
+      console.log(
+        `SKIP ${total} ${rand} ${runningTotal} ${JSON.stringify(scores[i])}`
+      );
+    }
+    console.log("FELL THROUGH");
+  }
+
+  moveTowardsPellet({ position, pelletPosition, targetState }) {
     const left = this.leftDistance({ me: position, them: pelletPosition });
     const right = this.rightDistance({ me: position, them: pelletPosition });
     const up = this.upDistance({ me: position, them: pelletPosition });
@@ -401,14 +577,14 @@ class BotStateMachine {
     const horizontal = Math.min(left, right);
     const vertical = Math.min(up, down);
 
-    let { chosenDirection } = this.targetPelletState;
+    let { chosenDirection } = targetState;
     const horizontalCompleted =
       chosenDirection !== null &&
-      horizontal <= PLAYER_RADIUS &&
+      horizontal <= OVERLAP_THRESHOLD &&
       directionHorizontal(chosenDirection);
     const verticalCompleted =
       chosenDirection !== null &&
-      vertical <= PLAYER_RADIUS &&
+      vertical <= OVERLAP_THRESHOLD &&
       directionVertical(chosenDirection);
     if (chosenDirection === null || horizontalCompleted || verticalCompleted) {
       const keys = [
@@ -416,7 +592,7 @@ class BotStateMachine {
         { key: DIRECTION.RIGHT, value: right, min: horizontal },
         { key: DIRECTION.UP, value: up, min: vertical },
         { key: DIRECTION.DOWN, value: down, min: vertical },
-      ].filter((d) => d.min > PLAYER_RADIUS);
+      ].filter((d) => d.min > OVERLAP_THRESHOLD);
       if (keys.length === 0) {
         console.warn(
           `moveTowardsPellet: No valid directions to move ${JSON.stringify(position)} ${JSON.stringify(pelletPosition)}`
@@ -426,7 +602,7 @@ class BotStateMachine {
       keys.sort((a, b) => a.value - b.value);
       const { key } = keys[0];
       chosenDirection = key;
-      this.targetPelletState.chosenDirection = chosenDirection;
+      targetState.chosenDirection = chosenDirection;
       this.direction = chosenDirection;
     }
   }
@@ -452,8 +628,8 @@ class BotStateMachine {
       this.maybeChomp({ now });
       this.smoothlyRandom({
         currentTime: now,
-        stateKey: "lastWaitDirectionChange",
-        targetFrequency: 3500,
+        stateKey: "lastRandomDirectionChange",
+        targetFrequency: 2500,
         runOnSuccess: () => {
           this.direction = randomDirection();
         },
@@ -492,6 +668,7 @@ class BotStateMachine {
         this.moveTowardsPellet({
           position,
           pelletPosition: this.targetPelletState.target,
+          targetState: this.targetPelletState,
         });
       }
     } else if (this.plan === PLAN.FLEEING) {
@@ -510,6 +687,41 @@ class BotStateMachine {
         targetFrequency: TARGET_TIME_BETWEEN_CHOMPS_AGGRESSIVE,
         chompKey: "hunting",
       });
+      const hasTarget = () => {
+        if (this.huntingState === null || this.huntingState.target === null) {
+          return false;
+        }
+        const target = this.huntingState.target;
+        const player = playerPositions.find((p) => p.playerNum === target);
+        return !player.isEaten;
+      };
+      if (!hasTarget()) {
+        this.smoothlyRandom({
+          currentTime: now,
+          stateKey: "lastHuntTargetChoice",
+          targetFrequency: 200,
+          runOnSuccess: () => {
+            const target = this.determineHuntingTarget({
+              position,
+              playerPositions,
+            });
+            this.huntingState = { target, chosenDirection: null };
+          },
+        });
+      }
+
+      if (hasTarget()) {
+        const player = playerPositions.find(
+          (p) => p.playerNum === this.huntingState.target
+        );
+        this.orientTowardsTarget({
+          position,
+          target: player.position,
+          distanceScaleFactor: 1,
+          targetState: this.huntingState,
+          pickNewEvenIfAlreadyChoseDirection: false,
+        });
+      }
     } else if (this.plan === PLAN.NOTHING) {
     } else {
       console.warn("Unhandled state", this.plan);
@@ -529,7 +741,7 @@ class BotStateMachine {
     if (superIsActive) {
       superState = thisBotIsSuper ? "am-super" : "other-bot-is-super";
     }
-    this.maybeUpdatePlan({ now, superState });
+    this.maybeUpdatePlan({ now, superState, position, playerPositions });
     this.maybeExecutePlan({
       now,
       pellets,

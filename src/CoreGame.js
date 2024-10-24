@@ -6,6 +6,8 @@ import {
   BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT,
   pelletSizeInSlots,
   MAX_BANKED_BONUS_MOVEMENT,
+  SPEED_MULTIPLIER_IF_SUPER,
+  DEFAULT_SUPER_DURATION,
 } from "./constants";
 import { range, easeOutPow } from "./utils";
 import {
@@ -42,12 +44,10 @@ const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
 const SPECIAL_RESPAWN_CHANCE = 0.15; // 0.2
 const SPECIAL_IS_A_FRUIT_CHANCE = 1.0; // 0.7
 const STRAWBERRY_POINTS = 3;
-const DEFAULT_SUPER_DURATION = 5.3;
 const EAT_RECOVERY_TIME = 1.5;
 const IMMEDIATELY_EAT = false;
 const MAX_PLAYERS = 4;
 const TIME_TO_TOGGLE_BETWEEN_GHOST_STATES = 400;
-const SPEED_MULTIPLIER_IF_SUPER = 1.2;
 const MISSING_FACES_ALERT_THRESHOLD = 300;
 
 const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
@@ -1836,6 +1836,8 @@ class GameEngine {
         const playerPositions = this.playerStates.map((x) => ({
           position: x.position,
           direction: x.direction,
+          playerNum: x.playerNum,
+          isEaten: this.isEaten({ playerNum: x.playerNum, startTime }),
         }));
 
         botState.maybeUpdateAndExecutePlan({
