@@ -5,6 +5,7 @@ import {
   BASE_SLOTS_MOVED_PER_SECOND,
   BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT,
   pelletSizeInSlots,
+  MAX_BANKED_BONUS_MOVEMENT,
 } from "./constants";
 import { range, easeOutPow } from "./utils";
 import {
@@ -698,12 +699,6 @@ class GameEngine {
     this.updateTimeConsumers({ singleCallback: callback });
   }
 
-  addMovement() {
-    if (this.slotsToMove < 2) {
-      this.slotsToMove += SLOTS_MOVED_PER_MOUTH_MOVE;
-    }
-  }
-
   resetState() {
     this.pelletsByPosition = {};
     this.playerStates = [];
@@ -816,8 +811,8 @@ class GameEngine {
     this.updatePelletConsumers();
   }
 
-  addIndividualMovement({ currentState, playerNum }) {
-    if (currentState.slotsToMove < 2) {
+  addIndividualMovement({ currentState }) {
+    if (currentState.slotsToMove < MAX_BANKED_BONUS_MOVEMENT) {
       currentState.slotsToMove += SLOTS_MOVED_PER_MOUTH_MOVE;
     } else {
       // Don't allow people to rack up too much bonus movement
@@ -862,7 +857,7 @@ class GameEngine {
     currentState.verticalStrength = verticalStrength;
     if (currentState.mouthIsOpen !== mouthIsOpen) {
       if (this.status === RUNNING_ROUND) {
-        this.addIndividualMovement({ playerNum, currentState });
+        this.addIndividualMovement({ currentState });
       }
     }
     currentState.mouthIsOpen = mouthIsOpen;
@@ -1634,7 +1629,6 @@ class GameEngine {
         this.tutorialState.actionSatisfactionCount += 1;
         if (directiveAction === "move") {
           this.addIndividualMovement({
-            playerNum: 1,
             currentState: playerState,
           });
         }
@@ -1855,6 +1849,12 @@ class GameEngine {
         });
         const { direction, mouthIsOpen } = botState.getCurrentState();
         playerState.direction = direction;
+        if (
+          this.status === RUNNING_ROUND &&
+          mouthIsOpen !== playerState.mouthIsOpen
+        ) {
+          this.addIndividualMovement({ currentState: playerState });
+        }
         playerState.mouthIsOpen = mouthIsOpen;
         this.updateRelevantFaceStateConsumers({
           playerNum: playerState.playerNum,
@@ -1910,6 +1910,12 @@ class GameEngine {
         `BUG: startGameLoop called when not waiting for video - ${this.status}`
       );
     }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === " ") {
+        // this.skipTutorialStep = true;
+        this.enableSuper({ playerNum: 0 });
+      }
+    });
     let lastVideoTime = -1;
     this.updatePositionConsumers();
     function loop() {

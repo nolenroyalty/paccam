@@ -110,12 +110,17 @@ function Playfield({
   const slotSizePx = playfieldSize.slotSizePx;
 
   const borderBlockStyle = (() => {
-    const w =
-      playfieldSize.shrinkHorizontal === 0
+    const noShrinkage =
+      playfieldSize.shrinkHorizontal === 0 &&
+      playfieldSize.shrinkVertical === 0;
+    const w = noShrinkage
+      ? "0px"
+      : playfieldSize.shrinkHorizontal === 0
         ? "100%"
         : playfieldSize.shrinkHorizontal / 2 + "px";
-    const h =
-      playfieldSize.shrinkVertical === 0
+    const h = noShrinkage
+      ? "0px"
+      : playfieldSize.shrinkVertical === 0
         ? "100%"
         : playfieldSize.shrinkVertical / 2 + "px";
     const backdropFilter =
