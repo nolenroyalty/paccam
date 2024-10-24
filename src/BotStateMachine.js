@@ -1,19 +1,15 @@
 import {
   BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT,
   PLAYER_SIZE_IN_SLOTS,
-  BASE_SLOTS_MOVED_PER_SECOND,
-  BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT,
-  SPEED_MULTIPLIER_IF_SUPER,
-  DEFAULT_SUPER_DURATION,
 } from "./constants";
 
 // You need to open / close your mouth 3.5 times per second to get the full bonus.
 // humans don't do this, so we don't want our bots to play perfectly.
 const TARGET_TIME_BETWEEN_CHOMPS =
-  1000 / (BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT * 1.25);
+  1000 / (BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT * 1.5);
 // but let them be a little more aggressive sometimes :)
 const TARGET_TIME_BETWEEN_CHOMPS_AGGRESSIVE =
-  1000 / (BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT * 1.1);
+  1000 / (BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT * 1.05);
 
 const OVERLAP_THRESHOLD = PLAYER_SIZE_IN_SLOTS / 16;
 
@@ -126,19 +122,16 @@ class BotStateMachine {
     } else if (oldPlan === PLAN.HUNTING) {
       this.huntingState = null;
     }
+    this.smoothRandomState = {};
   }
 
-  maybeUpdatePlan({ now, superState, positions, playerPositions }) {
-    // let shouldUpdate = this.lastUpdatedPlan === null;
-    // if (this.lastUpdatedPlan !== null) {
-    //   const elapsed = now - this.lastUpdatedPlan;
-    //   const span = UPDATE_PLAN_EVERY_MS(this.plan);
-    //   shouldUpdate = elapsed > span;
-    // }
-
-    // if (!shouldUpdate) {
-    //   return;
-    // }
+  maybeUpdatePlan({
+    now,
+    superState,
+    superPlayerNum,
+    position,
+    playerPositions,
+  }) {
     this.lastUpdatedPlan = now;
     const currentPlan = this.plan;
     let newPlan = null;
@@ -153,10 +146,8 @@ class BotStateMachine {
       // I think this doesn't ever come up, but whatever
       newPlan = PLAN.NOTHING;
     } else if (superState === "am-super" && this.plan === PLAN.HUNTING) {
-      // ideal logic here is like:
-      // if I'm hunting and already have a target, stay with it for ~2.5 seconds
-      // if I'm not hunting, aim to start hunting within a second
-      // if I'm hunting and there's no good target, consider eating rando dots
+      // we could try teaching the bots to eat dots if nobody is close, but i think
+      // it's more fun if they just hunt!
       const shouldMoveToRandom = this.smoothlyRandom({
         currentTime: now,
         stateKey: "huntingMovedToRandom",
@@ -168,55 +159,79 @@ class BotStateMachine {
       } else {
         newPlan = PLAN.HUNTING;
       }
-    } else if (
-      superState === "am-super" &&
-      this.plan === PLAN.MOVING_RANDOMLY
-    ) {
-      const shouldMoveToHunting = this.smoothlyRandom({
+    } else if (superState === "am-super" && this.plan !== PLAN.HUNTING) {
+      const shouldMoveToHunt = this.smoothlyRandom({
         currentTime: now,
-        stateKey: "randomMovedToHunting",
+        stateKey: "movedToHunting",
         targetFrequency: 350,
       });
-      if (shouldMoveToHunting) {
-        newPlan = PLAN.HUNTING;
-      }
-    } else if (superState === "am-super" && this.plan === PLAN.EATING_DOTS) {
-      const shouldMoveToFlee = this.smoothlyRandom({
-        currentTime: now,
-        stateKey: "eatingMovedToHunting",
-        targetFrequency: 300,
-      });
-      if (shouldMoveToFlee) {
+      if (shouldMoveToHunt) {
         newPlan = PLAN.HUNTING;
       }
     } else if (superState === "other-bot-is-super") {
-      // this.moveToFleeOrRandom();
-      newPlan = PLAN.FLEEING;
-    } else if (superState === "not-super" && this.plan === PLAN.HUNTING) {
-      newPlan = PLAN.EATING_DOTS;
-      // this.moveToEatOrRandom({ howLikelyToRandom: 0.2 });
-      // newPlan = this.stateOrRandom({
-      //   state: PLAN.EATING_DOTS,
-      //   howLikelyToRandom: 0.05,
-      // });
-    } else if (superState === "not-super" && this.plan === PLAN.FLEEING) {
-      newPlan = PLAN.EATING_DOTS;
-      // newPlan = this.stateOrRandom({
-      //   state: PLAN.EATING_DOTS,
-      //   howLikelyToRandom: 0.05,
-      // });
+      const superPlayerPosition = playerPositions[superPlayerNum].position;
+      const distanceToSuperPlayer = this.manhattanDistance(
+        position,
+        superPlayerPosition
+      );
+      if (distanceToSuperPlayer < PLAYER_SIZE_IN_SLOTS * 1.5) {
+        // always flee here
+        newPlan = PLAN.FLEEING;
+      } else if (distanceToSuperPlayer < PLAYER_SIZE_IN_SLOTS * 6) {
+        // flee eventually here
+        const shouldSwitchStrategy = this.smoothlyRandom({
+          currentTime: now,
+          stateKey: "otherBotMovedToFlee",
+          targetFrequency: 1500,
+        });
+        if (shouldSwitchStrategy) {
+          newPlan =
+            currentPlan === PLAN.EATING_DOTS ? PLAN.FLEEING : PLAN.EATING_DOTS;
+        }
+      } else {
+        // switch eventually here, but less often
+        const shouldSwitchStrategy = this.smoothlyRandom({
+          currentTime: now,
+          stateKey: "otherBotMovedToFlee",
+          targetFrequency: 4000,
+          jitterFactor: 0.5,
+        });
+        if (shouldSwitchStrategy) {
+          newPlan =
+            currentPlan === PLAN.EATING_DOTS ? PLAN.FLEEING : PLAN.EATING_DOTS;
+        }
+      }
+    } else if (
+      (superState === "not-super" && this.plan === PLAN.HUNTING) ||
+      (superState === "not-super" && this.plan === PLAN.FLEEING)
+    ) {
+      // Super just ended - either move randomly (occasionally) or
+      // go back to eating dots.
+      const rand = Math.random();
+      if (rand < 0.1) {
+        newPlan = PLAN.MOVING_RANDOMLY;
+      } else {
+        newPlan = PLAN.EATING_DOTS;
+      }
     } else if (this.plan === PLAN.MOVING_RANDOMLY) {
-      newPlan = PLAN.EATING_DOTS;
-      // newPlan = this.stateOrRandom({
-      //   state: PLAN.EATING_DOTS,
-      //   howLikelyToRandom: 0.05,
-      // });
+      const shouldMoveToEating = this.smoothlyRandom({
+        currentTime: now,
+        stateKey: "randomMovedToEating",
+        targetFrequency: 2000,
+      });
+      if (shouldMoveToEating) {
+        newPlan = PLAN.EATING_DOTS;
+      }
     } else if (this.plan === PLAN.EATING_DOTS) {
-      newPlan = PLAN.EATING_DOTS;
-      // newPlan = this.stateOrRandom({
-      // state: PLAN.EATING_DOTS,
-      // howLikelyToRandom: 0.05,
-      // });
+      const shouldMoveToRandom = this.smoothlyRandom({
+        currentTime: now,
+        stateKey: "eatingMovedToRandom",
+        targetFrequency: 7500,
+        jitterFactor: 0.5,
+      });
+      if (shouldMoveToRandom) {
+        newPlan = PLAN.MOVING_RANDOMLY;
+      }
     } else {
       console.warn("Unhandled state", this.plan, superState, newPlan);
     }
@@ -243,7 +258,7 @@ class BotStateMachine {
   }) {
     if (!this.smoothRandomState[stateKey]) {
       this.smoothRandomState[stateKey] = {
-        lastTimeSomethingHappened: 0,
+        lastTimeSomethingHappened: currentTime,
         targetDelta: null,
       };
     }
@@ -343,7 +358,7 @@ class BotStateMachine {
       } else if (pellet.kind === "fruit") {
         return 3;
       } else if (pellet.kind === "power-pellet") {
-        return 20;
+        return 13;
       } else {
         throw new Error(`Unknown pellet kind: ${pellet.kind}`);
       }
@@ -527,45 +542,25 @@ class BotStateMachine {
   }
 
   determineHuntingTarget({ position, playerPositions }) {
-    const maxTargetMovementDuringSuper =
-      DEFAULT_SUPER_DURATION *
-      (BASE_SLOTS_MOVED_PER_SECOND +
-        BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT);
-    const maxMyMovementDuringSuper =
-      maxTargetMovementDuringSuper * SPEED_MULTIPLIER_IF_SUPER;
-    const reasonableTargetDistance =
-      5 * (maxMyMovementDuringSuper - maxTargetMovementDuringSuper);
-
-    const dd = this.getMyDistanceToOtherPlayers({
-      playerPositions,
-      position,
-    });
     const distances = this.getMyDistanceToOtherPlayers({
       playerPositions,
       position,
-    }).filter((d) => d.distance < reasonableTargetDistance);
+    });
 
     const scores = distances.map((d) => {
-      const score = (reasonableTargetDistance - d.distance) ** 2;
+      const score = 1 / d.distance ** 3;
       return { ...d, score };
     });
-    console.log(
-      `JS: ${JSON.stringify(scores)} || ${JSON.stringify(dd)} || ${reasonableTargetDistance}`
-    );
-    const total = scores.reduce((acc, s) => acc + s.score, 0);
-    const rand = Math.random() * total;
-    let runningTotal = 0;
-    for (let i = 0; i < scores.length; i++) {
-      runningTotal += scores[i].score;
-      if (rand < runningTotal) {
-        console.log(`CHOSE TARGET: ${JSON.stringify(scores[i])}`);
-        return scores[i].playerNum;
-      }
-      console.log(
-        `SKIP ${total} ${rand} ${runningTotal} ${JSON.stringify(scores[i])}`
-      );
+    const choice = this.weightedRandomChoiceFromList({
+      list: scores,
+      logKey: "determineHuntingTarget",
+      scoreScaleFactor: 1,
+    });
+    if (choice) {
+      return choice.playerNum;
     }
-    console.log("FELL THROUGH");
+    console.log(`NO HUNTING TARGET FOUND: ${JSON.stringify(scores)}`);
+    return null;
   }
 
   moveTowardsPellet({ position, pelletPosition, targetState }) {
@@ -606,6 +601,11 @@ class BotStateMachine {
     }
   }
 
+  // Plan execution: based on the current plan, determine what to do
+  // This used to contain logic for changing plans and had lots of places where
+  // we could, for example, not pick a target to hunt. But I think it's nicer to handle that
+  // at the "plan" level (and add some randomness there) and make execution pretty
+  // straightforward
   maybeExecutePlan({
     now,
     pellets,
@@ -628,7 +628,7 @@ class BotStateMachine {
       this.smoothlyRandom({
         currentTime: now,
         stateKey: "lastRandomDirectionChange",
-        targetFrequency: 2500,
+        targetFrequency: 1500,
         runOnSuccess: () => {
           this.direction = randomDirection();
         },
@@ -644,25 +644,10 @@ class BotStateMachine {
       };
 
       if (!hasPellet()) {
-        this.smoothlyRandom({
-          currentTime: now,
-          stateKey: "lastEatTargetChoice",
-          targetFrequency: 400,
-          runOnSuccess: () => {
-            // console.log("PICKING TARGET");
-            const target = this.determineEatTarget({ position, pellets });
-            // console.log(
-            //   `TARGET: ${JSON.stringify(target)} | ${JSON.stringify(pellets[target.key])}`
-            // );
-            this.targetPelletState = { target, chosenDirection: null };
-          },
-        });
-      } else {
-        // console.log(`HAS PELLET: ${JSON.stringify(this.targetPelletState)}
-        // | ${JSON.stringify(pellets[this.targetPelletState.target.key])}
-        // | ${JSON.stringify(position)}
-        // `);
+        const target = this.determineEatTarget({ position, pellets });
+        this.targetPelletState = { target, chosenDirection: null };
       }
+
       if (hasPellet()) {
         this.moveTowardsPellet({
           position,
@@ -685,6 +670,12 @@ class BotStateMachine {
         },
       });
     } else if (this.plan === PLAN.HUNTING) {
+      // Hunting plan:
+      // * chomp aggressively
+      // * pick a target, if one doesn't exist
+      // * potentially pick a new target, if it's been a bit
+      // * pursue the target
+      // * potentially reorient towards the target, if it's been a bit
       this.maybeChomp({
         now,
         targetFrequency: TARGET_TIME_BETWEEN_CHOMPS_AGGRESSIVE,
@@ -699,21 +690,26 @@ class BotStateMachine {
         return !player.isEaten;
       };
       if (!hasTarget()) {
-        this.smoothlyRandom({
-          currentTime: now,
-          stateKey: "lastHuntTargetChoice",
-          targetFrequency: 200,
-          runOnSuccess: () => {
-            const target = this.determineHuntingTarget({
-              position,
-              playerPositions,
-            });
-            this.huntingState = { target, chosenDirection: null };
-          },
+        const target = this.determineHuntingTarget({
+          position,
+          playerPositions,
         });
+        this.huntingState = { target, chosenDirection: null };
       }
 
       if (hasTarget()) {
+        const canPickNewTarget = this.smoothlyRandom({
+          currentTime: now,
+          stateKey: "lastHuntTargetChange",
+          targetFrequency: 2250,
+        });
+        if (canPickNewTarget) {
+          const target = this.determineHuntingTarget({
+            position,
+            playerPositions,
+          });
+          this.huntingState = { target, chosenDirection: null };
+        }
         const player = playerPositions.find(
           (p) => p.playerNum === this.huntingState.target
         );
@@ -750,7 +746,13 @@ class BotStateMachine {
     if (superIsActive) {
       superState = thisBotIsSuper ? "am-super" : "other-bot-is-super";
     }
-    this.maybeUpdatePlan({ now, superState, position, playerPositions });
+    this.maybeUpdatePlan({
+      now,
+      superState,
+      superPlayerNum,
+      position,
+      playerPositions,
+    });
     this.maybeExecutePlan({
       now,
       pellets,
