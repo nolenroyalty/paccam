@@ -564,21 +564,21 @@ class GameEngine {
     });
   }
 
-  maybeDuplicate({ position, direction }) {
+  maybeDuplicate({ position, size }) {
     let dupeHorizontal = null;
     let dupeVertical = null;
     let dupeDiagonal = null;
     if (position.x < 0) {
       const dupeX = this.numSlots.horizontal + position.x;
       dupeHorizontal = { x: dupeX, y: position.y, dir: "from-right" };
-    } else if (position.x + PLAYER_SIZE_IN_SLOTS > this.numSlots.horizontal) {
+    } else if (position.x + size > this.numSlots.horizontal) {
       const dupeX = position.x - this.numSlots.horizontal;
       dupeHorizontal = { x: dupeX, y: position.y, dir: "from-left" };
     }
     if (position.y < 0) {
       const dupeY = this.numSlots.vertical + position.y;
       dupeVertical = { x: position.x, y: dupeY, dir: "from-bottom" };
-    } else if (position.y + PLAYER_SIZE_IN_SLOTS > this.numSlots.vertical) {
+    } else if (position.y + size > this.numSlots.vertical) {
       const dupeY = position.y - this.numSlots.vertical;
       dupeVertical = { x: position.x, y: dupeY, dir: "from-top" };
     }
@@ -606,10 +606,9 @@ class GameEngine {
       const state = this.playerStates[playerNum];
       if (playerNum !== null && state) {
         const position = this.playerStates[playerNum].position;
-        const direction = this.playerStates[playerNum].direction;
         const duped = this.maybeDuplicate({
           position,
-          direction,
+          size: PLAYER_SIZE_IN_SLOTS,
         });
         callback({ position, duped });
       }
@@ -1134,16 +1133,45 @@ class GameEngine {
     candidateSlotSize,
     candidateRadius,
   }) {
-    playerX = playerX + PLAYER_SIZE_IN_SLOTS / 2;
-    playerY = playerY + PLAYER_SIZE_IN_SLOTS / 2;
-    candidateX = candidateX + candidateSlotSize / 2;
-    candidateY = candidateY + candidateSlotSize / 2;
-    const distance = Math.sqrt(
-      (playerX - candidateX) ** 2 + (playerY - candidateY) ** 2
+    // kinda gnarly, but we need to account for dupes of the player and potentially
+    // candidate (if the candidate is also a player) when checking for overlaps
+    const positionsIncludingDupes = (position, size) => {
+      const positions = [{ x: position.x, y: position.y }];
+      const dupeObj = this.maybeDuplicate({
+        position,
+        size,
+      });
+      const dupeList = Object.values(dupeObj).filter((x) => x !== null);
+      positions.push(...dupeList.map((x) => ({ x: x.x, y: x.y })));
+      return positions;
+    };
+
+    const playerPositions = positionsIncludingDupes(
+      { x: playerX, y: playerY },
+      PLAYER_SIZE_IN_SLOTS
     );
-    // player size in slots is the *diameter*
-    // return distance < PLAYER_SIZE_IN_SLOTS / 2 + candidateRadius / 2;
-    return distance < PLAYER_SIZE_IN_SLOTS / 2 + candidateRadius;
+
+    const candidatePositions = positionsIncludingDupes(
+      { x: candidateX, y: candidateY },
+      candidateSlotSize
+    );
+
+    for (let i = 0; i < playerPositions.length; i++) {
+      playerX = playerPositions[i].x + PLAYER_SIZE_IN_SLOTS / 2;
+      playerY = playerPositions[i].y + PLAYER_SIZE_IN_SLOTS / 2;
+      for (let j = 0; j < candidatePositions.length; j++) {
+        candidateX = candidatePositions[j].x + candidateSlotSize / 2;
+        candidateY = candidatePositions[j].y + candidateSlotSize / 2;
+        const dist = Math.sqrt(
+          (playerX - candidateX) ** 2 + (playerY - candidateY) ** 2
+        );
+        if (dist < PLAYER_SIZE_IN_SLOTS / 2 + candidateRadius) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   updatePelletsForPosition({ startTime }) {

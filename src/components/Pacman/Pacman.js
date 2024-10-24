@@ -377,7 +377,8 @@ function Pacman({
               style={{
                 "--left": `${pos.x * slotSizePx}px`,
                 "--top": `${pos.y * slotSizePx}px`,
-                "--grayscale": grayScale,
+                // "--grayscale": grayScale,
+                "--grayscale": 0.6,
                 "--width": `${widthPx}px`,
                 "--pacman-x": pos.x,
                 "--pacman-y": pos.y,

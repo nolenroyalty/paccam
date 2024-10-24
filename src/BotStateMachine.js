@@ -44,24 +44,6 @@ const GAME_STATE = {
   OVER: "over",
 };
 
-const UPDATE_PLAN_EVERY_MS = (plan) => {
-  let base = 100;
-  let jitterPct = 0.05;
-  if (plan === PLAN.WAITING_FOR_START) {
-    base = 800;
-    jitterPct = 0.5;
-  } else if (plan === PLAN.FLEEING) {
-    base = 600;
-    jitterPct = 0.4;
-  }
-  if (jitterPct !== null) {
-    const rand = 2 * (Math.random() - 0.5);
-    return base * (1 + jitterPct * rand);
-  } else {
-    return base;
-  }
-};
-
 function randomDirection() {
   const rand = Math.random();
   if (rand < 0.25) {
@@ -90,6 +72,9 @@ class BotStateMachine {
     this.targetPelletState = null;
     this.huntingState = null;
   }
+
+  // these distance functions can potentially return negative results
+  // if a point is off the side of the screen. let's not worry about that too much.
 
   leftDistance({ me, them }) {
     // if we're to their right, the distance is just our loc minus their loc
@@ -135,15 +120,6 @@ class BotStateMachine {
     return { direction: this.direction, mouthIsOpen: this.mouthIsOpen };
   }
 
-  stateOrRandom({ state, howLikelyToRandom }) {
-    const rand = Math.random();
-    if (rand < howLikelyToRandom) {
-      return PLAN.MOVING_RANDOMLY;
-    } else {
-      return state;
-    }
-  }
-
   clearStateForOldPlan({ oldPlan }) {
     if (oldPlan === PLAN.EATING_DOTS) {
       this.targetPelletState = null;
@@ -176,12 +152,43 @@ class BotStateMachine {
     } else if (this.gameState === GAME_STATE.OVER) {
       // I think this doesn't ever come up, but whatever
       newPlan = PLAN.NOTHING;
-    } else if (superState === "am-super") {
+    } else if (superState === "am-super" && this.plan === PLAN.HUNTING) {
       // ideal logic here is like:
       // if I'm hunting and already have a target, stay with it for ~2.5 seconds
       // if I'm not hunting, aim to start hunting within a second
       // if I'm hunting and there's no good target, consider eating rando dots
-      newPlan = PLAN.HUNTING;
+      const shouldMoveToRandom = this.smoothlyRandom({
+        currentTime: now,
+        stateKey: "huntingMovedToRandom",
+        targetFrequency: 2750,
+        jitterFactor: 0.5,
+      });
+      if (shouldMoveToRandom) {
+        newPlan = PLAN.MOVING_RANDOMLY;
+      } else {
+        newPlan = PLAN.HUNTING;
+      }
+    } else if (
+      superState === "am-super" &&
+      this.plan === PLAN.MOVING_RANDOMLY
+    ) {
+      const shouldMoveToHunting = this.smoothlyRandom({
+        currentTime: now,
+        stateKey: "randomMovedToHunting",
+        targetFrequency: 350,
+      });
+      if (shouldMoveToHunting) {
+        newPlan = PLAN.HUNTING;
+      }
+    } else if (superState === "am-super" && this.plan === PLAN.EATING_DOTS) {
+      const shouldMoveToFlee = this.smoothlyRandom({
+        currentTime: now,
+        stateKey: "eatingMovedToHunting",
+        targetFrequency: 300,
+      });
+      if (shouldMoveToFlee) {
+        newPlan = PLAN.HUNTING;
+      }
     } else if (superState === "other-bot-is-super") {
       // this.moveToFleeOrRandom();
       newPlan = PLAN.FLEEING;
@@ -288,40 +295,35 @@ class BotStateMachine {
   // random direction, heavily weighted towards the direction that will
   // increase the distance.
   determineFleeDirection({ position: me, playerPositions, superPlayerNum }) {
-    // maybe this should account for the direction the player is facing?
     const them = playerPositions[superPlayerNum].position;
     const superPlayerDirection = playerPositions[superPlayerNum].direction;
-    const horizontalFactor =
-      superPlayerDirection === "left" || superPlayerDirection === "right"
-        ? 1.15
-        : 1;
-    const verticalFactor =
-      superPlayerDirection === "up" || superPlayerDirection === "down"
-        ? 1.15
-        : 1;
+    const rightScale = superPlayerDirection === "right" ? 1.2 : 1;
+    const leftScale = superPlayerDirection === "left" ? 1.2 : 1;
+    const upScale = superPlayerDirection === "up" ? 1.2 : 1;
+    const downScale = superPlayerDirection === "down" ? 1.2 : 1;
 
     const keys = [
       {
         direction: DIRECTION.LEFT,
-        score: this.leftDistance({ me, them }) * horizontalFactor,
+        score: this.leftDistance({ me, them }) * leftScale,
       },
       {
         direction: DIRECTION.RIGHT,
-        score: this.rightDistance({ me, them }) * horizontalFactor,
+        score: this.rightDistance({ me, them }) * rightScale,
       },
       {
         direction: DIRECTION.UP,
-        score: this.upDistance({ me, them }) * verticalFactor,
+        score: this.upDistance({ me, them }) * upScale,
       },
       {
         direction: DIRECTION.DOWN,
-        score: this.downDistance({ me, them }) * verticalFactor,
+        score: this.downDistance({ me, them }) * downScale,
       },
     ];
     return this.weightedRandomChoiceFromList({
       list: keys,
       logKey: "setFleeDirection",
-      scoreScaleFactor: 2.5,
+      scoreScaleFactor: 3,
     }).direction;
   }
 
@@ -365,17 +367,12 @@ class BotStateMachine {
         candidates.push(powerPellet);
       }
     }
-    const totalScore = candidates.reduce((acc, p) => acc + p.score, 0);
-    const rand = Math.random() * totalScore;
-    let runningTotal = 0;
-    for (let i = 0; i < candidates.length; i++) {
-      runningTotal += candidates[i].score;
-      if (rand < runningTotal) {
-        const x = candidates[i].x;
-        const y = candidates[i].y;
-        return { x, y, key: [x, y] };
-      }
-    }
+    const choice = this.weightedRandomChoiceFromList({
+      list: candidates,
+      logKey: "determineEatTarget",
+      scoreScaleFactor: 1,
+    });
+    return { x: choice.x, y: choice.y, key: [choice.x, choice.y] };
   }
 
   getMyDistanceToOtherPlayers({ playerPositions, position }) {
@@ -409,6 +406,9 @@ class BotStateMachine {
         return list[i];
       }
     }
+    console.log(
+      `NO RETURN?? ${logKey} ${rand} ${runningTotal} ${total} ${JSON.stringify(list)} | ${JSON.stringify(scaled)}`
+    );
   }
 
   alreadyOverlapsHorizontally({ me, them }) {
@@ -423,11 +423,20 @@ class BotStateMachine {
     return Math.min(up, down) <= OVERLAP_THRESHOLD;
   }
 
-  determineDirectionToTarget({ position, target, distanceScaleFactor }) {
+  determineDirectionToTarget({
+    position,
+    target,
+    distanceScaleFactor,
+    targetDirection = "no-direction",
+  }) {
     const left = this.leftDistance({ me: position, them: target });
     const right = this.rightDistance({ me: position, them: target });
     const up = this.upDistance({ me: position, them: target });
     const down = this.downDistance({ me: position, them: target });
+    const leftScale = targetDirection === DIRECTION.RIGHT ? 1.15 : 1;
+    const rightScale = targetDirection === DIRECTION.LEFT ? 1.15 : 1;
+    const upScale = targetDirection === DIRECTION.DOWN ? 1.15 : 1;
+    const downScale = targetDirection === DIRECTION.UP ? 1.15 : 1;
 
     // We want directions that will get us to the target most quickly (closer)
     // to be more desirable, so our score inverts the distance.
@@ -437,22 +446,22 @@ class BotStateMachine {
       {
         key: DIRECTION.LEFT,
         filterValue: Math.min(left, right),
-        score: this.numSlots.horizontal - left,
+        score: (this.numSlots.horizontal - left) * leftScale,
       },
       {
         key: DIRECTION.RIGHT,
         filterValue: Math.min(left, right),
-        score: this.numSlots.horizontal - right,
+        score: (this.numSlots.horizontal - right) * rightScale,
       },
       {
         key: DIRECTION.UP,
         filterValue: Math.min(up, down),
-        score: this.numSlots.vertical - up,
+        score: (this.numSlots.vertical - up) * upScale,
       },
       {
         key: DIRECTION.DOWN,
         filterValue: Math.min(up, down),
-        score: this.numSlots.vertical - down,
+        score: (this.numSlots.vertical - down) * downScale,
       },
     ].filter((d) => d.filterValue > OVERLAP_THRESHOLD);
 
@@ -480,6 +489,7 @@ class BotStateMachine {
     distanceScaleFactor,
     targetState,
     pickNewEvenIfAlreadyChoseDirection,
+    targetDirection = "no-direction",
   }) {
     let { chosenDirection } = targetState;
     let pickNew =
@@ -503,6 +513,7 @@ class BotStateMachine {
         position,
         target,
         distanceScaleFactor,
+        targetDirection,
       });
       if (chosenDirection === null) {
         targetState.chosenDirection = null;
@@ -717,6 +728,7 @@ class BotStateMachine {
           distanceScaleFactor: 2.5,
           targetState: this.huntingState,
           pickNewEvenIfAlreadyChoseDirection: canReorient,
+          targetDirection: player.direction,
         });
       }
     } else if (this.plan === PLAN.NOTHING) {
