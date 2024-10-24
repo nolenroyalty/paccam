@@ -1,4 +1,7 @@
-import { BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT } from "./constants";
+import {
+  BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT,
+  PLAYER_SIZE_IN_SLOTS,
+} from "./constants";
 
 // You need to open / close your mouth 3.5 times per second to get the full bonus.
 // humans don't do this, so we don't want our bots to play perfectly.
@@ -7,6 +10,8 @@ const TARGET_TIME_BETWEEN_CHOMPS =
 // but let them be a little more aggressive sometimes :)
 const TARGET_TIME_BETWEEN_CHOMPS_AGGRESSIVE =
   1000 / (BONUS_SLOTS_MOVED_PER_SECOND_WITH_MOUTH_MOVEMENT * 1.1);
+
+const PLAYER_RADIUS = PLAYER_SIZE_IN_SLOTS / 16;
 
 const PLAN = {
   WAITING_FOR_START: "waiting-for-start",
@@ -23,6 +28,11 @@ const DIRECTION = {
   LEFT: "left",
   RIGHT: "right",
 };
+
+const directionHorizontal = (direction) =>
+  direction === DIRECTION.LEFT || direction === DIRECTION.RIGHT;
+const directionVertical = (direction) =>
+  direction === DIRECTION.UP || direction === DIRECTION.DOWN;
 
 const GAME_STATE = {
   WAITING_FOR_START: "waiting-for-start",
@@ -88,6 +98,7 @@ class BotStateMachine {
     this.gameState = GAME_STATE.WAITING_FOR_START;
     this.lastChompTime = 0;
     this.smoothRandomState = {};
+    this.targetPelletState = null;
   }
 
   leftDistance({ me, them }) {
@@ -186,6 +197,7 @@ class BotStateMachine {
       // I think this doesn't ever come up, but whatever
       this.plan = PLAN.NOTHING;
     } else if (superState === "am-super") {
+      console.log("AM HUNTING");
       this.moveToHuntOrRandom();
     } else if (superState === "other-bot-is-super") {
       // this.moveToFleeOrRandom();
@@ -303,6 +315,97 @@ class BotStateMachine {
     }
   }
 
+  manhattanDistance(a, b) {
+    const left = this.leftDistance({ me: a, them: b });
+    const right = this.rightDistance({ me: a, them: b });
+    const up = this.upDistance({ me: a, them: b });
+    const down = this.downDistance({ me: a, them: b });
+    return Math.min(left, right) + Math.min(up, down);
+  }
+
+  // maybe this should treat distances < player radius as 0
+  determineEatTarget({ position, pellets }) {
+    const pelletValue = (pellet) => {
+      if (pellet.kind === "pellet") {
+        return 1;
+      } else if (pellet.kind === "fruit") {
+        return 3;
+      } else if (pellet.kind === "power-pellet") {
+        return 20;
+      } else {
+        throw new Error(`Unknown pellet kind: ${pellet.kind}`);
+      }
+    };
+
+    const scoredPellets = Object.values(pellets)
+      .filter((p) => p.enabled)
+      .map((p) => {
+        const dist = this.manhattanDistance(position, { x: p.x, y: p.y });
+        const score = pelletValue(p) / dist ** 3;
+        return { ...p, dist, score };
+      });
+    // inverse sort
+    scoredPellets.sort((a, b) => b.score - a.score);
+    let candidates = scoredPellets.slice(0, 6);
+    const hasPowerPellet = candidates.some((p) => p.kind === "power-pellet");
+    if (!hasPowerPellet) {
+      const powerPellet = scoredPellets.find((p) => p.kind === "power-pellet");
+      if (powerPellet) {
+        candidates = candidates.slice(0, 5);
+        candidates.push(powerPellet);
+      }
+    }
+    const totalScore = candidates.reduce((acc, p) => acc + p.score, 0);
+    const rand = Math.random() * totalScore;
+    let runningTotal = 0;
+    for (let i = 0; i < candidates.length; i++) {
+      runningTotal += candidates[i].score;
+      if (rand < runningTotal) {
+        const x = candidates[i].x;
+        const y = candidates[i].y;
+        return { x, y, key: [x, y] };
+      }
+    }
+  }
+
+  moveTowardsPellet({ position, pelletPosition }) {
+    const left = this.leftDistance({ me: position, them: pelletPosition });
+    const right = this.rightDistance({ me: position, them: pelletPosition });
+    const up = this.upDistance({ me: position, them: pelletPosition });
+    const down = this.downDistance({ me: position, them: pelletPosition });
+    const horizontal = Math.min(left, right);
+    const vertical = Math.min(up, down);
+
+    let { chosenDirection } = this.targetPelletState;
+    const horizontalCompleted =
+      chosenDirection !== null &&
+      horizontal <= PLAYER_RADIUS &&
+      directionHorizontal(chosenDirection);
+    const verticalCompleted =
+      chosenDirection !== null &&
+      vertical <= PLAYER_RADIUS &&
+      directionVertical(chosenDirection);
+    if (chosenDirection === null || horizontalCompleted || verticalCompleted) {
+      const keys = [
+        { key: DIRECTION.LEFT, value: left, min: horizontal },
+        { key: DIRECTION.RIGHT, value: right, min: horizontal },
+        { key: DIRECTION.UP, value: up, min: vertical },
+        { key: DIRECTION.DOWN, value: down, min: vertical },
+      ].filter((d) => d.min > PLAYER_RADIUS);
+      if (keys.length === 0) {
+        console.warn(
+          `moveTowardsPellet: No valid directions to move ${JSON.stringify(position)} ${JSON.stringify(pelletPosition)}`
+        );
+        return;
+      }
+      keys.sort((a, b) => a.value - b.value);
+      const { key } = keys[0];
+      chosenDirection = key;
+      this.targetPelletState.chosenDirection = chosenDirection;
+      this.direction = chosenDirection;
+    }
+  }
+
   maybeExecutePlan({
     now,
     pellets,
@@ -331,17 +434,50 @@ class BotStateMachine {
       // this.direction = randomDirection();
     } else if (this.plan === PLAN.EATING_DOTS) {
       this.maybeChomp({ now });
+      const hasPellet = () => {
+        if (this.targetPelletState === null) {
+          return false;
+        }
+        const { target } = this.targetPelletState;
+        return pellets[target.key] && pellets[target.key].enabled;
+      };
+
+      if (!hasPellet()) {
+        this.smoothlyRandom({
+          currentTime: now,
+          stateKey: "lastEatTargetChoice",
+          targetFrequency: 200,
+          runOnSuccess: () => {
+            console.log("PICKING TARGET");
+            const target = this.determineEatTarget({ position, pellets });
+            console.log(
+              `TARGET: ${JSON.stringify(target)} | ${JSON.stringify(pellets[target.key])}`
+            );
+            this.targetPelletState = { target, chosenDirection: null };
+          },
+        });
+      } else {
+        console.log(`HAS PELLET: ${JSON.stringify(this.targetPelletState)}
+        | ${JSON.stringify(pellets[this.targetPelletState.target.key])}
+        | ${JSON.stringify(position)}
+        `);
+      }
+      if (hasPellet()) {
+        this.moveTowardsPellet({
+          position,
+          pelletPosition: this.targetPelletState.target,
+        });
+      }
     } else if (this.plan === PLAN.FLEEING) {
-      // this.maybeOpenOrCloseMouth({ chance: 0.95 });
       this.maybeChomp({ now });
-      const shouldChangeDirection = this.smoothlyRandom({
+      this.smoothlyRandom({
         currentTime: now,
         stateKey: "lastFleeDirectionChange",
         targetFrequency: 510,
+        runOnSuccess: () => {
+          this.setFleeDirection({ position, playerPositions, superPlayerNum });
+        },
       });
-      if (shouldChangeDirection) {
-        this.setFleeDirection({ position, playerPositions, superPlayerNum });
-      }
     } else if (this.plan === PLAN.HUNTING) {
     } else if (this.plan === PLAN.NOTHING) {
     } else {
@@ -358,11 +494,10 @@ class BotStateMachine {
     superIsActive,
     superPlayerNum,
   }) {
-    const superState = thisBotIsSuper
-      ? "am-super"
-      : superIsActive
-        ? "other-bot-is-super"
-        : "not-super";
+    let superState = "not-super";
+    if (superIsActive) {
+      superState = thisBotIsSuper ? "am-super" : "other-bot-is-super";
+    }
     this.maybeUpdatePlan({ now, superState });
     this.maybeExecutePlan({
       now,

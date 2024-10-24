@@ -1832,7 +1832,7 @@ class GameEngine {
         const botState = playerState.botState;
         const superIsActive = this.superIsActive({ startTime });
         const thisBotIsSuper =
-          playerState.playerNum === this.superStatus.playerNum;
+          superIsActive && playerState.playerNum === this.superStatus.playerNum;
         const playerPositions = this.playerStates.map((x) => ({
           position: x.position,
           direction: x.direction,
