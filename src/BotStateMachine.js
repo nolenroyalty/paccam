@@ -312,10 +312,10 @@ class BotStateMachine {
   determineFleeDirection({ position: me, playerPositions, superPlayerNum }) {
     const them = playerPositions[superPlayerNum].position;
     const superPlayerDirection = playerPositions[superPlayerNum].direction;
-    const rightScale = superPlayerDirection === "right" ? 1.2 : 1;
-    const leftScale = superPlayerDirection === "left" ? 1.2 : 1;
-    const upScale = superPlayerDirection === "up" ? 1.2 : 1;
-    const downScale = superPlayerDirection === "down" ? 1.2 : 1;
+    const rightScale = superPlayerDirection === "right" ? 1.05 : 1;
+    const leftScale = superPlayerDirection === "left" ? 1.05 : 1;
+    const upScale = superPlayerDirection === "up" ? 1.05 : 1;
+    const downScale = superPlayerDirection === "down" ? 1.05 : 1;
 
     const keys = [
       {

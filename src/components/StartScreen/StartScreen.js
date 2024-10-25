@@ -191,7 +191,6 @@ function StartScreen({
           </a>
         </SubHead>
       </TitleSubheadWrapper>
-
       <CheckboxContainer
         numBoxes={4}
         onCheck={numHumansBoxChecked}
@@ -258,6 +257,7 @@ function StartScreen({
           </FadeInButton>
         )}
       </ButtonHolder>
+      <NoVideoLeaves>(video stays on your device)</NoVideoLeaves>
     </Wrapper>
   );
 }
@@ -288,6 +288,15 @@ const TitleSubheadWrapper = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+`;
+
+const NoVideoLeaves = styled.p`
+  font-size: 1rem;
+  font-family: "Arcade Classic";
+  word-spacing: 0.2rem;
+  color: ${COLORS.white};
+  text-align: center;
+  line-height: 1;
 `;
 
 const Title = styled.h2`

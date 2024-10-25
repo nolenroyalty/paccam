@@ -57,17 +57,17 @@ const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
 
 const TUTORIAL_DIRECTIVES = [
   ["left", "wait"],
-  // ["up", "wait"],
-  // ["right", "wait"],
-  // ["down", "wait"],
-  // ["left", "chomp"],
-  // ["up", "chomp"],
-  // ["right", "chomp"],
-  // ["down", "chomp"],
-  // ["left", "move"],
-  // ["up", "move"],
-  // ["right", "move"],
-  // ["down", "move"],
+  ["up", "wait"],
+  ["right", "wait"],
+  ["down", "wait"],
+  ["left", "chomp"],
+  ["up", "chomp"],
+  ["right", "chomp"],
+  ["down", "chomp"],
+  ["left", "move"],
+  ["up", "move"],
+  ["right", "move"],
+  ["down", "move"],
 ];
 
 const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ playerCount }) => {
