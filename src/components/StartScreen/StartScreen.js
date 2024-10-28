@@ -1,6 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import Button from "../Button";
+import UnstyledButton from "../UnstyledButton";
 import { zIndex1 } from "../../zindex";
 import { WAITING_FOR_PLAYER_SELECT, WAITING_FOR_VIDEO } from "../../STATUS";
 import { COLORS } from "../../COLORS";
@@ -26,8 +27,8 @@ function StartScreen({
   const [allowMorePlayers, setAllowMorePlayers] = React.useState(
     window.localStorage.getItem("allowMorePlayers") === "true"
   );
-  const [speculativelyHighlighted, _setSpeculativelyHighlighted] =
-    React.useState({ CPUs: null, Humans: null });
+  console.log(`NUM HUMANS: ${numHumans}`);
+  console.log(`NUM BOTS: ${numBots}`);
   const [hideVideoButton, setHideVideoButton] = React.useState(false);
   const [hidingHowToPlay, setHidingHowToPlay] = React.useState(false);
   const [aboutToRunTutorial, setAboutToRunTutorial] = React.useState(false);
@@ -46,63 +47,30 @@ function StartScreen({
     }, 100);
   }, []);
 
-  const setSpeculativelyHighlighted = React.useCallback(
-    ({ count, kind }) => {
-      if (kind === "CPUs") {
-        const humans = Math.min(MAX_PLAYERS - count, numHumans);
-        const cpus = count === numBots ? count - 1 : count;
-        _setSpeculativelyHighlighted((prev) => ({
-          ...prev,
-          CPUs: cpus,
-          Humans: humans,
-        }));
-      } else if (kind === "Humans") {
-        const cpus = Math.min(MAX_PLAYERS - count, numBots);
-        const humans = count === numHumans ? count - 1 : count;
-        _setSpeculativelyHighlighted((prev) => ({
-          ...prev,
-          CPUs: cpus,
-          Humans: humans,
-        }));
-      } else {
-        _setSpeculativelyHighlighted({
-          clickedThisCycle: false,
-          CPUs: null,
-          Humans: null,
-        });
-      }
-    },
-    [numBots, numHumans]
-  );
-
-  const numHumansBoxChecked = React.useCallback(
-    (count) => {
+  const updateNumHumans = React.useCallback(
+    (delta) => {
       let _numBots = null;
+      let count = numHumans + delta;
+      count = Math.min(MAX_PLAYERS, Math.max(0, count));
       if (count + numBots > MAX_PLAYERS) {
         _numBots = MAX_PLAYERS - count;
       }
       setNumPlayers({ numHumans: count, numBots: _numBots });
-      setSpeculativelyHighlighted((prev) => ({
-        ...prev,
-        clickedThisCycle: true,
-      }));
     },
-    [numBots, setNumPlayers, setSpeculativelyHighlighted]
+    [numBots, numHumans, setNumPlayers]
   );
 
-  const numBotsBoxChecked = React.useCallback(
-    (count) => {
+  const updateNumBots = React.useCallback(
+    (delta) => {
       let _numHumans = null;
-      if (numHumans + count > MAX_PLAYERS) {
+      let count = numBots + delta;
+      count = Math.min(MAX_PLAYERS, Math.max(0, count));
+      if (count + numHumans > MAX_PLAYERS) {
         _numHumans = MAX_PLAYERS - count;
       }
       setNumPlayers({ numHumans: _numHumans, numBots: count });
-      setSpeculativelyHighlighted((prev) => ({
-        ...prev,
-        clickedThisCycle: true,
-      }));
     },
-    [numHumans, setNumPlayers, setSpeculativelyHighlighted]
+    [numBots, numHumans, setNumPlayers]
   );
 
   const startGame = React.useCallback(() => {
@@ -183,24 +151,16 @@ function StartScreen({
           </a>
         </SubHead>
       </TitleSubheadWrapper>
-      <CheckboxContainer
-        numBoxes={4}
-        onCheck={numHumansBoxChecked}
-        currentCount={numHumans}
-        allowMoreThan2={allowMorePlayers}
-        speculativelyHighlighted={speculativelyHighlighted}
-        setSpeculativelyHighlighted={setSpeculativelyHighlighted}
-        kind="Humans"
+      <PlusMinusNumber
+        label={"Humans"}
+        number={numHumans}
+        updateNumber={updateNumHumans}
         videoEnabled={videoEnabled}
       />
-      <CheckboxContainer
-        numBoxes={4}
-        onCheck={numBotsBoxChecked}
-        currentCount={numBots}
-        allowMoreThan2={true}
-        speculativelyHighlighted={speculativelyHighlighted}
-        setSpeculativelyHighlighted={setSpeculativelyHighlighted}
-        kind="CPUs"
+      <PlusMinusNumber
+        label={"Bots"}
+        number={numBots}
+        updateNumber={updateNumBots}
         videoEnabled={videoEnabled}
       />
       <AllowMorePlayers
@@ -210,6 +170,7 @@ function StartScreen({
         setNumPlayers={setNumPlayers}
         videoEnabled={videoEnabled}
       />
+
       <EnableOnlinePlay videoEnabled={videoEnabled} />
       <ButtonHolder>
         {
@@ -248,6 +209,68 @@ function StartScreen({
       </ButtonHolder>
       <NoVideoLeaves>(video stays on your device)</NoVideoLeaves>
     </Wrapper>
+  );
+}
+
+const PlusMinusOuterWrapper = styled.div`
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  opacity: var(--opacity);
+  transition: opacity 0.5s ease;
+`;
+
+const PlusMinusWrapper = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background-color: ${COLORS.pacmanYellow};
+  border-radius: 8px;
+  flex: 1;
+  max-width: min(180px, 50%);
+`;
+
+const PlusMinusButton = styled(UnstyledButton)`
+  padding: 0.5rem;
+  color: ${(p) => (p.disabled ? COLORS.black : COLORS.black)};
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  justify-content: ${(p) => (p.$left ? "flex-start" : "flex-end")};
+  opacity: ${(p) => (p.disabled ? 0.3 : 1)};
+`;
+
+const PlusMinusText = styled.span`
+  font-size: 1.5rem;
+  color: var(--color);
+  font-family: "Arcade Classic";
+`;
+
+function PlusMinusNumber({ label, number, updateNumber, videoEnabled }) {
+  return (
+    <PlusMinusOuterWrapper style={{ "--opacity": videoEnabled ? 1 : 0.5 }}>
+      <PlusMinusText style={{ "--color": COLORS.white }}>{label}</PlusMinusText>
+      <PlusMinusWrapper>
+        <PlusMinusButton
+          $left={true}
+          onClick={() => updateNumber(-1)}
+          disabled={!videoEnabled || number === 0}
+        >
+          <Icons.Minus size="24px" />
+        </PlusMinusButton>
+        <PlusMinusText style={{ "--color": COLORS.black }}>
+          {number}
+        </PlusMinusText>
+        <PlusMinusButton
+          $left={false}
+          onClick={() => updateNumber(1)}
+          disabled={!videoEnabled || number === MAX_PLAYERS}
+        >
+          <Icons.Plus size="24px" />
+        </PlusMinusButton>
+      </PlusMinusWrapper>
+    </PlusMinusOuterWrapper>
   );
 }
 
@@ -310,79 +333,8 @@ const SubHead = styled.h3`
   }
 `;
 
-function CheckboxContainer({
-  currentCount,
-  kind,
-  numBoxes,
-  onCheck,
-  allowMoreThan2,
-  speculativelyHighlighted,
-  setSpeculativelyHighlighted,
-  videoEnabled,
-}) {
-  const enabled = React.useCallback(
-    (x) => (x <= 2 || allowMoreThan2) && videoEnabled,
-    [allowMoreThan2, videoEnabled]
-  );
-
-  const updateSpeculativelyHighlighted = React.useCallback(
-    ({ count, kind }) => {
-      setSpeculativelyHighlighted({ count, kind });
-    },
-    [setSpeculativelyHighlighted]
-  );
-
-  const determineBackgroundColor = React.useCallback(
-    (count) => {
-      // checked is handled in CSS
-      const toSpeculativelyHighlight = speculativelyHighlighted[kind];
-      const isEnabled = enabled(count);
-      if (!isEnabled) {
-        return COLORS.grey;
-      }
-      if (toSpeculativelyHighlight === null) {
-        return count <= currentCount ? COLORS.pacmanYellow : COLORS.white;
-      } else {
-        if (
-          count <= toSpeculativelyHighlight &&
-          !speculativelyHighlighted.clickedThisCycle
-        ) {
-          return COLORS.pacmanYellow;
-        } else {
-          return isEnabled ? COLORS.white : COLORS.grey;
-        }
-      }
-    },
-    [speculativelyHighlighted, kind, enabled, currentCount]
-  );
-
-  return (
-    <CheckboxContainerWrapper $videoEnabled={videoEnabled}>
-      <CheckboxContainerLabel>
-        {kind === "CPUs" ? "Bots" : "Humans"}
-      </CheckboxContainerLabel>
-      <CheckboxGroupHolder>
-        {[...Array(numBoxes)].map((_, i) => (
-          <SingleCheckbox
-            style={{ "--background-color": determineBackgroundColor(i + 1) }}
-            key={i}
-            myCheckCount={i + 1}
-            checkCount={currentCount}
-            onMouseEnter={() =>
-              updateSpeculativelyHighlighted({ count: i + 1, kind: kind })
-            }
-            onMouseLeave={() =>
-              updateSpeculativelyHighlighted({ count: 0, kind: null })
-            }
-            onCheck={onCheck}
-            disabled={!enabled(i + 1)}
-          />
-        ))}
-      </CheckboxGroupHolder>
-    </CheckboxContainerWrapper>
-  );
-}
-
+// checkbox code is a little weird because player select used to rely
+// on checkboxes as well. haven't bothered to disentagle it.
 const CheckboxContainerWrapper = styled.div`
   display: flex;
   flex-direction: row;
@@ -404,38 +356,6 @@ const CheckboxContainerLabel = styled.span`
   flex-direction: row;
   gap: 0.5rem;
 `;
-
-const CheckboxGroupHolder = styled.div`
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
-`;
-
-function SingleCheckbox({
-  checkCount,
-  myCheckCount,
-  onCheck,
-  onHover,
-  ...rest
-}) {
-  const onCheckedChange = React.useCallback(
-    (e) => {
-      if (checkCount === myCheckCount) {
-        onCheck(myCheckCount - 1);
-      } else {
-        onCheck(myCheckCount);
-      }
-    },
-    [checkCount, myCheckCount, onCheck]
-  );
-  return (
-    <CheckboxRoot
-      checked={checkCount >= myCheckCount}
-      onCheckedChange={onCheckedChange}
-      {...rest}
-    ></CheckboxRoot>
-  );
-}
 
 const CheckboxRoot = styled(Checkbox.Root)`
   all: unset;
@@ -630,4 +550,4 @@ const FadeInButton = styled(Button)`
   }
 `;
 
-export default StartScreen;
+export default React.memo(StartScreen);

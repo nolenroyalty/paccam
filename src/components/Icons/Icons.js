@@ -106,6 +106,43 @@ export const X = ({ size }) => (
   </svg>
 );
 
+export const Plus = ({ size }) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  );
+};
+
+export const Minus = ({ size }) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  );
+};
+
 export const Link = styled.a`
   display: inline-flex;
   vertical-align: middle;
@@ -118,5 +155,5 @@ export const Link = styled.a`
   }
 `;
 
-const Icons = { Mail, Code, Question, Dollar, Link };
+const Icons = { Mail, Code, Question, Dollar, Link, Plus, Minus, X, BoxX };
 export default Icons;

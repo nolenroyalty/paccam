@@ -208,7 +208,7 @@ function App() {
     // gameRef.current.startGameLoop();
 
     gameRef.current.resetState();
-    setGameState((state) => ({ ...state, numHumans: 0, numBots: null }));
+    setGameState((state) => ({ ...state, numHumans: 0, numBots: 0 }));
     gameRef.current.moveToWaitingForPlayerSelect();
   }, []);
 
