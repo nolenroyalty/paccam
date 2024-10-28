@@ -308,7 +308,13 @@ function Pacman({
 
   const savedBotState = React.useRef(false);
   React.useEffect(() => {
-    if (isHuman || savedBotState.current) {
+    if (isHuman) {
+      // if we don't clear state here, we can run into a bug where we show a human
+      // face for a bot (because we don't re-take our picture of the bot when
+      // swapping between humans and bots repeatedly)
+      savedBotState.current = false;
+      return;
+    } else if (savedBotState.current) {
       return;
     }
     savedBotState.current = true;
