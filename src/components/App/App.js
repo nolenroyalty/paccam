@@ -139,12 +139,6 @@ function App() {
     [gameState.numBots, gameState.numHumans]
   );
 
-  // const setnumBots = React.useCallback(async (numBots) => {
-  //   // await gameRef.current.initNumComputers(numBots);
-  //   setGameState((state) => ({ ...state, numBots }));
-  //   // gameRef.current.startGameLoop();
-  // }, []);
-
   const nullOutNumPlayers = React.useCallback(() => {
     setGameState((state) => ({ ...state, numHumans: 0, numBots: 0 }));
   }, []);
