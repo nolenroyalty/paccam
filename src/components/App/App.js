@@ -20,6 +20,22 @@ function App() {
   const videoActuallyStarted = React.useRef(null);
   const [videoActuallyStartedState, setVideoActuallyStartedState] =
     React.useState(false);
+  const [lastUsedPlayerSet, setLastUsedPlayerSet] = React.useState(() => {
+    const fromStorage = window.localStorage.getItem("lastUsedPlayerSet");
+    try {
+      const js = JSON.parse(fromStorage);
+      if (js.numHumans !== null && js.numBots !== null) {
+        console.log(`loaded last used player set: ${JSON.stringify(js)}`);
+        return js;
+      } else {
+        console.log(`invalid player set from storage: ${fromStorage}`);
+        return DEFAULT_PLAYER_SET;
+      }
+    } catch (e) {
+      console.log(`error loading player set from storage: ${e}`);
+      return DEFAULT_PLAYER_SET;
+    }
+  });
   const [tutorialInstruction, setTutorialInstruction] = React.useState([]);
   const [gameState, setGameState] = React.useState({
     numHumans: 0,
@@ -53,6 +69,17 @@ function App() {
     }
     gameRef.current.setIgnoreMissingFaces(ignoreMissingFaces);
   }, [ignoreMissingFaces]);
+
+  React.useEffect(() => {
+    console.log(
+      "setting last used player set: ",
+      JSON.stringify(lastUsedPlayerSet)
+    );
+    window.localStorage.setItem(
+      "lastUsedPlayerSet",
+      JSON.stringify(lastUsedPlayerSet)
+    );
+  }, [lastUsedPlayerSet]);
 
   // alt-f to toggle ignore missing results
   React.useEffect(() => {
@@ -113,6 +140,7 @@ function App() {
         ...state,
         ...patch,
       }));
+      setLastUsedPlayerSet({ numHumans: _numHumans, numBots: _numBots });
       gameRef.current.startGameLoop();
     },
     [gameState.numBots, gameState.numHumans]
@@ -130,7 +158,10 @@ function App() {
         resolve();
         setVideoActuallyStartedState(true);
         videoRef.current.onplaying = null;
-        setNumPlayers(DEFAULT_PLAYER_SET);
+        console.log(
+          `last used player set: ${JSON.stringify(lastUsedPlayerSet)}`
+        );
+        setNumPlayers(lastUsedPlayerSet);
         const restartIfPaused = () => {
           console.warn(
             "Video paused - this can happen if you take your airpods out! Restarting..."
@@ -146,7 +177,7 @@ function App() {
       videoRef.current.onplaying = f;
     });
     videoActuallyStarted.current = promise;
-  }, [setNumPlayers]);
+  }, [lastUsedPlayerSet, setNumPlayers]);
 
   const startGame = React.useCallback(() => {
     setGameState((state) => ({ ...state, running: true }));
