@@ -14,6 +14,79 @@ import {
   COMPLETED_ROUND,
 } from "../../STATUS";
 
+const PelletItem = React.memo(
+  ({ x, y, kind, enabled, delay, slotSizePx, slotWidth }) => {
+    const imgSrc = React.useMemo(() => {
+      if (kind === "pellet") {
+        return "/aseprite/pellet.png";
+      } else if (kind === "fruit") {
+        return "/aseprite/strawberry2.png";
+      } else if (kind === "power-pellet") {
+        return "/aseprite/powerpellet.png";
+      }
+      throw new Error(`Unknown pellet kind: ${kind}`);
+    }, [kind]);
+
+    const wrapperStyle = React.useMemo(() => {
+      return {
+        "--left": `${slotSizePx * x}px`,
+        "--top": `${slotSizePx * y}px`,
+        "--opacity": enabled ? 1 : 0,
+        "--scale": enabled ? null : 0,
+        "--pellet-x": x,
+        "--pellet-y": y,
+        "--pellet-width": slotWidth + "%",
+      };
+    }, [enabled, slotSizePx, slotWidth, x, y]);
+
+    const imgStyle = React.useMemo(() => {
+      return {
+        "--delay": delay + "s",
+        "--size-in-slots": pelletSizeInSlots(kind),
+      };
+    }, [delay, kind]);
+
+    return (
+      <PelletWrapper style={wrapperStyle}>
+        <PelletImg
+          $enabled={enabled}
+          data-x={x}
+          alt=""
+          src={imgSrc}
+          style={imgStyle}
+        ></PelletImg>
+      </PelletWrapper>
+    );
+  }
+);
+
+const PelletContainer = React.memo(({ slotSizePx, slotWidth, gameRef }) => {
+  const [pellets, setPellets] = React.useState([]);
+  const id = React.useId();
+  React.useEffect(() => {
+    console.log("subscribing to pellet state");
+    let game = gameRef.current;
+    game.subscribeToPellets({ callback: setPellets, id });
+    return () => {
+      console.log("unsubscribing from pellet state");
+      game.unsubscribeFromPellets({ id });
+    };
+  }, [gameRef, id]);
+
+  return pellets.map((pellet) => (
+    <PelletItem
+      key={`${pellet.x}-${pellet.y}`}
+      slotSizePx={slotSizePx}
+      slotWidth={slotWidth}
+      x={pellet.x}
+      y={pellet.y}
+      kind={pellet.kind}
+      enabled={pellet.enabled}
+      delay={pellet.delay}
+    />
+  ));
+});
+
 function Playfield({
   videoRef,
   gameRef,
@@ -24,7 +97,6 @@ function Playfield({
   addPacmanResultScreenState,
   debugInfo,
 }) {
-  const [pellets, setPellets] = React.useState([]);
   const [initializedPlayfield, setInitializedPlayfield] = React.useState(false);
   const [playfieldSize, setPlayfieldSize] = React.useState({
     shrinkVertical: 0,
@@ -100,7 +172,6 @@ function Playfield({
       vertical: _playfieldSize.verticalSlots,
       slotSizePx: slotSizePx,
     });
-    gameRef.current.subscribeToPellets(setPellets);
   }, [gameRef, initializedPlayfield, playfieldSize]);
 
   const opacity =
@@ -178,43 +249,11 @@ function Playfield({
                 />
               );
             })}
-        {pellets.map((pellet) => {
-          let src;
-          let sizeInSlots = pelletSizeInSlots(pellet.kind);
-          if (pellet.kind === "pellet") {
-            src = "/aseprite/pellet.png";
-          } else if (pellet.kind === "fruit") {
-            src = "/aseprite/strawberry2.png";
-          } else if (pellet.kind === "power-pellet") {
-            src = "/aseprite/powerpellet.png";
-          } else {
-            throw new Error(`Unknown pellet kind: ${pellet.kind}`);
-          }
-          return (
-            <PelletWrapper
-              key={`${pellet.x}-${pellet.y}`}
-              style={{
-                "--left": `${slotSizePx * pellet.x}px`,
-                "--top": `${slotSizePx * pellet.y}px`,
-                "--opacity": pellet.enabled ? 1 : 0,
-                "--scale": pellet.enabled ? null : 0,
-                "--pellet-x": pellet.x,
-                "--pellet-y": pellet.y,
-                "--pellet-width": slotWidth + "%",
-              }}
-            >
-              <Pellet
-                data-x={pellet.x}
-                alt=""
-                src={src}
-                style={{
-                  "--delay": pellet.delay + "s",
-                  "--size-in-slots": sizeInSlots,
-                }}
-              ></Pellet>
-            </PelletWrapper>
-          );
-        })}
+        <PelletContainer
+          slotSizePx={slotSizePx}
+          slotWidth={slotWidth}
+          gameRef={gameRef}
+        />
       </InnerRelativeWrapper>
       <BorderBlock style={borderBlockStyle} />
     </Wrapper>
@@ -252,21 +291,21 @@ const InnerRelativeWrapper = styled.div`
   /* overflow: hidden; */
 `;
 
-const PopIn = keyframes`
-  0% {
-    transform: scale(0) translateY(200%);
+const PelletImg = styled.img`
+  @keyframes PelletImgPopIn {
+    0% {
+      transform: scale(0) translateY(200%);
+    }
+
+    60% {
+      transform: scale(1.2);
+    }
+
+    100% {
+      transform: scale(1);
+    }
   }
 
-  60% {
-    transform: scale(1.2);
-  }
-
-  100% {
-    transform: scale(1);
-  }
-`;
-
-const Pellet = styled.img`
   display: inline-block;
   width: calc(var(--size-in-slots) * 100%);
 
@@ -275,7 +314,12 @@ const Pellet = styled.img`
     opacity 0.5s ease-out,
     transform 0.3s ease-out;
 
-  animation: ${PopIn} 0.75s backwards var(--delay);
+  // we flip our animation like this so that the delay for the animation
+  // only kicks in when pellets are enabled. The only alternative I could
+  // think of is swapping the key for a pellet, which results in a lot of
+  // re-rendering of components, causing a loading hitch.
+  animation: ${(p) => (p.$enabled ? "PelletImgPopIn" : "none")} 0.75s backwards
+    var(--delay);
   transform: scale(var(--scale));
   image-rendering: pixelated; /* Chrome, Firefox */
   image-rendering: -moz-crisp-edges; /* Firefox */

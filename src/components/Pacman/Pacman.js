@@ -294,7 +294,8 @@ function Pacman({
       spriteAlpha: 1,
       spriteKind: NORMAL,
     });
-    const faceCapture = tempCanvas.toDataURL("image/jpeg", 0.8);
+    // const faceCapture = tempCanvas.toDataURL("image/jpeg", 0.8);
+    const faceCapture = tempCanvas.toDataURL("image/png");
     addPacmanResultScreenState({ playerNum, faceCapture });
     largestMouthSaved.current = maxJawState;
   }, [

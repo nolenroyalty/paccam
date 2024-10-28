@@ -28,7 +28,7 @@ const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_TRACKING_CONFIDENCE = 0.3;
 const MIN_SUPPRESSION_THRESHOLD = 0.1;
 
-const SECONDS_IN_ROUND = 10; // 30
+const SECONDS_IN_ROUND = 5; // 30
 const COUNT_IN_TIME = 3; // 3
 
 // this was 0.48
@@ -38,7 +38,6 @@ const NOSE_BASE_LOOK_UP_THRESHOLD = 0.42;
 const NOSE_BASE_LOOK_DOWN_THRSEHOLD = 0.6;
 const MINIMUM_NOSE_UPNESS = 0.33;
 const MAXIMUM_NOSE_DOWNNESS = 0.73;
-const RANDOM_PELLETS = true;
 const SPAWN_STRAWBERRIES = true;
 const SPECIAL_STARTING_SPAWN_CHANCE = 0.05;
 const SPECIAL_RESPAWN_CHANCE = 0.15; // 0.2
@@ -247,6 +246,7 @@ class GameEngine {
 
   initNumSlots(numSlots) {
     this.numSlots = numSlots;
+    this.generatePellets();
   }
 
   _initSpawnSupersAfterThisManyEats() {
@@ -650,15 +650,21 @@ class GameEngine {
     if (singleCallback) {
       singleCallback(pos);
     } else {
-      this.pelletConsumers.forEach((callback) => {
+      this.pelletConsumers.forEach(({ callback, id }) => {
         callback(Object.values(pos));
       });
     }
   }
 
-  subscribeToPellets(callback) {
-    this.pelletConsumers.push(callback);
+  subscribeToPellets({ callback, id }) {
+    this.pelletConsumers.push({ callback, id });
     this.updatePelletConsumers({ singleCallback: callback });
+  }
+
+  unsubscribeFromPellets({ id }) {
+    this.pelletConsumers = this.pelletConsumers.filter(
+      (consumer) => consumer.id !== id
+    );
   }
 
   updateScoreConsumers({ singleCallback = null } = {}) {
@@ -699,7 +705,7 @@ class GameEngine {
   }
 
   resetState() {
-    this.pelletsByPosition = {};
+    this.generatePellets();
     this.playerStates = [];
     this.superStatus = { playerNum: null, endSuperAt: null };
     this.numPlayers = null;
@@ -737,6 +743,12 @@ class GameEngine {
     );
   }
 
+  // This generates pellets but does not enable any of them.
+  // We have a separate step (when the timer starts) where we enable
+  // pellets marked as "willEnable"
+  // By doing this, we reduce the amount of stuff that react has to re-render
+  // while the game is running.
+  // This code should be called once per game round.
   generatePellets() {
     if (this.numSlots === null) {
       throw new Error("BUG: numSlots is not set.");
@@ -757,56 +769,58 @@ class GameEngine {
         ? this.numSlots.vertical
         : this.numSlots.vertical - 1;
 
-    if (RANDOM_PELLETS) {
-      for (let x = startHorizontal; x < endHorizontal; x += 1) {
-        for (let y = startVertical; y < endVertical; y += 1) {
-          let neighborCount = 0;
-          for (let dx = -1; dx <= 1; dx += 2) {
-            for (let dy = -1; dy <= 1; dy += 2) {
-              if (pelletsByPosition[[x + dx, y + dy]]?.enabled) {
-                neighborCount += 1;
-              }
+    for (let x = startHorizontal; x < endHorizontal; x += 1) {
+      for (let y = startVertical; y < endVertical; y += 1) {
+        let neighborCount = 0;
+        for (let dx = -1; dx <= 1; dx += 2) {
+          for (let dy = -1; dy <= 1; dy += 2) {
+            if (pelletsByPosition[[x + dx, y + dy]]?.enabled) {
+              neighborCount += 1;
             }
           }
-          const baseChance = 0.4;
-          const chance = baseChance - neighborCount * 0.1;
-          const makeIt = Math.random() < chance;
-          const delay = Math.random() * 1.75;
-          let kind;
-          // we always spawn berries at the start
-          if (SPAWN_STRAWBERRIES) {
-            const forceThisKind = "fruit";
-            kind =
-              Math.random() < SPECIAL_STARTING_SPAWN_CHANCE
-                ? forceThisKind
-                : "pellet";
-          } else {
-            kind = "pellet";
-          }
-          const p = { x, y, enabled: makeIt, delay, kind: kind };
-          pelletsByPosition[[x, y]] = p;
         }
-      }
-    } else {
-      let slotX = 1;
-      const pellets = [];
-      while (slotX < this.numSlots.horizontal) {
-        let slotY = 1;
-        while (slotY < this.numSlots.vertical) {
-          const delay = Math.random() * 1.75;
-          pellets.push({
-            x: slotX,
-            y: slotY,
-            enabled: slotX % 2 === 1 && slotY % 2 === 1,
-            delay,
-          });
-          slotY += 2;
+        const baseChance = 0.4;
+        const chance = baseChance - neighborCount * 0.1;
+        const makeIt = Math.random() < chance;
+        const delay = Math.random() * 1.75;
+        let kind;
+        // we always spawn berries at the start
+        if (SPAWN_STRAWBERRIES) {
+          const forceThisKind = "fruit";
+          kind =
+            Math.random() < SPECIAL_STARTING_SPAWN_CHANCE
+              ? forceThisKind
+              : "pellet";
+        } else {
+          kind = "pellet";
         }
-        slotX += 2;
+        const p = {
+          x,
+          y,
+          wilEnable: makeIt,
+          enabled: false,
+          delay,
+          kind: kind,
+        };
+        pelletsByPosition[[x, y]] = p;
       }
     }
     this.pelletsByPosition = pelletsByPosition;
 
+    this.updatePelletConsumers();
+  }
+
+  enableRelevantPellets() {
+    this.pelletsByPosition = Object.entries(this.pelletsByPosition).reduce(
+      (acc, [key, pellet]) => {
+        if (pellet.wilEnable) {
+          pellet.enabled = true;
+        }
+        acc[key] = pellet;
+        return acc;
+      },
+      {}
+    );
     this.updatePelletConsumers();
   }
 
@@ -1525,7 +1539,6 @@ class GameEngine {
   }
 
   movePlayersToStartingLocation() {
-    console.log("yo");
     const startTime = performance.now();
     const totalTime = (COUNT_IN_TIME * 1000) / 1.15;
     const endTime = startTime + totalTime;
@@ -1776,11 +1789,11 @@ class GameEngine {
     // we need it.
     const z = new Audio(this.sounds.start.src);
     z.play();
-    // this.movePlayersToStartingLocation();
+    this.movePlayersToStartingLocation();
 
     const intervalId = setInterval(() => {
       if (this.time === "starting") {
-        this.generatePellets();
+        this.enableRelevantPellets();
         this.time = COUNT_IN_TIME;
       } else {
         this.time -= 1;

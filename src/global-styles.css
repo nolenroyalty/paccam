@@ -84,4 +84,5 @@ h6 {
   font-weight: 400;
   src: url("/static/fonts/arcade_classic_2/ARCADECLASSIC.ttf")
     format("truetype");
+  font-display: block;
 }
