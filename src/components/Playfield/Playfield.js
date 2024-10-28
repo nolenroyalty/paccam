@@ -15,7 +15,7 @@ import {
 } from "../../STATUS";
 
 const PelletItem = React.memo(
-  ({ x, y, kind, enabled, delay, slotSizePx, slotWidth }) => {
+  ({ x, y, kind, enabled, delay, slotSizePx, slotWidth, status }) => {
     const imgSrc = React.useMemo(() => {
       if (kind === "pellet") {
         return "/aseprite/pellet.png";
@@ -43,8 +43,16 @@ const PelletItem = React.memo(
       return {
         "--delay": delay + "s",
         "--size-in-slots": pelletSizeInSlots(kind),
+        "--opacity-speed":
+          status === COUNTING_IN_ROUND || status === RUNNING_ROUND
+            ? "0.5s"
+            : "0s",
+        "--transform-speed":
+          status === COUNTING_IN_ROUND || status === RUNNING_ROUND
+            ? "0.3s"
+            : "0s",
       };
-    }, [delay, kind]);
+    }, [delay, kind, status]);
 
     return (
       <PelletWrapper style={wrapperStyle}>
@@ -60,32 +68,35 @@ const PelletItem = React.memo(
   }
 );
 
-const PelletContainer = React.memo(({ slotSizePx, slotWidth, gameRef }) => {
-  const [pellets, setPellets] = React.useState([]);
-  const id = React.useId();
-  React.useEffect(() => {
-    console.log("subscribing to pellet state");
-    let game = gameRef.current;
-    game.subscribeToPellets({ callback: setPellets, id });
-    return () => {
-      console.log("unsubscribing from pellet state");
-      game.unsubscribeFromPellets({ id });
-    };
-  }, [gameRef, id]);
+const PelletContainer = React.memo(
+  ({ slotSizePx, slotWidth, gameRef, status }) => {
+    const [pellets, setPellets] = React.useState([]);
+    const id = React.useId();
+    React.useEffect(() => {
+      console.log("subscribing to pellet state");
+      let game = gameRef.current;
+      game.subscribeToPellets({ callback: setPellets, id });
+      return () => {
+        console.log("unsubscribing from pellet state");
+        game.unsubscribeFromPellets({ id });
+      };
+    }, [gameRef, id]);
 
-  return pellets.map((pellet) => (
-    <PelletItem
-      key={`${pellet.x}-${pellet.y}`}
-      slotSizePx={slotSizePx}
-      slotWidth={slotWidth}
-      x={pellet.x}
-      y={pellet.y}
-      kind={pellet.kind}
-      enabled={pellet.enabled}
-      delay={pellet.delay}
-    />
-  ));
-});
+    return pellets.map((pellet) => (
+      <PelletItem
+        key={`${pellet.x}-${pellet.y}`}
+        slotSizePx={slotSizePx}
+        slotWidth={slotWidth}
+        x={pellet.x}
+        y={pellet.y}
+        kind={pellet.kind}
+        enabled={pellet.enabled}
+        delay={pellet.delay}
+        status={status}
+      />
+    ));
+  }
+);
 
 function Playfield({
   videoRef,
@@ -253,6 +264,7 @@ function Playfield({
           slotSizePx={slotSizePx}
           slotWidth={slotWidth}
           gameRef={gameRef}
+          status={status}
         />
       </InnerRelativeWrapper>
       <BorderBlock style={borderBlockStyle} />
@@ -311,8 +323,8 @@ const PelletImg = styled.img`
 
   opacity: var(--opacity);
   transition:
-    opacity 0.5s ease-out,
-    transform 0.3s ease-out;
+    opacity var(--opacity-speed) ease-out,
+    transform var(--transform-speed) ease-out;
 
   // we flip our animation like this so that the delay for the animation
   // only kicks in when pellets are enabled. The only alternative I could

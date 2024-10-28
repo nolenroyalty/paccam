@@ -13,6 +13,38 @@ import TranslucentWindow from "../TranslucentWindow";
 
 const MAX_PLAYERS = 4;
 
+const useStartingAnimationComplete = ({
+  startingAnimationCompletePromiseRef,
+  status,
+}) => {
+  const resolveRef = React.useRef();
+  const [isInitial, setIsInitial] = React.useState(true);
+
+  React.useEffect(() => {
+    if (status !== WAITING_FOR_PLAYER_SELECT) {
+      setIsInitial(true);
+      return;
+    }
+  }, [status]);
+
+  React.useEffect(() => {
+    if (isInitial) {
+      setIsInitial(false);
+      startingAnimationCompletePromiseRef.current = new Promise((resolve) => {
+        resolveRef.current = resolve;
+      });
+    }
+  }, [isInitial, startingAnimationCompletePromiseRef]);
+
+  const handleAnimationComplete = React.useCallback(() => {
+    if (resolveRef.current) {
+      resolveRef.current();
+    }
+  }, []);
+
+  return { handleAnimationComplete };
+};
+
 function StartScreen({
   status,
   startGame: _startGame,
@@ -24,12 +56,11 @@ function StartScreen({
   beginTutorial,
   startScreenRef,
   landmarkerLoading,
+  startingAnimationCompletePromiseRef,
 }) {
   const [allowMorePlayers, setAllowMorePlayers] = React.useState(
     window.localStorage.getItem("allowMorePlayers") === "true"
   );
-  console.log(`NUM HUMANS: ${numHumans}`);
-  console.log(`NUM BOTS: ${numBots}`);
   const [hideVideoButton, setHideVideoButton] = React.useState(false);
   const [hidingHowToPlay, setHidingHowToPlay] = React.useState(false);
   const [aboutToRunTutorial, setAboutToRunTutorial] = React.useState(false);
@@ -37,6 +68,10 @@ function StartScreen({
   // loaded just prevents the animation from starting before we've loaded
   // everything in
   const [loaded, setLoaded] = React.useState(false);
+  const { handleAnimationComplete } = useStartingAnimationComplete({
+    startingAnimationCompletePromiseRef,
+    status,
+  });
 
   React.useEffect(() => {
     window.localStorage.setItem("allowMorePlayers", allowMorePlayers);
@@ -103,7 +138,7 @@ function StartScreen({
         type: "spring",
         stiffness: 100, // 225
         damping: 12, // 15
-        restDelta: 0.005,
+        restDelta: 0.5,
       };
     }
   }, [slideOut]);
@@ -123,6 +158,7 @@ function StartScreen({
       initial={{ opacity: startOpacity, y: startY, x: "-50%" }}
       animate={{ opacity: endOpacity, y: endY, x: "-50%" }}
       transition={spring}
+      onAnimationComplete={handleAnimationComplete}
     >
       <DonoLinkHolder>
         <Icons.Link href="https://eieio.substack.com" target="_blank">

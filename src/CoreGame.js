@@ -56,17 +56,17 @@ const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
 
 const TUTORIAL_DIRECTIVES = [
   ["left", "wait"],
-  ["up", "wait"],
-  ["right", "wait"],
-  ["down", "wait"],
-  ["left", "chomp"],
-  ["up", "chomp"],
-  ["right", "chomp"],
-  ["down", "chomp"],
-  ["left", "move"],
-  ["up", "move"],
-  ["right", "move"],
-  ["down", "move"],
+  // ["up", "wait"],
+  // ["right", "wait"],
+  // ["down", "wait"],
+  // ["left", "chomp"],
+  // ["up", "chomp"],
+  // ["right", "chomp"],
+  // ["down", "chomp"],
+  // ["left", "move"],
+  // ["up", "move"],
+  // ["right", "move"],
+  // ["down", "move"],
 ];
 
 const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ playerCount }) => {
@@ -150,6 +150,7 @@ class GameEngine {
     this.missingFacesState = { faceCount: 0, lastOk: null, lastStatus: null };
     this.missingFacesConsumers = [];
     this.landmarker = null;
+    this.endTutorialHack = null;
   }
 
   _initTutorialState() {
@@ -321,13 +322,13 @@ class GameEngine {
   }
 
   initialState({ playerNum, isHuman }) {
-    const { x, y } = this.spawnLocation({ playerNum, waiting: true });
+    // const { x, y } = this.spawnLocation({ playerNum, waiting: true });
     const direction = isHuman ? "center" : "right";
     const botState = isHuman
       ? null
       : new BotStateMachine({ playerNum, numSlots: this.numSlots });
     return {
-      position: { x, y },
+      position: null,
       direction: direction,
       tutorialDirection: "center",
       horizontalStrength: 0,
@@ -359,7 +360,19 @@ class GameEngine {
     return true;
   }
 
-  async initNumPlayers({ numHumans, numBots }) {
+  // pretty gross, but we break this into a separate step so that we can
+  // call it *after* the start screen has loaded in
+  setStartingLocations() {
+    this.playerStates.forEach((playerState) => {
+      const { x, y } = this.spawnLocation({
+        playerNum: playerState.playerNum,
+        waiting: true,
+      });
+      playerState.position = { x, y };
+    });
+  }
+
+  async initNumPlayers({ numHumans, numBots, setStartingLocations }) {
     const total = numHumans + numBots;
     console.log(
       `initNumPlayers: ${total} (humans: ${numHumans}, bots: ${numBots}) status ${this.status}`
@@ -380,6 +393,9 @@ class GameEngine {
     this.playerStates = range(total).map((playerNum) => {
       return this.initialState({ playerNum, isHuman: playerNum < numHumans });
     });
+    if (setStartingLocations) {
+      this.setStartingLocations();
+    }
     console.log(`INITIALIZED PLAYERS: ${JSON.stringify(this.playerStates)}`);
     this.updatePositionConsumers();
     this.updateScoreConsumers();
@@ -573,6 +589,10 @@ class GameEngine {
   }
 
   maybeDuplicate({ position, size }) {
+    if (position === null) {
+      return { horizontal: null, vertical: null, diagonal: null };
+    }
+
     let dupeHorizontal = null;
     let dupeVertical = null;
     let dupeDiagonal = null;
@@ -722,7 +742,7 @@ class GameEngine {
     this.generatePellets();
     this.playerStates = [];
     this.superStatus = { playerNum: null, endSuperAt: null };
-    this.numPlayers = null;
+    // this.numPlayers = null;
     this.satisfiedTutorialDirectiveTime = null;
     this.missingFacesState = { faceCount: 0, lastOk: null, lastStatus: null };
     this.tutorialState = this._initTutorialState();
@@ -1043,8 +1063,8 @@ class GameEngine {
         ["jawOpenMax", jawOpenMax],
         ["jawOpenThreshold", jawOpenThreshold],
         ["jawCloseThreshold", jawCloseThreshold],
-        ["posX", this.playerStates[playerNum].position.x],
-        ["posY", this.playerStates[playerNum].position.y],
+        ["posX", this.playerStates[playerNum]?.position?.x],
+        ["posY", this.playerStates[playerNum]?.position?.y],
         ["horizontal", horizontal],
         ["horizontalStrength", horizontalStrength],
         ["vertical", vertical],
@@ -1582,6 +1602,7 @@ class GameEngine {
     this.updateTimeConsumers();
     this.setTutorialInstruction(null);
     let timeToSleep = 1000;
+    this.sounds.chomp.loop = false;
     if (this.loopRunning) {
       const then = performance.now();
       await this.tellLoopToStopReturningWhenStopped();
@@ -1592,9 +1613,12 @@ class GameEngine {
     }
 
     setTimeout(() => {
-      this.nullOutNumPlayers();
-      this.resetState();
-      this.moveToWaitingForPlayerSelect();
+      // this is a hack to avoid a circular dependency around how ending the tutorial
+      // needs to reference the game, but the game needs to reference that logic.
+      if (this.endTutorialHack) {
+        console.log("END TUTORIAL HACK");
+        this.endTutorialHack();
+      }
       this.aboutToEndTutorial = false;
     }, timeToSleep);
   }
@@ -1876,8 +1900,11 @@ class GameEngine {
   endGameLoop(because) {
     console.log(`Ending game loop because: ${because}`);
     if (this.shouldRestartLandmarker) {
+      console.log(`Restarting landmarker`);
       delete this.landmarker;
       this.landmarker = null;
+    } else {
+      console.log(`Not restarting landmarker`);
     }
     this.loopRunning = false;
     if (this.resolveEndLoop) {

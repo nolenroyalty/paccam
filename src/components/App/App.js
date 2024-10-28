@@ -36,6 +36,7 @@ function App() {
     })
   );
   const sounds = React.useRef({});
+  const startingAnimationCompletePromiseRef = React.useRef(null);
   const spriteSheets = React.useRef({});
   const [ignoreMissingFaces, setIgnoreMissingFaces] = React.useState(false);
 
@@ -113,7 +114,7 @@ function App() {
   }, []);
 
   const setNumPlayers = React.useCallback(
-    async ({ numHumans, numBots }) => {
+    async ({ numHumans, numBots, setStartingLocations = true }) => {
       console.log(`SETNUMPLAYERS: ${numHumans} | ${numBots}`);
       const patch = {};
       let _numHumans = gameState.numHumans;
@@ -129,6 +130,7 @@ function App() {
       await gameRef.current.initNumPlayers({
         numHumans: _numHumans,
         numBots: _numBots,
+        setStartingLocations,
       });
       setGameState((state) => ({
         ...state,
@@ -138,30 +140,6 @@ function App() {
     },
     [gameState.numBots, gameState.numHumans]
   );
-
-  const nullOutNumPlayers = React.useCallback(() => {
-    setGameState((state) => ({ ...state, numHumans: 0, numBots: 0 }));
-  }, []);
-
-  const beginTutorial = React.useCallback(() => {
-    gameRef.current.beginTutorial();
-    // HACK
-    gameRef.current.nullOutNumPlayers = nullOutNumPlayers;
-    setNumPlayers({ numHumans: 1, numBots: 0 });
-  }, [nullOutNumPlayers, setNumPlayers]);
-
-  // alt-d to begin tutorial
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.code === "KeyD" && e.altKey) {
-        beginTutorial();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [beginTutorial]);
 
   const startGame = React.useCallback(() => {
     setGameState((state) => ({ ...state, running: true }));
@@ -187,27 +165,63 @@ function App() {
     }
   }, []);
 
-  const moveToWaitingForPlayerSelect = React.useCallback(async () => {
-    // It'd be nice if we could save state between rounds here. Some problems:
-    // 1. we need to await an initNumPlayers call, which is expensive and will
-    // block our intro animation
-    // 2. for some reason doing the naive thing results in the player's position not
-    // being updated??
-    // from further looking, the problem is that we haven't re-added the start
-    // screen when we call initNumPlayers, so we can't figure out where to put
-    // the player faces...
-    //
-    // we want the following code, but we need a "wait for start screen" line
-    // gameRef.current.resetState();
-    // await startScreen.loaded(); // this doesn't exist
-    // await gameRef.current.initNumPlayers(gameState.numPlayers);
-    // gameRef.current.moveToWaitingForPlayerSelect(); // maybe not this
-    // gameRef.current.startGameLoop();
+  const moveToWaitingForPlayerSelect = React.useCallback(
+    async (
+      { forceNumHumans = null, forceNumBots = null } = {
+        forceNumHumans: null,
+        forceNumBots: null,
+      }
+    ) => {
+      // We do some gross stuff here.
+      // Basically: we want to reset the game state, avoid re-initializing the landmarker
+      // (since it's blocking and takes a while), and avoid displaying the players
+      // until the start screen animation has completed.
+      //
+      // The worst part of this is probably the need to call setStartingLocations
+      // separately from setNumPlayers; setNumPlayers used to set the starting
+      // location of the players, but we make that configurable now.
+      const numHumans =
+        forceNumHumans === null ? gameState.numHumans : forceNumHumans;
+      const numBots = forceNumBots === null ? gameState.numBots : forceNumBots;
+      console.log(`FORCE: ${forceNumHumans} | ${forceNumBots}`);
+      console.log(`moveToWaitingForPlayerSelect: ${numHumans} | ${numBots}`);
+      gameRef.current.resetState();
+      gameRef.current.moveToWaitingForPlayerSelect();
+      await setNumPlayers({
+        numHumans,
+        numBots,
+        setStartingLocations: false,
+      });
 
-    gameRef.current.resetState();
-    setGameState((state) => ({ ...state, numHumans: 0, numBots: 0 }));
-    gameRef.current.moveToWaitingForPlayerSelect();
-  }, []);
+      if (startingAnimationCompletePromiseRef.current) {
+        console.log("waiting for animation to complete...");
+        const promise = startingAnimationCompletePromiseRef.current;
+        await promise;
+        console.log("animation complete!");
+      }
+
+      // we compute the waiting location based on the location of the start
+      // screen, so we need to wait for that animation to complete before fading
+      // in the players! kinda gross.
+      gameRef.current.setStartingLocations();
+    },
+    [gameState.numBots, gameState.numHumans, setNumPlayers]
+  );
+
+  const beginTutorial = React.useCallback(async () => {
+    // HACK: we do this to avoid a circular dependency.
+    // we also have to specify forceNumHumans because [endTutorialHack]
+    // is set before we re-define [moveToWaitingForPlayerSelect] with
+    // an updated number of players lol
+    const endTutorialHack = () => {
+      moveToWaitingForPlayerSelect({
+        forceNumHumans: 1,
+      });
+    };
+    gameRef.current.endTutorialHack = endTutorialHack;
+    await setNumPlayers({ numHumans: 1, numBots: 0 });
+    gameRef.current.beginTutorial();
+  }, [moveToWaitingForPlayerSelect, setNumPlayers]);
 
   React.useEffect(() => {
     if (!videoEnabled) {
@@ -281,6 +295,9 @@ function App() {
           beginTutorial={beginTutorial}
           startScreenRef={startScreenRef}
           landmarkerLoading={landmarkerLoading}
+          startingAnimationCompletePromiseRef={
+            startingAnimationCompletePromiseRef
+          }
         />
         <Playfield
           videoRef={videoRef}
