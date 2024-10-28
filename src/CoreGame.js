@@ -148,6 +148,7 @@ class GameEngine {
     this.startScreenRef = startScreenRef;
     this.missingFacesState = { faceCount: 0, lastOk: null, lastStatus: null };
     this.missingFacesConsumers = [];
+    this.landmarker = null;
   }
 
   _initTutorialState() {
@@ -362,6 +363,12 @@ class GameEngine {
     console.log(
       `initNumPlayers: ${total} (humans: ${numHumans}, bots: ${numBots}) status ${this.status}`
     );
+    this.shouldRestartLandmarker =
+      this.numPlayers === null || numHumans !== this.numPlayers.numHumans;
+    console.log(
+      `initNumPlayers: shouldRestartLandmarker ${this.shouldRestartLandmarker}`
+    );
+
     if (this.loopRunning) {
       console.log("initNumPlayers: loop is running, stopping");
       await this.tellLoopToStopReturningWhenStopped();
@@ -1861,7 +1868,10 @@ class GameEngine {
 
   endGameLoop(because) {
     console.log(`Ending game loop because: ${because}`);
-    delete this.landmarker;
+    if (this.shouldRestartLandmarker) {
+      delete this.landmarker;
+      this.landmarker = null;
+    }
     this.loopRunning = false;
     if (this.resolveEndLoop) {
       this.resolveEndLoop();
@@ -1938,12 +1948,23 @@ class GameEngine {
     console.log(`Starting game loop with ${this.numPlayers.total} players`);
 
     if (this.numPlayers.numHumans > 0) {
-      this.landmarker = await createFaceLandmarker({
-        numFaces: this.numPlayers.numHumans,
-      });
+      if (this.shouldRestartLandmarker || this.landmarker === null) {
+        console.log(`Number of humans changed; restarting landmarker`);
+        this.landmarker = await createFaceLandmarker({
+          numFaces: this.numPlayers.numHumans,
+        });
+        this.shouldRestartLandmarker = false;
+      } else {
+        console.log(
+          `Not restarting landmarker because number of humans did not change`
+        );
+      }
     } else {
+      if (this.shouldRestartLandmarker) {
+        console.log(`Set landmarker to null because no humans`);
+        this.landmarker = null;
+      }
       console.log(`No humans; not creating landmarker...`);
-      this.landmarker = null;
     }
     if (
       this.status === RUNNING_TUTORIAL ||

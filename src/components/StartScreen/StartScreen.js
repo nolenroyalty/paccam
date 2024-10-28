@@ -154,12 +154,14 @@ function StartScreen({
       <PlusMinusNumber
         label={"Humans"}
         number={numHumans}
+        maxCount={allowMorePlayers ? MAX_PLAYERS : 2}
         updateNumber={updateNumHumans}
         videoEnabled={videoEnabled}
       />
       <PlusMinusNumber
         label={"Bots"}
         number={numBots}
+        maxCount={MAX_PLAYERS}
         updateNumber={updateNumBots}
         videoEnabled={videoEnabled}
       />
@@ -232,7 +234,7 @@ const PlusMinusWrapper = styled.div`
 `;
 
 const PlusMinusButton = styled(UnstyledButton)`
-  padding: 0.5rem;
+  padding: 0.25rem 0.5rem;
   color: ${(p) => (p.disabled ? COLORS.black : COLORS.black)};
   flex: 1;
   display: flex;
@@ -247,7 +249,13 @@ const PlusMinusText = styled.span`
   font-family: "Arcade Classic";
 `;
 
-function PlusMinusNumber({ label, number, updateNumber, videoEnabled }) {
+function PlusMinusNumber({
+  label,
+  number,
+  maxCount,
+  updateNumber,
+  videoEnabled,
+}) {
   return (
     <PlusMinusOuterWrapper style={{ "--opacity": videoEnabled ? 1 : 0.5 }}>
       <PlusMinusText style={{ "--color": COLORS.white }}>{label}</PlusMinusText>
@@ -265,7 +273,7 @@ function PlusMinusNumber({ label, number, updateNumber, videoEnabled }) {
         <PlusMinusButton
           $left={false}
           onClick={() => updateNumber(1)}
-          disabled={!videoEnabled || number === MAX_PLAYERS}
+          disabled={!videoEnabled || number === maxCount}
         >
           <Icons.Plus size="24px" />
         </PlusMinusButton>
