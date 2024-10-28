@@ -43,7 +43,6 @@ function App() {
   const [pacmanResultScreenState, setPacmanResultScreenState] = React.useState(
     {}
   );
-  const [scores, setScores] = React.useState({});
   const [debugInfo, setDebugInfo] = React.useState({});
 
   React.useEffect(() => {
@@ -180,7 +179,6 @@ function App() {
     game.subscribeToStatus((status) => {
       setGameState((state) => ({ ...state, status }));
     });
-    game.subscribeToScores(setScores);
     game.subscribeToLandmarkerLoading({
       callback: setLandmarkerLoading,
       id: "MAIN-APP",
@@ -329,15 +327,13 @@ function App() {
       </GameHolderOverlapping>
       <LiveScoreDisplay
         status={gameState.status}
-        // numPlayers={gameState.numPlayers}
         totalPlayers={totalPlayers}
-        scores={scores}
+        gameRef={gameRef}
       />
       <ResultsDisplay
         status={gameState.status}
-        // numPlayers={gameState.numPlayers}
         totalPlayers={totalPlayers}
-        scores={scores}
+        gameRef={gameRef}
         resultScreenState={pacmanResultScreenState}
         moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
       />

@@ -8,7 +8,17 @@ import {
   COMPLETED_ROUND,
 } from "../../STATUS";
 
-function LiveScoreDisplay({ status, scores, totalPlayers }) {
+function LiveScoreDisplay({ status, gameRef, totalPlayers }) {
+  const [scores, setScores] = React.useState({});
+  const id = React.useId();
+  React.useEffect(() => {
+    const game = gameRef.current;
+    game.subscribeToScores({ id, callback: setScores });
+    return () => {
+      game.unsubscribeFromScores({ id });
+    };
+  }, [gameRef, id]);
+
   let startOpacity, endOpacity;
   if (status === COUNTING_IN_ROUND) {
     startOpacity = 0;

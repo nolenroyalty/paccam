@@ -3,21 +3,29 @@ import styled from "styled-components";
 import TranslucentWindow from "../TranslucentWindow";
 import { motion } from "framer-motion";
 import { colorForPlayer } from "../../utils";
-import { COMPLETED_ROUND, SHOWING_RESULTS } from "../../STATUS";
-import { COLORS } from "../../COLORS";
+import { SHOWING_RESULTS } from "../../STATUS";
 import Button from "../Button";
 import { MAX_PLAYERS } from "../../constants";
 
 function ResultsDisplay({
   totalPlayers,
-  scores,
   resultScreenState,
   status,
+  gameRef,
   moveToWaitingForPlayerSelect,
 }) {
   const [z, setZ] = React.useState(0);
   const [swapResultsAround, setSwapResultsAround] = React.useState(false);
   const [fadeOut, setFadeOut] = React.useState(false);
+  const [scores, setScores] = React.useState({});
+  const id = React.useId();
+  React.useEffect(() => {
+    const game = gameRef.current;
+    game.subscribeToScores({ id, callback: setScores });
+    return () => {
+      game.unsubscribeFromScores({ id });
+    };
+  }, [gameRef, id]);
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {

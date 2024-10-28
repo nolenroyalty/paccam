@@ -687,15 +687,21 @@ class GameEngine {
     if (singleCallback) {
       singleCallback(scores);
     } else {
-      this.scoreConsumers.forEach((callback) => {
+      this.scoreConsumers.forEach(({ callback, id }) => {
         callback(scores);
       });
     }
   }
 
-  subscribeToScores(callback) {
-    this.scoreConsumers.push(callback);
+  subscribeToScores({ callback, id }) {
+    this.scoreConsumers.push({ callback, id });
     this.updateScoreConsumers({ singleCallback: callback });
+  }
+
+  unsubscribeFromScores({ id }) {
+    this.scoreConsumers = this.scoreConsumers.filter(
+      (consumer) => consumer.id !== id
+    );
   }
 
   updateTimeConsumers({ singleCallback = null } = {}) {
