@@ -78,7 +78,7 @@ const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ playerCount }) => {
 
 let didImmediatelyEat = false;
 
-async function createFaceLandmarker({ numFaces }) {
+async function _createFaceLandmarker({ numFaces }) {
   console.log(`create a face landmarker with ${numFaces} faces`);
   const filesetResolver = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
@@ -125,6 +125,7 @@ class GameEngine {
     this.timeConsumers = [];
     this.statusConsumers = [];
     this.debugConsumers = [];
+    this.landmarkerLoadingConsumers = [];
     this.stagedDebugUpdate = [];
     this.playerStates = [];
     this.pacmanStateConsumers = [];
@@ -1926,6 +1927,45 @@ class GameEngine {
     });
   }
 
+  updateLandmarkerLoadingConumsers({ singleId = null }) {
+    if (singleId !== null) {
+      this.landmarkerLoadingConsumers
+        .filter((x) => x.id === singleId)
+        .forEach((consumer) => {
+          consumer.callback(this.landmarkerLoading);
+        });
+    } else {
+      this.landmarkerLoadingConsumers.forEach((consumer) => {
+        consumer.callback(this.landmarkerLoading);
+      });
+    }
+  }
+
+  subscribeToLandmarkerLoading({ callback, id }) {
+    this.landmarkerLoadingConsumers.push({ callback, id });
+    callback(this.landmarkerLoading);
+  }
+
+  unsubscribeFromLandmarkerLoading({ id }) {
+    this.landmarkerLoadingConsumers = this.landmarkerLoadingConsumers.filter(
+      (x) => x.id !== id
+    );
+  }
+
+  updateLandmarkerLoading({ loading }) {
+    this.landmarkerLoading = loading;
+    this.updateLandmarkerLoadingConumsers({ singleId: null });
+  }
+
+  async createLandmarker() {
+    this.updateLandmarkerLoading({ loading: true });
+    this.landmarker = await _createFaceLandmarker({
+      numFaces: this.numPlayers.numHumans,
+    });
+    this.updateLandmarkerLoading({ loading: false });
+    this.shouldRestartLandmarker = false;
+  }
+
   async startGameLoop() {
     if (this.loopRunning) {
       console.error(`BUG: startGameLoop called when loop is running`);
@@ -1950,10 +1990,7 @@ class GameEngine {
     if (this.numPlayers.numHumans > 0) {
       if (this.shouldRestartLandmarker || this.landmarker === null) {
         console.log(`Number of humans changed; restarting landmarker`);
-        this.landmarker = await createFaceLandmarker({
-          numFaces: this.numPlayers.numHumans,
-        });
-        this.shouldRestartLandmarker = false;
+        await this.createLandmarker();
       } else {
         console.log(
           `Not restarting landmarker because number of humans did not change`

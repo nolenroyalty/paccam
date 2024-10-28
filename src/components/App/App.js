@@ -25,6 +25,7 @@ function App() {
     numBots: 0,
     status: WAITING_FOR_VIDEO,
   });
+  const [landmarkerLoading, setLandmarkerLoading] = React.useState(false);
   const startScreenRef = React.useRef();
   const gameRef = React.useRef(
     new GameEngine({
@@ -180,6 +181,10 @@ function App() {
       setGameState((state) => ({ ...state, status }));
     });
     game.subscribeToScores(setScores);
+    game.subscribeToLandmarkerLoading({
+      callback: setLandmarkerLoading,
+      id: "MAIN-APP",
+    });
     if (DEBUG) {
       const updateDebugInfo = ({ playerNum, debugState }) => {
         setDebugInfo((state) => {
@@ -278,13 +283,12 @@ function App() {
           startGame={startGame}
           numHumans={gameState.numHumans}
           numBots={gameState.numBots}
-          // setNumHumans={setNumPlayers}
-          // setnumBots={setnumBots}
           setNumPlayers={setNumPlayers}
           enableVideo={enableVideo}
           videoEnabled={videoEnabled}
           beginTutorial={beginTutorial}
           startScreenRef={startScreenRef}
+          landmarkerLoading={landmarkerLoading}
         />
         <Playfield
           videoRef={videoRef}

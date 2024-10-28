@@ -23,6 +23,7 @@ function StartScreen({
   videoEnabled,
   beginTutorial,
   startScreenRef,
+  landmarkerLoading,
 }) {
   const [allowMorePlayers, setAllowMorePlayers] = React.useState(
     window.localStorage.getItem("allowMorePlayers") === "true"
@@ -202,10 +203,21 @@ function StartScreen({
             onClick={(e) => {
               startGame();
             }}
-            disabled={numHumans + numBots === 0}
+            disabled={numHumans + numBots === 0 || landmarkerLoading}
+            // Landmarker loading is blocking. We can try to delay our transition speed,
+            // but this doesn't work super well because the landmarker loading blocks
+            // the css transition. Instead we try making the speed super snappy, so that
+            // the button transitions during the loading.
+            // transitionDelay={landmarkerLoading ? "0s" : "0s"}
+            overrideTransitionSpeed={landmarkerLoading ? "0.05s" : null}
             size="small"
           >
-            {numHumans + numBots === 0 ? "Select Players" : "Start Game"}
+            {numHumans + numBots === 0
+              ? "Select Players"
+              : landmarkerLoading
+                ? "Loading..."
+                : "Start Game"}
+            {/* "Start Game"} */}
           </FadeInButton>
         )}
       </ButtonHolder>
@@ -241,12 +253,14 @@ const PlusMinusButton = styled(UnstyledButton)`
   flex-direction: row;
   justify-content: ${(p) => (p.$left ? "flex-start" : "flex-end")};
   opacity: ${(p) => (p.disabled ? 0.3 : 1)};
+  transition: opacity 0.5s ease;
 `;
 
 const PlusMinusText = styled.span`
   font-size: 1.5rem;
   color: var(--color);
   font-family: "Arcade Classic";
+  transition: opacity 0.5s ease;
 `;
 
 function PlusMinusNumber({
@@ -257,7 +271,7 @@ function PlusMinusNumber({
   videoEnabled,
 }) {
   return (
-    <PlusMinusOuterWrapper style={{ "--opacity": videoEnabled ? 1 : 0.5 }}>
+    <PlusMinusOuterWrapper style={{ "--opacity": videoEnabled ? 1 : 0.3 }}>
       <PlusMinusText style={{ "--color": COLORS.white }}>{label}</PlusMinusText>
       <PlusMinusWrapper>
         <PlusMinusButton

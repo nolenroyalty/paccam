@@ -4,7 +4,18 @@ import UnstyledButton from "../UnstyledButton";
 import { COLORS } from "../../COLORS";
 
 const Button = React.forwardRef(
-  ({ children, style = {}, size, disabled, ...props }, ref) => {
+  (
+    {
+      children,
+      style = {},
+      size,
+      disabled,
+      transitionDelay = "0s",
+      overrideTransitionSpeed = null,
+      ...props
+    },
+    ref
+  ) => {
     let borderPx;
     let padding;
     let fontSize;
@@ -29,6 +40,10 @@ const Button = React.forwardRef(
       "--border-size": borderPx + "px",
       "--padding": padding,
       "--font-size": fontSize,
+      "--transition-delay": transitionDelay,
+      "--background-color-trans-speed": overrideTransitionSpeed || "0.25s",
+      "--color-trans-speed": overrideTransitionSpeed || "0.25s",
+      "--opacity-trans-speed": overrideTransitionSpeed || "1s",
     };
 
     return (
@@ -50,9 +65,10 @@ const Wrapper = styled(UnstyledButton)`
   pointer-events: ${(p) => (p.disabled ? "none" : "auto")};
   opacity: ${(p) => (p.disabled ? 0.1 : 1)};
   transition:
-    background-color 0.25s ease,
-    color 0.25s ease,
-    opacity 1s ease;
+    background-color var(--background-color-trans-speed) ease
+      var(--transition-delay),
+    color var(--color-trans-speed) ease var(--transition-delay),
+    opacity var(--opacity-trans-speed) ease var(--transition-delay);
   padding: var(--padding);
 
   &:hover {
