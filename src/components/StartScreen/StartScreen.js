@@ -8,7 +8,6 @@ import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Popover from "@radix-ui/react-popover";
 import HowToPlay from "../HowToPlay";
 import Icons from "../Icons";
-import { motion } from "framer-motion";
 import TranslucentWindow from "../TranslucentWindow";
 
 const MAX_PLAYERS = 4;
@@ -17,8 +16,6 @@ function StartScreen({
   status,
   startGame: _startGame,
   setNumPlayers,
-  // setNumHumans,
-  // setnumBots,
   numHumans,
   numBots,
   enableVideo,
@@ -32,7 +29,6 @@ function StartScreen({
   const [speculativelyHighlighted, _setSpeculativelyHighlighted] =
     React.useState({ CPUs: null, Humans: null });
   const [hideVideoButton, setHideVideoButton] = React.useState(false);
-  // const [showingHowToPlay, setShowingHowToPlay] = React.useState(false);
   const [hidingHowToPlay, setHidingHowToPlay] = React.useState(false);
   const [aboutToRunTutorial, setAboutToRunTutorial] = React.useState(false);
   const [aboutToStartGame, setAboutToStartGame] = React.useState(false);
@@ -84,10 +80,8 @@ function StartScreen({
       let _numBots = null;
       if (count + numBots > MAX_PLAYERS) {
         _numBots = MAX_PLAYERS - count;
-        // setnumBots(MAX_PLAYERS - count);
       }
       setNumPlayers({ numHumans: count, numBots: _numBots });
-      // setNumHumans(count);
       setSpeculativelyHighlighted((prev) => ({
         ...prev,
         clickedThisCycle: true,
@@ -101,9 +95,7 @@ function StartScreen({
       let _numHumans = null;
       if (numHumans + count > MAX_PLAYERS) {
         _numHumans = MAX_PLAYERS - count;
-        // setNumHumans(MAX_PLAYERS - count);
       }
-      // setnumBots(count);
       setNumPlayers({ numHumans: _numHumans, numBots: count });
       setSpeculativelyHighlighted((prev) => ({
         ...prev,
@@ -216,15 +208,12 @@ function StartScreen({
         setAllowMorePlayers={setAllowMorePlayers}
         numHumans={numHumans}
         setNumPlayers={setNumPlayers}
-        // setNumHumans={setNumHumans}
         videoEnabled={videoEnabled}
       />
       <EnableOnlinePlay videoEnabled={videoEnabled} />
       <ButtonHolder>
         {
           <HowToPlay
-            // showingHowToPlay={showingHowToPlay}
-            // setShowingHowToPlay={setShowingHowToPlay}
             hidingHowToPlay={hidingHowToPlay}
             setHidingHowToPlay={setHidingHowToPlay}
             enableVideo={enableVideo}
@@ -479,7 +468,6 @@ function AllowMorePlayers({
   const onClick = React.useCallback(() => {
     if (allowMorePlayers) {
       setNumPlayers({ numHumans: Math.min(numHumans, 2), numBots: null });
-      // setNumHumans(Math.min(numHumans, 2));
     }
     setAllowMorePlayers((prev) => !prev);
   }, [allowMorePlayers, setAllowMorePlayers, setNumPlayers, numHumans]);
