@@ -28,7 +28,7 @@ const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_TRACKING_CONFIDENCE = 0.3;
 const MIN_SUPPRESSION_THRESHOLD = 0.1;
 
-const SECONDS_IN_ROUND = 30; // 30
+const SECONDS_IN_ROUND = 10; // 30
 const COUNT_IN_TIME = 3; // 3
 
 // this was 0.48
@@ -1216,6 +1216,7 @@ class GameEngine {
     });
 
     if (updated) {
+      console.log("UPDATING PELLETS");
       this.updatePelletConsumers();
       this.updateScoreConsumers();
     }
@@ -1524,6 +1525,7 @@ class GameEngine {
   }
 
   movePlayersToStartingLocation() {
+    console.log("yo");
     const startTime = performance.now();
     const totalTime = (COUNT_IN_TIME * 1000) / 1.15;
     const endTime = startTime + totalTime;
@@ -1774,7 +1776,7 @@ class GameEngine {
     // we need it.
     const z = new Audio(this.sounds.start.src);
     z.play();
-    this.movePlayersToStartingLocation();
+    // this.movePlayersToStartingLocation();
 
     const intervalId = setInterval(() => {
       if (this.time === "starting") {

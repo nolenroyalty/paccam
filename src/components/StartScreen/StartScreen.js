@@ -253,7 +253,7 @@ function StartScreen({
             disabled={numHumans + numBots === 0}
             size="small"
           >
-            Start Game
+            {numHumans + numBots === 0 ? "Select Players" : "Start Game"}
           </FadeInButton>
         )}
       </ButtonHolder>

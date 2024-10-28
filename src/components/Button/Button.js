@@ -10,7 +10,7 @@ const Button = React.forwardRef(
     let fontSize;
     if (size === "small") {
       borderPx = 4;
-      padding = "1rem";
+      padding = "1rem 0.25rem";
       fontSize = "1.5rem";
     } else if (size === "medium") {
       borderPx = 4;

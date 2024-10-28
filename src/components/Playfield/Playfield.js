@@ -31,6 +31,7 @@ function Playfield({
     shrinkHorizontal: 0,
   });
   const selfRef = React.useRef();
+  console.log("RENDERING PLAYFIELD");
 
   React.useEffect(() => {
     if (initializedPlayfield) {
@@ -292,4 +293,4 @@ const PelletWrapper = styled.div`
   place-items: center;
 `;
 
-export default Playfield;
+export default React.memo(Playfield);

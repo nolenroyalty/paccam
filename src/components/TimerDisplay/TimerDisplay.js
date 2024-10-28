@@ -48,10 +48,6 @@ const PopInDropOut = keyframes`
   }
 `;
 
-const NoSpacing = styled.span`
-  letter-spacing: -5rem;
-`;
-
 const Text = styled.p`
   font-family: "Arcade Classic";
   // I was originally using 20rem all the time, but this is way too big on smaller screens
