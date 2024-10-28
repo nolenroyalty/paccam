@@ -13,6 +13,7 @@ import { WAITING_FOR_VIDEO } from "../../STATUS";
 import { COLORS } from "../../COLORS";
 
 const DEBUG = false;
+const DEFAULT_PLAYER_SET = { numHumans: 1, numBots: 2 };
 
 function App() {
   const videoRef = React.useRef();
@@ -45,30 +46,6 @@ function App() {
     {}
   );
   const [debugInfo, setDebugInfo] = React.useState({});
-
-  React.useEffect(() => {
-    const promise = new Promise((resolve) => {
-      const f = () => {
-        console.log("video began");
-        resolve();
-        setVideoActuallyStartedState(true);
-        videoRef.current.onplaying = null;
-        const restartIfPaused = () => {
-          console.warn(
-            "Video paused - this can happen if you take your airpods out! Restarting..."
-          );
-          setTimeout(() => {
-            if (videoRef.current && videoRef.current.paused) {
-              videoRef.current.play();
-            }
-          }, 0);
-        };
-        videoRef.current.onpause = restartIfPaused;
-      };
-      videoRef.current.onplaying = f;
-    });
-    videoActuallyStarted.current = promise;
-  }, []);
 
   React.useEffect(() => {
     if (!gameRef.current) {
@@ -140,6 +117,36 @@ function App() {
     },
     [gameState.numBots, gameState.numHumans]
   );
+
+  const initializedVideo = React.useRef(false);
+  React.useEffect(() => {
+    if (initializedVideo.current) {
+      return;
+    }
+    initializedVideo.current = true;
+    const promise = new Promise((resolve) => {
+      const f = () => {
+        console.log("video began");
+        resolve();
+        setVideoActuallyStartedState(true);
+        videoRef.current.onplaying = null;
+        setNumPlayers(DEFAULT_PLAYER_SET);
+        const restartIfPaused = () => {
+          console.warn(
+            "Video paused - this can happen if you take your airpods out! Restarting..."
+          );
+          setTimeout(() => {
+            if (videoRef.current && videoRef.current.paused) {
+              videoRef.current.play();
+            }
+          }, 0);
+        };
+        videoRef.current.onpause = restartIfPaused;
+      };
+      videoRef.current.onplaying = f;
+    });
+    videoActuallyStarted.current = promise;
+  }, [setNumPlayers]);
 
   const startGame = React.useCallback(() => {
     setGameState((state) => ({ ...state, running: true }));
