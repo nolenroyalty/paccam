@@ -28,7 +28,7 @@ const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_TRACKING_CONFIDENCE = 0.3;
 const MIN_SUPPRESSION_THRESHOLD = 0.1;
 
-const SECONDS_IN_ROUND = 5; // 30
+const SECONDS_IN_ROUND = 30; // 30
 const COUNT_IN_TIME = 3; // 3
 
 // this was 0.48
@@ -48,6 +48,8 @@ const IMMEDIATELY_EAT = false;
 const MAX_PLAYERS = 4;
 const TIME_TO_TOGGLE_BETWEEN_GHOST_STATES = 400;
 const MISSING_FACES_ALERT_THRESHOLD = 300;
+
+const EATABLE_DELAY_FOR_SPAWNING = 0.3 * 1000;
 
 const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
   lower: 8,
@@ -70,10 +72,12 @@ const TUTORIAL_DIRECTIVES = [
 ];
 
 const MAX_NUMBER_OF_SUPERS_FOR_NUMBER_OF_PLAYERS = ({ playerCount }) => {
-  if (playerCount === 4) {
-    return 3;
-  }
-  return 2;
+  return 3;
+  // if (playerCount === 4) {
+  //   return 3; // this seems a little too aggressive
+  //   // return 2;
+  // }
+  // return 2;
 };
 
 let didImmediatelyEat = false;
@@ -252,15 +256,12 @@ class GameEngine {
     this.generatePellets();
   }
 
-  _initSpawnSupersAfterThisManyEats() {
+  _initSpawnSupersAfterThisManyEats({ offset = 0 } = { offset: 0 }) {
     const lower = SPAWN_SUPERS_AFTER_THIS_MANY_EATS.lower;
     const upper = SPAWN_SUPERS_AFTER_THIS_MANY_EATS.upper;
     const range = upper - lower;
     const random = Math.random() * range;
-    this.spawnSupersAfterThisManyEats = Math.floor(random + lower);
-    console.log(
-      `SPAWN SUPERS AFTER THIS MANY EATS: ${this.spawnSupersAfterThisManyEats}`
-    );
+    this.spawnSupersAfterThisManyEats = offset + Math.floor(random + lower);
   }
 
   /* bug here on small screens? */
@@ -399,7 +400,7 @@ class GameEngine {
     console.log(`INITIALIZED PLAYERS: ${JSON.stringify(this.playerStates)}`);
     this.updatePositionConsumers();
     this.updateScoreConsumers();
-    this._initSpawnSupersAfterThisManyEats();
+    this._initSpawnSupersAfterThisManyEats({ offset: 0 });
   }
 
   _updateStatusConsumers() {
@@ -834,6 +835,7 @@ class GameEngine {
           wilEnable: makeIt,
           enabled: false,
           delay,
+          spawnTime: null,
           kind: kind,
         };
         pelletsByPosition[[x, y]] = p;
@@ -844,11 +846,13 @@ class GameEngine {
     this.updatePelletConsumers();
   }
 
-  enableRelevantPellets() {
+  enableRelevantPellets({ now }) {
     this.pelletsByPosition = Object.entries(this.pelletsByPosition).reduce(
       (acc, [key, pellet]) => {
         if (pellet.wilEnable) {
           pellet.enabled = true;
+          pellet.spawnTime =
+            now + pellet.delay * 1000 + EATABLE_DELAY_FOR_SPAWNING;
         }
         acc[key] = pellet;
         return acc;
@@ -1239,7 +1243,12 @@ class GameEngine {
           playerNum: playerState.playerNum,
           startTime,
         });
-        if (!isEaten && overlaps && pellet.enabled) {
+        const spawnTime = pellet.spawnTime;
+        // don't let players eat pellets while they're enabled but haven't actually
+        // appeared
+        const eatable =
+          spawnTime !== null && startTime >= spawnTime && pellet.enabled;
+        if (!isEaten && overlaps && eatable) {
           // console.log(
           //   `EAT ${playerState.position.x}, ${playerState.position.y} | ${pellet.x}, ${pellet.y} (${pellet.kind})`
           // );
@@ -1454,8 +1463,20 @@ class GameEngine {
     return this.superStatus.endSuperAt > startTime;
   }
 
+  // spawn up to 3 super pellets. stagger how they spawn in by a random amount
+  // (but at least 0.35 seconds) to make it a little more interesting; we stop
+  // spawning pellets when a super is activated, so we'll only spawn 3 if nobody
+  // grabs them.
+  //
+  // try to spawn them far away from players so that they don't get immediately eaten
+  // when they spawn in.
+  //
+  // require a minimum number of eats between spawning pellets so that we don't
+  // just constantly have them on the grid
   maybeSpawnSuperPellets({ spawnX, spawnY, startTime }) {
     const superIsActive = this.superIsActive({ startTime });
+    // there's a bug here: strawberries advance this too quickly. but whatever
+    // don't worry too much about it.
     const totalEats = this.playerStates.reduce(
       (acc, playerState) => acc + playerState.score,
       0
@@ -1464,6 +1485,7 @@ class GameEngine {
       totalEats > this.spawnSupersAfterThisManyEats;
 
     if (superIsActive) {
+      this._initSpawnSupersAfterThisManyEats({ offset: totalEats });
       return;
     }
     if (!exceededSuperSpawnThreshold) {
@@ -1481,12 +1503,16 @@ class GameEngine {
 
     let supersToSpawn = maxSupers - spawnedSupers;
     let triesRemaining = 20;
+    let spawnedOne = false;
+    let delayOffset = 0;
     while (triesRemaining > 0 && supersToSpawn > 0) {
       triesRemaining -= 1;
       const x = spawnX();
       const y = spawnY();
       let overlaps = false;
       this.playerStates.forEach((playerState) => {
+        const largeSlotSizeToAvoidInstantEating = 8;
+        const radius = largeSlotSizeToAvoidInstantEating / 2;
         overlaps =
           overlaps ||
           this.overlaps({
@@ -1494,21 +1520,29 @@ class GameEngine {
             playerY: playerState.position.y,
             candidateX: x,
             candidateY: y,
-            candidateSlotSize: 1,
-            candidateRadius: pelletSizeInSlots("power-pellet") / 2,
+            candidateSlotSize: largeSlotSizeToAvoidInstantEating,
+            candidateRadius: radius,
           });
       });
       if (!overlaps && !this.pelletsByPosition[[x, y]]?.enabled) {
-        // maybe add some more jitter here?
+        spawnedOne = true;
+        const delay = delayOffset + Math.random() * 0.05;
+        delayOffset += 0.35 + Math.random() * 0.5;
+        const spawnTime = startTime + delay * 1000 + EATABLE_DELAY_FOR_SPAWNING;
         this.pelletsByPosition[[x, y]] = {
           x,
           y,
           enabled: true,
-          delay: Math.random() * 0.25,
+          delay,
+          spawnTime,
           kind: "power-pellet",
         };
         supersToSpawn -= 1;
       }
+    }
+
+    if (spawnedOne) {
+      this._initSpawnSupersAfterThisManyEats({ offset: totalEats });
     }
   }
 
@@ -1546,8 +1580,10 @@ class GameEngine {
               kind = "fruit";
             }
           }
+          const delay = Math.random() * 0.25;
           this.pelletsByPosition[[x, y]].enabled = true;
-          this.pelletsByPosition[[x, y]].delay = Math.random() * 0.25;
+          this.pelletsByPosition[[x, y]].spawnTime = startTime + delay * 1000;
+          this.pelletsByPosition[[x, y]].delay = delay;
           this.pelletsByPosition[[x, y]].kind = kind;
         }
         maxSpawn -= 1;
@@ -1831,7 +1867,8 @@ class GameEngine {
 
     const intervalId = setInterval(() => {
       if (this.time === "starting") {
-        this.enableRelevantPellets();
+        const now = performance.now();
+        this.enableRelevantPellets({ now });
         this.time = COUNT_IN_TIME;
       } else {
         this.time -= 1;

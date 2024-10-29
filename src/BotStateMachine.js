@@ -351,7 +351,7 @@ class BotStateMachine {
   }
 
   // maybe this should treat distances < player radius as 0
-  determineEatTarget({ position, pellets }) {
+  determineEatTarget({ position, pellets, now }) {
     const pelletValue = (pellet) => {
       if (pellet.kind === "pellet") {
         return 1;
@@ -365,7 +365,11 @@ class BotStateMachine {
     };
 
     const scoredPellets = Object.values(pellets)
-      .filter((p) => p.enabled)
+      .filter((p) => {
+        const enabled = p.enabled;
+        const eatable = p.spawnTime <= now;
+        return enabled && eatable;
+      })
       .map((p) => {
         const dist = this.manhattanDistance(position, { x: p.x, y: p.y });
         const score = pelletValue(p) / dist ** 3;
@@ -640,11 +644,14 @@ class BotStateMachine {
           return false;
         }
         const { target } = this.targetPelletState;
-        return pellets[target.key] && pellets[target.key].enabled;
+        const p = pellets[target.key];
+        const enabled = p.enabled;
+        const eatable = p.spawnTime <= now;
+        return pellets[target.key] && enabled && eatable;
       };
 
       if (!hasPellet()) {
-        const target = this.determineEatTarget({ position, pellets });
+        const target = this.determineEatTarget({ position, pellets, now });
         this.targetPelletState = { target, chosenDirection: null };
       }
 
