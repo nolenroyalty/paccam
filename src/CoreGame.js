@@ -1158,16 +1158,9 @@ class GameEngine {
 
   handleAudio({ isMoving }) {
     if (isMoving) {
+      // sound manager does the right thing if a sound is already looping
       this.soundManager.playSound({ name: "chomp", loop: true });
-      // play audio if it's not playing
-      // if (this.sounds.chomp.paused) {
-      //   this.sounds.chomp.currentTime = 0;
-      //   this.sounds.chomp.play();
-      // }
-      // this.sounds.chomp.loop = true;
     } else {
-      // pause audio if it's playing
-      // this.sounds.chomp.loop = false;
       this.soundManager.stopLooping({ name: "chomp" });
     }
   }

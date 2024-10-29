@@ -1,5 +1,5 @@
 const SOUNDS = [
-  { src: "pacman-chomp.mp3", volume: 0.2, name: "chomp" },
+  { src: "pacman-chomp-padded.mp3", volume: 0.2, name: "chomp" },
   { src: "pacman-fruit.mp3", volume: 0.5, name: "fruit" },
   { src: "pacman-start.mp3", volume: 0.4, name: "start" },
   { src: "pacman-super.mp3", volume: 0.2, name: "super" },
@@ -82,8 +82,8 @@ class SoundManager {
     gainNode.gain.value = volume;
     source.connect(gainNode);
     gainNode.connect(this.audioContext.destination);
-    source.start(0);
     source.loop = loop;
+    source.start(0);
     this.sounds[name].nodes = { source, gainNode };
     this.sounds[name].playing = true;
     this.sounds[name].looping = loop;
@@ -104,7 +104,6 @@ class SoundManager {
     if (playing && !looping && loop) {
       source.loop = true;
     } else if (playing && looping && loop) {
-      console.log("NOTHING TO DO");
       // nothing to do
     } else if (playing && looping && !loop) {
       this._forceStopSound({ name });
@@ -118,6 +117,7 @@ class SoundManager {
   }
 
   stopLooping({ name }) {
+    console.log("STOP LOOPING: ", name);
     this.validateSoundName({ name });
     const { playing, looping } = this.sounds[name];
     if (playing && looping) {

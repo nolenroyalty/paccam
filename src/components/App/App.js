@@ -53,7 +53,6 @@ function App() {
       startScreenRef,
     })
   );
-  // const sounds = React.useRef({});
   const startingAnimationCompletePromiseRef = React.useRef(null);
   const spriteSheets = React.useRef({});
   const [ignoreMissingFaces, setIgnoreMissingFaces] = React.useState(false);
@@ -273,46 +272,6 @@ function App() {
     gameRef.current.beginTutorial();
   }, [moveToWaitingForPlayerSelect, setNumPlayers]);
 
-  React.useEffect(() => {
-    if (!videoEnabled) {
-      return;
-    }
-
-    // async function enableSounds() {
-    //   const soundManager = new SoundManager();
-    //   const success = await soundManager.loadAllSounds();
-    //   if (!success) {
-    //     console.error("Error loading sounds");
-    //   } else {
-    //     gameRef.current.initAudio({ soundManager });
-    //   }
-    // }
-
-    // enableSounds();
-
-    // const soundManager = new SoundManager();
-    // soundManager.loadAllSounds().then((success) => {
-    //   if (!success) {
-    //     console.error("Error loading sounds");
-    //   } else {
-    //     gameRef.current.initAudio({ soundManager });
-    //   }
-    // });
-
-    // const s = sounds.current;
-    // s.chomp.src = "/sounds/pacman-chomp.mp3";
-    // s.chomp.volume = 0.2;
-    // s.fruit.src = "/sounds/pacman-fruit.mp3";
-    // s.fruit.volume = 0.5;
-    // s.start.src = "/sounds/pacman-start.mp3";
-    // s.start.volume = 0.4;
-    // s.super.src = "/sounds/pacman-super.mp3";
-    // s.super.volume = 0.2;
-    // s.die.src = "/sounds/pacman-die.mp3";
-    // s.die.volume = 0.2;
-    // gameRef.current.initAudio({ sounds });
-  }, [videoEnabled]);
-
   const totalPlayers = gameState.numHumans + gameState.numBots;
 
   return (
@@ -380,31 +339,6 @@ function App() {
           addPacmanResultScreenState={addPacmanResultScreenState}
           debugInfo={debugInfo}
         />
-        {/* <audio
-          ref={(node) => {
-            sounds.current["chomp"] = node;
-          }}
-        />
-        <audio
-          ref={(node) => {
-            sounds.current["fruit"] = node;
-          }}
-        />
-        <audio
-          ref={(node) => {
-            sounds.current["start"] = node;
-          }}
-        />
-        <audio
-          ref={(node) => {
-            sounds.current["super"] = node;
-          }}
-        />
-        <audio
-          ref={(node) => {
-            sounds.current["die"] = node;
-          }} */}
-        {/* /> */}
         <MissingFacesBanner gameStatus={gameState.status} gameRef={gameRef} />
       </GameHolderOverlapping>
       <LiveScoreDisplay
