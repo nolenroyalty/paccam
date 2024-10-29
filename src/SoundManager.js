@@ -12,6 +12,7 @@ class SoundManager {
     this.sounds = {};
     this.audioContext = new (window.AudioContext ||
       window.webkitAudioContext)();
+    this.errorLoading = false;
   }
 
   async loadSound({ src, volume, name }) {
@@ -45,6 +46,7 @@ class SoundManager {
       return true;
     } catch (error) {
       console.error("Error loading sounds", error);
+      this.errorLoading = true;
       return false;
     }
   }
@@ -98,6 +100,9 @@ class SoundManager {
   }
 
   playSound({ name, loop = false }) {
+    if (this.errorLoading) {
+      return;
+    }
     this.validateSoundName({ name });
     const { playing, looping, nodes } = this.sounds[name];
     let { source } = nodes;
