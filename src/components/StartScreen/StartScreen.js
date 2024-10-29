@@ -19,10 +19,12 @@ const useStartingAnimationComplete = ({
 }) => {
   const resolveRef = React.useRef();
   const [isInitial, setIsInitial] = React.useState(true);
+  const [hasFinished, setHasFinished] = React.useState(false);
 
   React.useEffect(() => {
     if (status !== WAITING_FOR_PLAYER_SELECT) {
       setIsInitial(true);
+      setHasFinished(false);
       return;
     }
   }, [status]);
@@ -32,6 +34,7 @@ const useStartingAnimationComplete = ({
       setIsInitial(false);
       startingAnimationCompletePromiseRef.current = new Promise((resolve) => {
         resolveRef.current = resolve;
+        setHasFinished(true);
       });
     }
   }, [isInitial, startingAnimationCompletePromiseRef]);
@@ -42,7 +45,7 @@ const useStartingAnimationComplete = ({
     }
   }, []);
 
-  return { handleAnimationComplete };
+  return { handleAnimationComplete, animationHasFinished: hasFinished };
 };
 
 function StartScreen({
@@ -68,10 +71,11 @@ function StartScreen({
   // loaded just prevents the animation from starting before we've loaded
   // everything in
   const [loaded, setLoaded] = React.useState(false);
-  const { handleAnimationComplete } = useStartingAnimationComplete({
-    startingAnimationCompletePromiseRef,
-    status,
-  });
+  const { handleAnimationComplete, animationHasFinished } =
+    useStartingAnimationComplete({
+      startingAnimationCompletePromiseRef,
+      status,
+    });
 
   React.useEffect(() => {
     window.localStorage.setItem("allowMorePlayers", allowMorePlayers);
@@ -239,7 +243,11 @@ function StartScreen({
             onClick={(e) => {
               startGame();
             }}
-            disabled={numHumans + numBots === 0 || landmarkerLoading}
+            disabled={
+              numHumans + numBots === 0 ||
+              landmarkerLoading ||
+              !animationHasFinished
+            }
             // Landmarker loading is blocking. We can try to delay our transition speed,
             // but this doesn't work super well because the landmarker loading blocks
             // the css transition. Instead we try making the speed super snappy, so that

@@ -1941,6 +1941,7 @@ class GameEngine {
       console.log(`Restarting landmarker`);
       delete this.landmarker;
       this.landmarker = null;
+      this.soundManager.stopAllSounds();
     } else {
       console.log(`Not restarting landmarker`);
     }
