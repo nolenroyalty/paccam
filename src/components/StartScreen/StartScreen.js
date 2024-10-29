@@ -224,8 +224,8 @@ function StartScreen({
         }
         {!videoEnabled && (
           <FadeOutButton
-            onClick={(e) => {
-              enableVideo(true);
+            onClick={async (e) => {
+              await enableVideo(true);
               setHideVideoButton(true);
             }}
             size="small"

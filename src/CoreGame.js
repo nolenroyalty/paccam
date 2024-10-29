@@ -170,8 +170,9 @@ class GameEngine {
   enableSuper({ playerNum }) {
     const now = performance.now();
     const endSuperAt = now + DEFAULT_SUPER_DURATION * 1000;
-    this.sounds.super.currentTime = 0;
-    this.sounds.super.play();
+    // this.sounds.super.currentTime = 0;
+    // this.sounds.super.play();
+    this.soundManager.playSound({ name: "super" });
     this.superStatus = { playerNum: playerNum, endSuperAt };
     this.disableOtherSuperPellets();
   }
@@ -199,8 +200,8 @@ class GameEngine {
     this.updateStatusAndConsumers(WAITING_FOR_PLAYER_SELECT, "initVideo");
   }
 
-  initAudio({ sounds }) {
-    this.sounds = sounds.current;
+  initAudio({ soundManager }) {
+    this.soundManager = soundManager;
   }
 
   // manually move using the arrow keys; for debugging only
@@ -1157,15 +1158,17 @@ class GameEngine {
 
   handleAudio({ isMoving }) {
     if (isMoving) {
+      this.soundManager.playSound({ name: "chomp", loop: true });
       // play audio if it's not playing
-      if (this.sounds.chomp.paused) {
-        this.sounds.chomp.currentTime = 0;
-        this.sounds.chomp.play();
-      }
-      this.sounds.chomp.loop = true;
+      // if (this.sounds.chomp.paused) {
+      //   this.sounds.chomp.currentTime = 0;
+      //   this.sounds.chomp.play();
+      // }
+      // this.sounds.chomp.loop = true;
     } else {
       // pause audio if it's playing
-      this.sounds.chomp.loop = false;
+      // this.sounds.chomp.loop = false;
+      this.soundManager.stopLooping({ name: "chomp" });
     }
   }
 
@@ -1254,8 +1257,9 @@ class GameEngine {
           // );
           let scoreAmount;
           if (pellet.kind === "fruit") {
-            this.sounds.fruit.currentTime = 0;
-            this.sounds.fruit.play();
+            this.soundManager.playSound({ name: "fruit" });
+            // this.sounds.fruit.currentTime = 0;
+            // this.sounds.fruit.play();
             scoreAmount = STRAWBERRY_POINTS;
           } else if (pellet.kind === "pellet") {
             scoreAmount = 1;
@@ -1333,8 +1337,9 @@ class GameEngine {
     ghostPlayerState.eatRecoveryTime = startTime + EAT_RECOVERY_TIME * 1000;
     ghostPlayerState.slotsToMove = 0;
 
-    this.sounds.die.currentTime = 0;
-    this.sounds.die.play();
+    this.soundManager.playSound({ name: "die" });
+    // this.sounds.die.currentTime = 0;
+    // this.sounds.die.play();
 
     let dist = -1;
     let slotToMoveTo = null;
@@ -1638,7 +1643,8 @@ class GameEngine {
     this.updateTimeConsumers();
     this.setTutorialInstruction(null);
     let timeToSleep = 1000;
-    this.sounds.chomp.loop = false;
+    // this.sounds.chomp.loop = false;
+    this.soundManager.stopAllSounds();
     if (this.loopRunning) {
       const then = performance.now();
       await this.tellLoopToStopReturningWhenStopped();
@@ -1696,10 +1702,11 @@ class GameEngine {
     };
 
     const maybePlayErrorSound = () => {
-      if (this.sounds.fruit.paused) {
-        this.sounds.fruit.currentTime = 0;
-        this.sounds.fruit.play();
-      }
+      this.soundManager.playSound({ name: "fruit" });
+      // if (this.sounds.fruit.paused) {
+      //   this.sounds.fruit.currentTime = 0;
+      //   this.sounds.fruit.play();
+      // }
     };
 
     const resetDirectiveState = () => {
@@ -1861,8 +1868,9 @@ class GameEngine {
     this.time = "starting";
     // this is a hack to get the sound to play repeatedly on mobile, idk why
     // we need it.
-    const z = new Audio(this.sounds.start.src);
-    z.play();
+    // const z = new Audio(this.sounds.start.src);
+    // z.play();
+    this.soundManager.playSound({ name: "start" });
     this.movePlayersToStartingLocation();
 
     const intervalId = setInterval(() => {

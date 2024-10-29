@@ -3,6 +3,7 @@ import styled from "styled-components";
 import Playfield from "../Playfield";
 import VideoFrame from "../VideoFrame";
 import GameEngine from "../../CoreGame";
+import SoundManager from "../../SoundManager";
 import StartScreen from "../StartScreen";
 import TimerDisplay from "../TimerDisplay";
 import TutorialHandler from "../TutorialHandler";
@@ -52,7 +53,7 @@ function App() {
       startScreenRef,
     })
   );
-  const sounds = React.useRef({});
+  // const sounds = React.useRef({});
   const startingAnimationCompletePromiseRef = React.useRef(null);
   const spriteSheets = React.useRef({});
   const [ignoreMissingFaces, setIgnoreMissingFaces] = React.useState(false);
@@ -104,7 +105,10 @@ function App() {
     []
   );
 
-  const enableVideo = React.useCallback(() => {
+  const enableVideo = React.useCallback(async () => {
+    const soundManager = new SoundManager();
+    await soundManager.resumeAudioContext();
+
     navigator.mediaDevices
       .getUserMedia({ video: true })
       .then((stream) => {
@@ -115,6 +119,14 @@ function App() {
         console.alert("Error accessing the camera. Refresh?", err);
       });
     gameRef.current.initVideo(videoRef.current);
+
+    const success = await soundManager.loadAllSounds();
+    if (!success) {
+      console.error("Error loading sounds");
+    } else {
+      console.log("sounds loaded");
+      gameRef.current.initAudio({ soundManager });
+    }
   }, []);
 
   const setNumPlayers = React.useCallback(
@@ -266,18 +278,39 @@ function App() {
       return;
     }
 
-    const s = sounds.current;
-    s.chomp.src = "/sounds/pacman-chomp.mp3";
-    s.chomp.volume = 0.2;
-    s.fruit.src = "/sounds/pacman-fruit.mp3";
-    s.fruit.volume = 0.5;
-    s.start.src = "/sounds/pacman-start.mp3";
-    s.start.volume = 0.4;
-    s.super.src = "/sounds/pacman-super.mp3";
-    s.super.volume = 0.2;
-    s.die.src = "/sounds/pacman-die.mp3";
-    s.die.volume = 0.2;
-    gameRef.current.initAudio({ sounds });
+    // async function enableSounds() {
+    //   const soundManager = new SoundManager();
+    //   const success = await soundManager.loadAllSounds();
+    //   if (!success) {
+    //     console.error("Error loading sounds");
+    //   } else {
+    //     gameRef.current.initAudio({ soundManager });
+    //   }
+    // }
+
+    // enableSounds();
+
+    // const soundManager = new SoundManager();
+    // soundManager.loadAllSounds().then((success) => {
+    //   if (!success) {
+    //     console.error("Error loading sounds");
+    //   } else {
+    //     gameRef.current.initAudio({ soundManager });
+    //   }
+    // });
+
+    // const s = sounds.current;
+    // s.chomp.src = "/sounds/pacman-chomp.mp3";
+    // s.chomp.volume = 0.2;
+    // s.fruit.src = "/sounds/pacman-fruit.mp3";
+    // s.fruit.volume = 0.5;
+    // s.start.src = "/sounds/pacman-start.mp3";
+    // s.start.volume = 0.4;
+    // s.super.src = "/sounds/pacman-super.mp3";
+    // s.super.volume = 0.2;
+    // s.die.src = "/sounds/pacman-die.mp3";
+    // s.die.volume = 0.2;
+    // gameRef.current.initAudio({ sounds });
   }, [videoEnabled]);
 
   const totalPlayers = gameState.numHumans + gameState.numBots;
@@ -347,7 +380,7 @@ function App() {
           addPacmanResultScreenState={addPacmanResultScreenState}
           debugInfo={debugInfo}
         />
-        <audio
+        {/* <audio
           ref={(node) => {
             sounds.current["chomp"] = node;
           }}
@@ -370,8 +403,8 @@ function App() {
         <audio
           ref={(node) => {
             sounds.current["die"] = node;
-          }}
-        />
+          }} */}
+        {/* /> */}
         <MissingFacesBanner gameStatus={gameState.status} gameRef={gameRef} />
       </GameHolderOverlapping>
       <LiveScoreDisplay

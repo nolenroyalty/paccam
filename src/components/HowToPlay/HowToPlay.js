@@ -107,9 +107,9 @@ function HowToPlay({
 
             <ButtonHolder>
               <Button
-                onClick={(e) => {
+                onClick={async (e) => {
                   if (!videoEnabled) {
-                    enableVideo();
+                    await enableVideo();
                   }
                   const runThisEarly = () => {
                     setAboutToRunTutorial(true);
