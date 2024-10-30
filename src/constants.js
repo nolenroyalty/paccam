@@ -20,3 +20,13 @@ export const pelletSizeInSlots = (kind) => {
     throw new Error(`Unknown pellet kind: ${kind}`);
   }
 };
+
+export const GIF_STUFF = {
+  // gif.js wants this with a 0x, canvas with a #
+  alphaBackgroundCanvas: "#00FF00",
+  alphaBackgroundGif: "0x00FF00",
+  priorMouthFramesToSave: 12,
+  subsequentMouthFramesToSave: 0,
+  mouthSaveFrequency: 30, // save every ~30 ms
+  gifDelay: 105, // 3.5 times slower than the save frequency
+};

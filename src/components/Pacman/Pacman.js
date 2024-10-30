@@ -5,6 +5,7 @@ import { zIndex1 } from "../../zindex";
 import { EATEN, GHOST, NORMAL, FADED, SUPER } from "../../PACMANSTATE";
 import { RUNNING_TUTORIAL } from "../../STATUS";
 import { COLORS } from "../../COLORS";
+import { GIF_STUFF } from "../../constants";
 const PLAYER_CANVAS_SIZE = 128;
 const SPRITE_WIDTH = 32;
 const SPRITE_HEIGHT = 32;
@@ -312,11 +313,10 @@ function Pacman({
     displayDupe,
   ]);
 
+  // We always save a few frames of mouth movement so that we can build a gif
+  // that leads into the "funny" moment we want our gifs to freeze on.
   const lastFewMouthStates = React.useRef([]);
   const lastSavedTime = React.useRef(0);
-  const SAVE_MOUTH_FREQUENCY = 40;
-  const NUMBER_OF_MOUTHS_BEFORE_TO_SAVE = 6;
-  const NUMBER_OF_MOUTHS_AFTER_TO_SAVE = 1;
   const numberOfMouthStatesToAddToCurrentLoop = React.useRef(0);
   React.useEffect(() => {
     if (!isHuman) {
@@ -324,12 +324,14 @@ function Pacman({
     }
 
     const now = performance.now();
-    if (now - lastSavedTime.current > SAVE_MOUTH_FREQUENCY) {
+    if (now - lastSavedTime.current > GIF_STUFF.mouthSaveFrequency) {
       const { withBackground } = captureCurrentPlayerFace({ videoCoordinates });
       lastFewMouthStates.current = [
-        ...lastFewMouthStates.current.slice(-NUMBER_OF_MOUTHS_BEFORE_TO_SAVE),
+        ...lastFewMouthStates.current.slice(-GIF_STUFF.priorMouthFramesToSave),
         withBackground,
       ];
+      // optionally, we save a few frames "after" so that the gif can keep going
+      // in practice i think this is probably worse, not sure yet.
       if (numberOfMouthStatesToAddToCurrentLoop.current > 0) {
         numberOfMouthStatesToAddToCurrentLoop.current--;
         addPacmanFaceGifFrame({ playerNum, frame: withBackground });
@@ -367,7 +369,7 @@ function Pacman({
       pngToDisplayBeforeGifIsReady,
     });
     numberOfMouthStatesToAddToCurrentLoop.current =
-      NUMBER_OF_MOUTHS_AFTER_TO_SAVE;
+      GIF_STUFF.subsequentMouthFramesToSave;
     largestMouthSaved.current = maxJawState;
   }, [
     captureCurrentPlayerFace,

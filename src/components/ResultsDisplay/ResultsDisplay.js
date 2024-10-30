@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { colorForPlayer } from "../../utils";
 import { SHOWING_RESULTS } from "../../STATUS";
 import Button from "../Button";
-import { MAX_PLAYERS } from "../../constants";
+import { MAX_PLAYERS, GIF_STUFF } from "../../constants";
 import ImageToVideoConverter from "../../ImageToVideoConverter";
 
 function ResultsDisplay({
@@ -14,8 +14,8 @@ function ResultsDisplay({
   gameRef,
   moveToWaitingForPlayerSelect,
 }) {
-  // const [z, setZ] = React.useState(0);
   const [swapResultsAround, setSwapResultsAround] = React.useState(false);
+  const [displayGifs, setDisplayGifs] = React.useState(false);
   const [fadeOut, setFadeOut] = React.useState(false);
   const [scores, setScores] = React.useState({});
   const [gifs, setGifs] = React.useState({});
@@ -30,16 +30,23 @@ function ResultsDisplay({
 
   React.useEffect(() => {
     let timeoutId;
+    let displayGifsTimeoutId;
     if (status !== SHOWING_RESULTS) {
       setSwapResultsAround(false);
       setFadeOut(false);
+      setDisplayGifs(false);
     } else {
       timeoutId = setTimeout(() => {
         setSwapResultsAround(true);
       }, 2000);
 
+      displayGifsTimeoutId = setTimeout(() => {
+        setDisplayGifs(true);
+      }, 3000);
+
       return () => {
         clearTimeout(timeoutId);
+        clearTimeout(displayGifsTimeoutId);
       };
     }
   }, [status]);
@@ -68,28 +75,11 @@ function ResultsDisplay({
     for (let i = 0; i < totalPlayers; i++) {
       const state = pacmanFaceGifState["player" + i];
       const beforeMain = state.framesBeforeMain;
-      const afterMain = state.framesAfterMain;
-      if (beforeMain.length + afterMain.length === 0) {
+      if (beforeMain.length === 0) {
         continue;
       }
       const main = state.mainMouthFrame;
-      // const frames = [...beforeMain, main, main, main, ...afterMain];
-      const afterBackwards = [...afterMain].reverse();
-      const beforeBackwards = [...beforeMain].reverse();
-      const frames = [
-        ...beforeMain,
-        main,
-        // main,
-        // main,
-        // main,
-        // main,
-        // main,
-        // main,
-        // ...afterMain,
-        // ...[...afterMain].reverse(),
-        // main,
-        // ...[...beforeMain].reverse(),
-      ];
+      const frames = [...beforeMain, main];
       const appendLastFrame = (n) => {
         for (let i = 0; i < n; i++) {
           frames.push(frames.slice(-1)[0]);
@@ -98,15 +88,17 @@ function ResultsDisplay({
       // make the gif "stop" for a bit before looping
       appendLastFrame(9);
 
-      console.log(`GEN GIF: ${i} / length: ${state.length}`);
+      console.log(
+        `Generate gif for player ${i} / frame count: ${frames.length}`
+      );
       converter
-        .createGif(frames, { delay: 150 })
+        .createGif({ frames, delay: GIF_STUFF.gifDelay })
         .catch((e) => {
-          console.error(`GIF ERROR: ${e}`);
+          console.error(`Error generating gif for player ${i}: ${e}`);
         })
         .then((gif) => {
-          console.log(`SET GIFS: ${gif}`);
           const url = URL.createObjectURL(gif);
+          console.log(`Gif generated for player ${i}`);
           setGifs((gifs) => ({ ...gifs, [i]: url }));
         });
     }
@@ -121,7 +113,7 @@ function ResultsDisplay({
       {Array.from({ length: MAX_PLAYERS }, (_, i) => {
         if (i < totalPlayers) {
           let whatToDisplay;
-          if (gifs[i]) {
+          if (gifs[i] && displayGifs) {
             whatToDisplay = gifs[i];
           } else {
             whatToDisplay =

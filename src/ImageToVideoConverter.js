@@ -5,29 +5,27 @@ const gifWorker = new URL(
 );
 
 class ImageSequenceConverter {
-  async createGif(dataUrls, options = {}) {
-    console.log(`dataUrls.length: ${dataUrls.length}`);
-    console.log(`dataUrls: ${dataUrls}`);
+  async createGif({ frames, delay, options = {} }) {
     const gif = new GIF({
       workers: 2,
       quality: 10,
       transparent: "0x00FF00",
       threshold: 0,
       workerScript: gifWorker,
+      ...options,
     });
 
     return new Promise((resolve, reject) => {
       let loadedImages = 0;
-      dataUrls.forEach((dataUrl, i) => {
+      frames.forEach((dataUrl, i) => {
         const img = new Image();
-        console.log(`loading image ${i}`);
-        // console.log("dataUrl", dataUrl);
+        console.debug(`LOADING IMAGE ${i} / ${frames.length}`);
         img.onload = () => {
-          gif.addFrame(img, { delay: options.delay || 100 });
+          gif.addFrame(img, { delay });
           loadedImages++;
-          console.log(`loadedImages: ${loadedImages} / ${dataUrls.length}`);
-          if (loadedImages === dataUrls.length) {
-            console.log("RENDER!");
+          console.debug(`LOADED IMAGE: ${loadedImages} / ${frames.length}`);
+          if (loadedImages === frames.length) {
+            console.debug("rendering gif...");
             gif.render();
           }
         };
@@ -35,7 +33,7 @@ class ImageSequenceConverter {
       });
 
       gif.on("finished", (blob) => {
-        console.log("FINISHED");
+        console.debug("gif render complete");
         resolve(blob);
       });
       gif.on("error", (error) => {
