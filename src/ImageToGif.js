@@ -4,7 +4,7 @@ const gifWorker = new URL(
   import.meta.url
 );
 
-class ImageSequenceConverter {
+class ImageToGif {
   async createGif({ frames, delay, options = {} }) {
     const gif = new GIF({
       workers: 2,
@@ -55,4 +55,4 @@ class ImageSequenceConverter {
   }
 }
 
-export default ImageSequenceConverter;
+export default ImageToGif;

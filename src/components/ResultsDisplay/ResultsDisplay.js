@@ -5,7 +5,7 @@ import { colorForPlayer } from "../../utils";
 import { SHOWING_RESULTS } from "../../STATUS";
 import Button from "../Button";
 import { MAX_PLAYERS, GIF_STUFF } from "../../constants";
-import ImageToVideoConverter from "../../ImageToVideoConverter";
+import ImageToGif from "../../ImageToGif";
 
 function ResultsDisplay({
   totalPlayers,
@@ -71,7 +71,7 @@ function ResultsDisplay({
     }
     genGifs.current = false;
 
-    const converter = new ImageToVideoConverter();
+    const converter = new ImageToGif();
     for (let i = 0; i < totalPlayers; i++) {
       const state = pacmanFaceGifState["player" + i];
       const beforeMain = state.framesBeforeMain;
