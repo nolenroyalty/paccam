@@ -23,7 +23,6 @@ function Pacman({
   status,
   ghostSpriteSheet,
   superSpriteSheet,
-  addPacmanResultScreenState,
   addPacmanFaceGifFrame,
   initializePacmanFaceGif,
   isHuman,
@@ -316,8 +315,8 @@ function Pacman({
   const lastFewMouthStates = React.useRef([]);
   const lastSavedTime = React.useRef(0);
   const SAVE_MOUTH_FREQUENCY = 40;
-  const NUMBER_OF_MOUTHS_BEFORE_TO_SAVE = 4;
-  const NUMBER_OF_MOUTHS_AFTER_TO_SAVE = 2;
+  const NUMBER_OF_MOUTHS_BEFORE_TO_SAVE = 6;
+  const NUMBER_OF_MOUTHS_AFTER_TO_SAVE = 1;
   const numberOfMouthStatesToAddToCurrentLoop = React.useRef(0);
   React.useEffect(() => {
     if (!isHuman) {
@@ -371,7 +370,6 @@ function Pacman({
       NUMBER_OF_MOUTHS_AFTER_TO_SAVE;
     largestMouthSaved.current = maxJawState;
   }, [
-    addPacmanResultScreenState,
     captureCurrentPlayerFace,
     drawPlayerToCanvas,
     initializePacmanFaceGif,
@@ -412,7 +410,6 @@ function Pacman({
       framesBeforeMain: [],
     });
   }, [
-    addPacmanResultScreenState,
     drawPlayerToCanvas,
     initializePacmanFaceGif,
     isHuman,

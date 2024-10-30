@@ -73,18 +73,34 @@ function ResultsDisplay({
         continue;
       }
       const main = state.mainMouthFrame;
-      const frames = [...beforeMain, main, ...afterMain];
+      // const frames = [...beforeMain, main, main, main, ...afterMain];
+      const afterBackwards = [...afterMain].reverse();
+      const beforeBackwards = [...beforeMain].reverse();
+      const frames = [
+        ...beforeMain,
+        main,
+        // main,
+        // main,
+        // main,
+        // main,
+        // main,
+        // main,
+        // ...afterMain,
+        // ...[...afterMain].reverse(),
+        // main,
+        // ...[...beforeMain].reverse(),
+      ];
       const appendLastFrame = (n) => {
         for (let i = 0; i < n; i++) {
           frames.push(frames.slice(-1)[0]);
         }
       };
       // make the gif "stop" for a bit before looping
-      appendLastFrame(3);
+      appendLastFrame(9);
 
       console.log(`GEN GIF: ${i} / length: ${state.length}`);
       converter
-        .createGif(frames, { delay: 200 })
+        .createGif(frames, { delay: 150 })
         .catch((e) => {
           console.error(`GIF ERROR: ${e}`);
         })
@@ -115,13 +131,12 @@ function ResultsDisplay({
           return (
             <ScoreBlock
               key={i}
-              myResultScreenState={whatToDisplay}
+              imageToDisplay={whatToDisplay}
               color={colorForPlayer(i)}
               myScore={scores[i].score}
               myPlayerNum={i}
               swapResultsAround={swapResultsAround}
               scores={scores}
-              totalPlayers={totalPlayers}
             />
           );
         } else {
@@ -146,15 +161,14 @@ function ResultsDisplay({
 }
 
 function ScoreBlock({
-  totalPlayers,
   myPlayerNum,
-  myResultScreenState,
+  imageToDisplay,
   color,
   myScore,
   swapResultsAround,
   scores,
 }) {
-  const face = Boolean(myResultScreenState) ? myResultScreenState : null;
+  const image = Boolean(imageToDisplay) ? imageToDisplay : null;
 
   let initialY, finalY, delay, spring;
   if (swapResultsAround) {
@@ -196,7 +210,7 @@ function ScoreBlock({
       animate={{ y: finalY }}
       transition={spring}
     >
-      <PlayerFace src={face} />
+      <PlayerFace src={image} />
       <ScoreText style={{ "--color": color }}>{myScore}</ScoreText>
     </ScoreRow>
   );

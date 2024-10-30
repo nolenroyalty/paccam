@@ -105,10 +105,10 @@ function Playfield({
   totalPlayers,
   numHumans,
   status,
-  addPacmanResultScreenState,
   debugInfo,
   addPacmanFaceGifFrame,
   initializePacmanFaceGif,
+  round,
 }) {
   const [initializedPlayfield, setInitializedPlayfield] = React.useState(false);
   const [playfieldSize, setPlayfieldSize] = React.useState({
@@ -245,7 +245,7 @@ function Playfield({
 
               return (
                 <Pacman
-                  key={playerNum}
+                  key={`${round}-${playerNum}`}
                   gameRef={gameRef}
                   videoRef={videoRef}
                   spriteSheet={spriteSheet}
@@ -255,7 +255,6 @@ function Playfield({
                   slotHeight={slotHeight}
                   slotSizePx={slotSizePx}
                   playerNum={playerNum}
-                  addPacmanResultScreenState={addPacmanResultScreenState}
                   status={status}
                   debugInfo={debugInfo[playerNum]}
                   isHuman={playerNum < numHumans}

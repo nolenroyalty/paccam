@@ -58,11 +58,11 @@ function App() {
   const [ignoreMissingFaces, setIgnoreMissingFaces] = React.useState(false);
 
   const [videoEnabled, setVideoEnabled] = React.useState(false);
-  const [pacmanResultScreenState, setPacmanResultScreenState] = React.useState(
-    {}
-  );
   const [pacmanFaceGifState, setPacmanFaceGifState] = React.useState({});
   const [debugInfo, setDebugInfo] = React.useState({});
+  // Round basically exists to let us change React keys for some components
+  // between rounds to reset their internal state.
+  const [round, setRound] = React.useState(0);
 
   React.useEffect(() => {
     if (!gameRef.current) {
@@ -94,16 +94,6 @@ function App() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
-
-  const addPacmanResultScreenState = React.useCallback(
-    ({ playerNum, position, faceCapture }) => {
-      setPacmanResultScreenState((state) => ({
-        ...state,
-        ["player" + playerNum]: { position, faceCapture },
-      }));
-    },
-    []
-  );
 
   const initializePacmanFaceGif = React.useCallback(
     ({
@@ -281,6 +271,8 @@ function App() {
         numBots,
         setStartingLocations: false,
       });
+      setRound((r) => r + 1);
+      setPacmanFaceGifState({});
 
       if (startingAnimationCompletePromiseRef.current) {
         console.log("waiting for animation to complete...");
@@ -376,10 +368,10 @@ function App() {
           totalPlayers={totalPlayers}
           numHumans={gameState.numHumans}
           status={gameState.status}
-          addPacmanResultScreenState={addPacmanResultScreenState}
           addPacmanFaceGifFrame={addPacmanFaceGifFrame}
           initializePacmanFaceGif={initializePacmanFaceGif}
           debugInfo={debugInfo}
+          round={round}
         />
         <MissingFacesBanner gameStatus={gameState.status} gameRef={gameRef} />
       </GameHolderOverlapping>
@@ -393,7 +385,6 @@ function App() {
         totalPlayers={totalPlayers}
         gameRef={gameRef}
         pacmanFaceGifState={pacmanFaceGifState}
-        resultScreenState={pacmanResultScreenState}
         moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
       />
       {ignoreMissingFaces && (
