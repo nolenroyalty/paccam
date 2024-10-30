@@ -73,7 +73,7 @@ function ResultsDisplay({
 
     const converter = new ImageToGif();
     for (let i = 0; i < totalPlayers; i++) {
-      const state = pacmanFaceGifState["player" + i];
+      const state = pacmanFaceGifState[i];
       const beforeMain = state.framesBeforeMain;
       if (beforeMain.length === 0) {
         continue;
@@ -116,8 +116,7 @@ function ResultsDisplay({
           if (gifs[i] && displayGifs) {
             whatToDisplay = gifs[i];
           } else {
-            whatToDisplay =
-              pacmanFaceGifState["player" + i].pngToDisplayBeforeGifIsReady;
+            whatToDisplay = pacmanFaceGifState[i].pngToDisplayBeforeGifIsReady;
           }
 
           return (

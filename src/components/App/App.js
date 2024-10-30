@@ -104,7 +104,7 @@ function App() {
     }) => {
       setPacmanFaceGifState((state) => ({
         ...state,
-        ["player" + playerNum]: {
+        [playerNum]: {
           pngToDisplayBeforeGifIsReady,
           mainMouthFrame,
           framesBeforeMain,
@@ -117,7 +117,7 @@ function App() {
 
   const addPacmanFaceGifFrame = React.useCallback(({ playerNum, frame }) => {
     setPacmanFaceGifState((state) => {
-      const current = state["player" + playerNum] || {
+      const current = state[playerNum] || {
         pngToDisplayBeforeGifIsReady: frame,
         mainMouthFrame: frame,
         framesBeforeMain: [],
@@ -129,7 +129,7 @@ function App() {
       };
       return {
         ...state,
-        ["player" + playerNum]: ret,
+        [playerNum]: ret,
       };
     });
   }, []);
