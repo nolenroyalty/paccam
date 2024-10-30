@@ -28,7 +28,7 @@ const MIN_DETECTION_CONFIDENCE = 0.4;
 const MIN_TRACKING_CONFIDENCE = 0.3;
 const MIN_SUPPRESSION_THRESHOLD = 0.1;
 
-const SECONDS_IN_ROUND = 30; // 30
+const SECONDS_IN_ROUND = 5; // 30
 const COUNT_IN_TIME = 3; // 3
 
 // this was 0.48
@@ -1636,7 +1636,6 @@ class GameEngine {
     this.updateTimeConsumers();
     this.setTutorialInstruction(null);
     let timeToSleep = 1000;
-    // this.sounds.chomp.loop = false;
     this.soundManager.stopAllSounds();
     if (this.loopRunning) {
       const then = performance.now();
@@ -1941,10 +1940,10 @@ class GameEngine {
       console.log(`Restarting landmarker`);
       delete this.landmarker;
       this.landmarker = null;
-      this.soundManager.stopAllSounds();
     } else {
       console.log(`Not restarting landmarker`);
     }
+    this.soundManager.stopAllSounds();
     this.loopRunning = false;
     if (this.resolveEndLoop) {
       this.resolveEndLoop();

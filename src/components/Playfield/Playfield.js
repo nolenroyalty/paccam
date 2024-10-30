@@ -107,6 +107,8 @@ function Playfield({
   status,
   addPacmanResultScreenState,
   debugInfo,
+  addPacmanFaceGifFrame,
+  initializePacmanFaceGif,
 }) {
   const [initializedPlayfield, setInitializedPlayfield] = React.useState(false);
   const [playfieldSize, setPlayfieldSize] = React.useState({
@@ -257,6 +259,8 @@ function Playfield({
                   status={status}
                   debugInfo={debugInfo[playerNum]}
                   isHuman={playerNum < numHumans}
+                  addPacmanFaceGifFrame={addPacmanFaceGifFrame}
+                  initializePacmanFaceGif={initializePacmanFaceGif}
                 />
               );
             })}

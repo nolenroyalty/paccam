@@ -61,6 +61,7 @@ function App() {
   const [pacmanResultScreenState, setPacmanResultScreenState] = React.useState(
     {}
   );
+  const [pacmanFaceGifState, setPacmanFaceGifState] = React.useState({});
   const [debugInfo, setDebugInfo] = React.useState({});
 
   React.useEffect(() => {
@@ -103,6 +104,45 @@ function App() {
     },
     []
   );
+
+  const initializePacmanFaceGif = React.useCallback(
+    ({
+      playerNum,
+      pngToDisplayBeforeGifIsReady,
+      mainMouthFrame,
+      framesBeforeMain,
+    }) => {
+      setPacmanFaceGifState((state) => ({
+        ...state,
+        ["player" + playerNum]: {
+          pngToDisplayBeforeGifIsReady,
+          mainMouthFrame,
+          framesBeforeMain,
+          framesAfterMain: [],
+        },
+      }));
+    },
+    []
+  );
+
+  const addPacmanFaceGifFrame = React.useCallback(({ playerNum, frame }) => {
+    setPacmanFaceGifState((state) => {
+      const current = state["player" + playerNum] || {
+        pngToDisplayBeforeGifIsReady: frame,
+        mainMouthFrame: frame,
+        framesBeforeMain: [],
+        framesAfterMain: [],
+      };
+      const ret = {
+        ...current,
+        framesAfterMain: [...current.framesAfterMain, frame],
+      };
+      return {
+        ...state,
+        ["player" + playerNum]: ret,
+      };
+    });
+  }, []);
 
   const enableVideo = React.useCallback(async () => {
     const soundManager = new SoundManager();
@@ -337,6 +377,8 @@ function App() {
           numHumans={gameState.numHumans}
           status={gameState.status}
           addPacmanResultScreenState={addPacmanResultScreenState}
+          addPacmanFaceGifFrame={addPacmanFaceGifFrame}
+          initializePacmanFaceGif={initializePacmanFaceGif}
           debugInfo={debugInfo}
         />
         <MissingFacesBanner gameStatus={gameState.status} gameRef={gameRef} />
@@ -350,6 +392,7 @@ function App() {
         status={gameState.status}
         totalPlayers={totalPlayers}
         gameRef={gameRef}
+        pacmanFaceGifState={pacmanFaceGifState}
         resultScreenState={pacmanResultScreenState}
         moveToWaitingForPlayerSelect={moveToWaitingForPlayerSelect}
       />

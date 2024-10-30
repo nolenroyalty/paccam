@@ -24,6 +24,8 @@ function Pacman({
   ghostSpriteSheet,
   superSpriteSheet,
   addPacmanResultScreenState,
+  addPacmanFaceGifFrame,
+  initializePacmanFaceGif,
   isHuman,
   debugInfo,
 }) {
@@ -208,6 +210,41 @@ function Pacman({
     [drawCurrentSprite, drawVideoSnapshot, isHuman]
   );
 
+  const captureCurrentPlayerFace = React.useCallback(
+    ({ videoCoordinates, includeBackgroundlessImage }) => {
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = PLAYER_CANVAS_SIZE;
+      tempCanvas.height = PLAYER_CANVAS_SIZE;
+      const ctx = tempCanvas.getContext("2d");
+      drawPlayerToCanvas({
+        ctx,
+        spriteX: 0,
+        videoCoordinates,
+        spriteAlpha: 1,
+        spriteKind: NORMAL,
+      });
+      let pngToDisplayBeforeGifIsReady;
+      if (includeBackgroundlessImage) {
+        pngToDisplayBeforeGifIsReady = tempCanvas.toDataURL("image/png");
+      }
+      // So gif.js can handle transparency but the way that it does it is a little funny.
+      // we need to provide a color that it recognizes as transparent; it doesn't respect
+      // the alpha channel (I guess this is a gif limitation? like it can't figure it out because
+      // gifs just have a color marked as alpha?)
+      // So we draw a green rectangle behind the player and then we can tell gif.js to treat
+      // that color as transparent.
+      //
+      // Relatedly, we want a properly transparent png to display before we've created our gif.
+      // So we create that on demand just for the face frame that we're building the gif around.
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.fillStyle = "#00FF00";
+      ctx.fillRect(0, 0, PLAYER_CANVAS_SIZE, PLAYER_CANVAS_SIZE);
+      const withBackground = tempCanvas.toDataURL("image/png");
+      return { withBackground, pngToDisplayBeforeGifIsReady };
+    },
+    [drawPlayerToCanvas]
+  );
+
   React.useEffect(() => {
     if (!coords) {
       return;
@@ -276,6 +313,39 @@ function Pacman({
     displayDupe,
   ]);
 
+  const lastFewMouthStates = React.useRef([]);
+  const lastSavedTime = React.useRef(0);
+  const SAVE_MOUTH_FREQUENCY = 40;
+  const NUMBER_OF_MOUTHS_BEFORE_TO_SAVE = 4;
+  const NUMBER_OF_MOUTHS_AFTER_TO_SAVE = 2;
+  const numberOfMouthStatesToAddToCurrentLoop = React.useRef(0);
+  React.useEffect(() => {
+    if (!isHuman) {
+      return;
+    }
+
+    const now = performance.now();
+    if (now - lastSavedTime.current > SAVE_MOUTH_FREQUENCY) {
+      const { withBackground } = captureCurrentPlayerFace({ videoCoordinates });
+      lastFewMouthStates.current = [
+        ...lastFewMouthStates.current.slice(-NUMBER_OF_MOUTHS_BEFORE_TO_SAVE),
+        withBackground,
+      ];
+      if (numberOfMouthStatesToAddToCurrentLoop.current > 0) {
+        numberOfMouthStatesToAddToCurrentLoop.current--;
+        addPacmanFaceGifFrame({ playerNum, frame: withBackground });
+      }
+      lastSavedTime.current = now;
+    }
+  }, [
+    addPacmanFaceGifFrame,
+    captureCurrentPlayerFace,
+    drawPlayerToCanvas,
+    isHuman,
+    playerNum,
+    videoCoordinates,
+  ]);
+
   // good proxy for "funniest image" is "the time you opened your mouth the most"
   const largestMouthSaved = React.useRef(-1);
   React.useEffect(() => {
@@ -283,24 +353,28 @@ function Pacman({
       return;
     }
 
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = PLAYER_CANVAS_SIZE;
-    tempCanvas.height = PLAYER_CANVAS_SIZE;
-    const ctx = tempCanvas.getContext("2d");
-    drawPlayerToCanvas({
-      ctx,
-      spriteX: 0,
-      videoCoordinates,
-      spriteAlpha: 1,
-      spriteKind: NORMAL,
+    const lastFew = lastFewMouthStates.current;
+
+    const { withBackground, pngToDisplayBeforeGifIsReady } =
+      captureCurrentPlayerFace({
+        videoCoordinates,
+        includeBackgroundlessImage: true,
+      });
+
+    initializePacmanFaceGif({
+      playerNum,
+      mainMouthFrame: withBackground,
+      framesBeforeMain: lastFew,
+      pngToDisplayBeforeGifIsReady,
     });
-    // const faceCapture = tempCanvas.toDataURL("image/jpeg", 0.8);
-    const faceCapture = tempCanvas.toDataURL("image/png");
-    addPacmanResultScreenState({ playerNum, faceCapture });
+    numberOfMouthStatesToAddToCurrentLoop.current =
+      NUMBER_OF_MOUTHS_AFTER_TO_SAVE;
     largestMouthSaved.current = maxJawState;
   }, [
     addPacmanResultScreenState,
+    captureCurrentPlayerFace,
     drawPlayerToCanvas,
+    initializePacmanFaceGif,
     maxJawState,
     playerNum,
     videoCoordinates,
@@ -331,10 +405,16 @@ function Pacman({
       spriteKind: NORMAL,
     });
     const faceCapture = tempCanvas.toDataURL("image/png");
-    addPacmanResultScreenState({ playerNum, faceCapture });
+    initializePacmanFaceGif({
+      playerNum,
+      pngToDisplayBeforeGifIsReady: faceCapture,
+      mainMouthFrame: faceCapture,
+      framesBeforeMain: [],
+    });
   }, [
     addPacmanResultScreenState,
     drawPlayerToCanvas,
+    initializePacmanFaceGif,
     isHuman,
     playerNum,
     videoCoordinates,

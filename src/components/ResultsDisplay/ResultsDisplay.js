@@ -1,23 +1,24 @@
 import React from "react";
 import styled from "styled-components";
-import TranslucentWindow from "../TranslucentWindow";
 import { motion } from "framer-motion";
 import { colorForPlayer } from "../../utils";
 import { SHOWING_RESULTS } from "../../STATUS";
 import Button from "../Button";
 import { MAX_PLAYERS } from "../../constants";
+import ImageToVideoConverter from "../../ImageToVideoConverter";
 
 function ResultsDisplay({
   totalPlayers,
-  resultScreenState,
+  pacmanFaceGifState,
   status,
   gameRef,
   moveToWaitingForPlayerSelect,
 }) {
-  const [z, setZ] = React.useState(0);
+  // const [z, setZ] = React.useState(0);
   const [swapResultsAround, setSwapResultsAround] = React.useState(false);
   const [fadeOut, setFadeOut] = React.useState(false);
   const [scores, setScores] = React.useState({});
+  const [gifs, setGifs] = React.useState({});
   const id = React.useId();
   React.useEffect(() => {
     const game = gameRef.current;
@@ -26,19 +27,6 @@ function ResultsDisplay({
       game.unsubscribeFromScores({ id });
     };
   }, [gameRef, id]);
-
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.code === "KeyL" && e.altKey) {
-        setSwapResultsAround(false);
-        setZ((z) => z + 1);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   React.useEffect(() => {
     let timeoutId;
@@ -54,7 +42,7 @@ function ResultsDisplay({
         clearTimeout(timeoutId);
       };
     }
-  }, [status, z]);
+  }, [status]);
 
   const fadeOutAndMoveToPlayerSelect = React.useCallback(() => {
     if (!fadeOut) {
@@ -65,9 +53,48 @@ function ResultsDisplay({
     }
   }, [fadeOut, moveToWaitingForPlayerSelect]);
 
-  if (z % 2 === 1) {
-    return null;
-  }
+  const genGifs = React.useRef(false);
+  React.useEffect(() => {
+    if (status !== SHOWING_RESULTS) {
+      genGifs.current = true;
+      return;
+    }
+    if (!genGifs.current) {
+      return;
+    }
+    genGifs.current = false;
+
+    const converter = new ImageToVideoConverter();
+    for (let i = 0; i < totalPlayers; i++) {
+      const state = pacmanFaceGifState["player" + i];
+      const beforeMain = state.framesBeforeMain;
+      const afterMain = state.framesAfterMain;
+      if (beforeMain.length + afterMain.length === 0) {
+        continue;
+      }
+      const main = state.mainMouthFrame;
+      const frames = [...beforeMain, main, ...afterMain];
+      const appendLastFrame = (n) => {
+        for (let i = 0; i < n; i++) {
+          frames.push(frames.slice(-1)[0]);
+        }
+      };
+      // make the gif "stop" for a bit before looping
+      appendLastFrame(3);
+
+      console.log(`GEN GIF: ${i} / length: ${state.length}`);
+      converter
+        .createGif(frames, { delay: 200 })
+        .catch((e) => {
+          console.error(`GIF ERROR: ${e}`);
+        })
+        .then((gif) => {
+          console.log(`SET GIFS: ${gif}`);
+          const url = URL.createObjectURL(gif);
+          setGifs((gifs) => ({ ...gifs, [i]: url }));
+        });
+    }
+  }, [pacmanFaceGifState, status, totalPlayers]);
 
   if (status !== SHOWING_RESULTS) {
     return null;
@@ -77,10 +104,18 @@ function ResultsDisplay({
     <Wrapper style={{ "--opacity": fadeOut ? 0 : 1 }}>
       {Array.from({ length: MAX_PLAYERS }, (_, i) => {
         if (i < totalPlayers) {
+          let whatToDisplay;
+          if (gifs[i]) {
+            whatToDisplay = gifs[i];
+          } else {
+            whatToDisplay =
+              pacmanFaceGifState["player" + i].pngToDisplayBeforeGifIsReady;
+          }
+
           return (
             <ScoreBlock
               key={i}
-              myResultScreenState={resultScreenState["player" + i]}
+              myResultScreenState={whatToDisplay}
               color={colorForPlayer(i)}
               myScore={scores[i].score}
               myPlayerNum={i}
@@ -119,9 +154,7 @@ function ScoreBlock({
   swapResultsAround,
   scores,
 }) {
-  const face = Boolean(myResultScreenState)
-    ? myResultScreenState.faceCapture
-    : null;
+  const face = Boolean(myResultScreenState) ? myResultScreenState : null;
 
   let initialY, finalY, delay, spring;
   if (swapResultsAround) {

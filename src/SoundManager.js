@@ -66,6 +66,7 @@ class SoundManager {
     const { nodes } = this.sounds[name];
     const { source, gainNode } = nodes;
     if (source && gainNode) {
+      source.loop = false;
       source.stop();
       source.disconnect();
       gainNode.disconnect();
