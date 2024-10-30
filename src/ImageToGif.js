@@ -36,6 +36,7 @@ class ImageToGif {
         console.debug("gif render complete");
         resolve(blob);
       });
+
       gif.on("error", (error) => {
         console.error("GIF error", error);
         reject(error);
