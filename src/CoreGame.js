@@ -7,7 +7,7 @@ import {
   pelletSizeInSlots,
   MAX_BANKED_BONUS_MOVEMENT,
   SPEED_MULTIPLIER_IF_SUPER,
-  DEFAULT_SUPER_DURATION,
+  SUPER_DURATION,
 } from "./constants";
 import { range, easeOutPow } from "./utils";
 import {
@@ -44,6 +44,7 @@ const SPECIAL_RESPAWN_CHANCE = 0.15; // 0.2
 const SPECIAL_IS_A_FRUIT_CHANCE = 1.0; // 0.7
 const STRAWBERRY_POINTS = 3;
 const EAT_RECOVERY_TIME = 1.5;
+const POST_EAT_SAFETY_BUFFER_SECONDS = 0.75;
 const IMMEDIATELY_EAT = false;
 const MAX_PLAYERS = 4;
 const TIME_TO_TOGGLE_BETWEEN_GHOST_STATES = 400;
@@ -175,7 +176,7 @@ class GameEngine {
 
   enableSuper({ playerNum }) {
     const now = performance.now();
-    const endSuperAt = now + DEFAULT_SUPER_DURATION * 1000;
+    const endSuperAt = now + SUPER_DURATION * 1000;
     // this.sounds.super.currentTime = 0;
     // this.sounds.super.play();
     this.soundManager.playSound({ name: "super" });
@@ -1379,10 +1380,15 @@ class GameEngine {
     const superActivePlayers = this.playerStates.filter(
       (x) => x.playerNum === superPlayerNum
     );
+
     const eatableCandidates = this.playerStates.filter((x) => {
       const superNotActive = x.playerNum !== superPlayerNum;
       const notEaten = !this.isEaten({ playerNum: x.playerNum, startTime });
-      return superNotActive && notEaten;
+      const canBeEatenAgain = this.canBeEatenAgain({
+        playerNum: x.playerNum,
+        startTime,
+      });
+      return superNotActive && notEaten && canBeEatenAgain;
     });
 
     eatableCandidates.forEach((ghostPlayerState) => {
@@ -1905,7 +1911,21 @@ class GameEngine {
   }
 
   isEaten({ playerNum, startTime }) {
+    const eatRecoveryTime = this.playerStates[playerNum].eatRecoveryTime;
+    if (eatRecoveryTime === null) {
+      return false;
+    }
     return this.playerStates[playerNum].eatRecoveryTime > startTime;
+  }
+
+  canBeEatenAgain({ playerNum, startTime }) {
+    const playerState = this.playerStates[playerNum];
+    const eatRecoveryTime = playerState.eatRecoveryTime;
+    if (eatRecoveryTime === null) {
+      return true;
+    }
+    const withBuffer = eatRecoveryTime + POST_EAT_SAFETY_BUFFER_SECONDS * 1000;
+    return withBuffer < startTime;
   }
 
   transitionPacmanStates({ startTime }) {
@@ -1938,7 +1958,7 @@ class GameEngine {
           );
         } else {
           const diff = superTime - startTime;
-          const inFirstHalf = diff > (DEFAULT_SUPER_DURATION * 1000) / 2;
+          const inFirstHalf = diff > (SUPER_DURATION * 1000) / 2;
           targetState = inFirstHalf ? GHOST : fadedOrNormal({ diff });
         }
       }

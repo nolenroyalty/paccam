@@ -7,7 +7,7 @@ export const SLOTS_MOVED_PER_MOUTH_MOVE = 1;
 export const MAX_PLAYERS = 4;
 export const MAX_BANKED_BONUS_MOVEMENT = 2;
 export const SPEED_MULTIPLIER_IF_SUPER = 1.2;
-export const DEFAULT_SUPER_DURATION = 5.3;
+export const SUPER_DURATION = 5.1;
 
 export const pelletSizeInSlots = (kind) => {
   if (kind === "pellet") {
