@@ -1530,7 +1530,7 @@ class GameEngine {
             playerY: playerState.position.y,
             candidateX: x,
             candidateY: y,
-            candidateSlotSize: largeSlotSizeToAvoidInstantEating,
+            candidateSlotSize: 1,
             candidateRadius: radius,
           });
       });
