@@ -2124,12 +2124,6 @@ class GameEngine {
         `BUG: startGameLoop called when not waiting for video - ${this.status}`
       );
     }
-    document.addEventListener("keydown", (e) => {
-      if (e.key === " ") {
-        // this.skipTutorialStep = true;
-        this.enableSuper({ playerNum: 0 });
-      }
-    });
     let lastVideoTime = -1;
     this.updatePositionConsumers();
     function loop() {
