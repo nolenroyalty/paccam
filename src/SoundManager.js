@@ -137,6 +137,12 @@ class SoundManager {
       this._forceStopSound({ name });
     });
   }
+
+  stopLoopingAllSounds() {
+    Object.keys(this.sounds).forEach((name) => {
+      this.stopLooping({ name });
+    });
+  }
 }
 
 export default SoundManager;

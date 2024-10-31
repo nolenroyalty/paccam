@@ -20,6 +20,7 @@ function ResultsDisplay({
   const [scores, setScores] = React.useState({});
   const [gifs, setGifs] = React.useState({});
   const id = React.useId();
+
   React.useEffect(() => {
     const game = gameRef.current;
     game.subscribeToScores({ id, callback: setScores });
@@ -29,6 +30,37 @@ function ResultsDisplay({
   }, [gameRef, id]);
 
   React.useEffect(() => {
+    if (status !== SHOWING_RESULTS) {
+      Object.values(gifs).forEach((url) => {
+        console.log("revoking");
+        URL.revokeObjectURL(url);
+      });
+      setGifs({});
+    }
+    // intentionally don't include gifs here, we only want to run this when
+    // status changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  const scoreSwappingRequired = React.useMemo(() => {
+    if (status !== SHOWING_RESULTS) {
+      return false;
+    }
+    const scoresArray = Object.values(scores);
+    let prev = null;
+    let needSwap = false;
+    for (let i = 0; i < scoresArray.length; i++) {
+      const score = scoresArray[i].score;
+      if (prev !== null && score > prev) {
+        needSwap = true;
+        break;
+      }
+      prev = score;
+    }
+    return needSwap;
+  }, [scores, status]);
+
+  React.useEffect(() => {
     let timeoutId;
     let displayGifsTimeoutId;
     if (status !== SHOWING_RESULTS) {
@@ -36,20 +68,21 @@ function ResultsDisplay({
       setFadeOut(false);
       setDisplayGifs(false);
     } else {
+      const displayGifsTimeoutLength = scoreSwappingRequired ? 2500 : 1000;
       timeoutId = setTimeout(() => {
         setSwapResultsAround(true);
       }, 2000);
 
       displayGifsTimeoutId = setTimeout(() => {
         setDisplayGifs(true);
-      }, 3000);
+      }, displayGifsTimeoutLength);
 
       return () => {
         clearTimeout(timeoutId);
         clearTimeout(displayGifsTimeoutId);
       };
     }
-  }, [status]);
+  }, [status, scoreSwappingRequired]);
 
   const fadeOutAndMoveToPlayerSelect = React.useCallback(() => {
     if (!fadeOut) {
@@ -143,6 +176,7 @@ function ResultsDisplay({
           onClick={fadeOutAndMoveToPlayerSelect}
           disabled={fadeOut}
           size="medium"
+          // style={{ "--padding": "1rem 1rem" }}
         >
           Play Again
         </Button>
@@ -177,6 +211,7 @@ function ScoreBlock({
 
     const totalHeight = window.innerHeight * 0.95 - 32;
     const hardcodedButtonHeightPleaseDontMurderMe = 120;
+    // const hardcodedButtonHeightPleaseDontMurderMe = 68;
     const availableHeight =
       totalHeight - hardcodedButtonHeightPleaseDontMurderMe;
     const individualHeight = availableHeight / MAX_PLAYERS;
@@ -209,6 +244,7 @@ function ScoreBlock({
 
 const ButtonWrapper = styled(motion.div)`
   display: flex;
+  flex-direction: row;
   justify-content: center;
 `;
 

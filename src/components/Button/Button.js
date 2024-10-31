@@ -36,7 +36,6 @@ const Button = React.forwardRef(
     }
 
     style = {
-      ...style,
       "--border-size": borderPx + "px",
       "--padding": padding,
       "--font-size": fontSize,
@@ -44,6 +43,7 @@ const Button = React.forwardRef(
       "--background-color-trans-speed": overrideTransitionSpeed || "0.25s",
       "--color-trans-speed": overrideTransitionSpeed || "0.25s",
       "--opacity-trans-speed": overrideTransitionSpeed || "1s",
+      ...style,
     };
 
     return (
