@@ -23,6 +23,9 @@ function App() {
     React.useState(false);
   const [lastUsedPlayerSet, setLastUsedPlayerSet] = React.useState(() => {
     const fromStorage = window.localStorage.getItem("lastUsedPlayerSet");
+    if (fromStorage === null) {
+      return DEFAULT_PLAYER_SET;
+    }
     try {
       const js = JSON.parse(fromStorage);
       if (js.numHumans !== null && js.numBots !== null) {

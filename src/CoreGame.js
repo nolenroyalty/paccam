@@ -52,8 +52,14 @@ const MISSING_FACES_ALERT_THRESHOLD = 300;
 const EATABLE_DELAY_FOR_SPAWNING = 0.3 * 1000;
 
 const SPAWN_SUPERS_AFTER_THIS_MANY_EATS = {
-  lower: 8,
-  upper: 16,
+  initial: {
+    lower: 14,
+    upper: 24,
+  },
+  duringGame: {
+    lower: 34,
+    upper: 60,
+  },
 };
 
 const TUTORIAL_DIRECTIVES = [
@@ -257,9 +263,7 @@ class GameEngine {
     this.generatePellets();
   }
 
-  _initSpawnSupersAfterThisManyEats({ offset = 0 } = { offset: 0 }) {
-    const lower = SPAWN_SUPERS_AFTER_THIS_MANY_EATS.lower;
-    const upper = SPAWN_SUPERS_AFTER_THIS_MANY_EATS.upper;
+  _initSpawnSupersAfterThisManyEats({ offset = 0, lower, upper }) {
     const range = upper - lower;
     const random = Math.random() * range;
     this.spawnSupersAfterThisManyEats = offset + Math.floor(random + lower);
@@ -401,7 +405,11 @@ class GameEngine {
     console.log(`INITIALIZED PLAYERS: ${JSON.stringify(this.playerStates)}`);
     this.updatePositionConsumers();
     this.updateScoreConsumers();
-    this._initSpawnSupersAfterThisManyEats({ offset: 0 });
+    this._initSpawnSupersAfterThisManyEats({
+      offset: 0,
+      lower: SPAWN_SUPERS_AFTER_THIS_MANY_EATS.initial.lower,
+      upper: SPAWN_SUPERS_AFTER_THIS_MANY_EATS.initial.upper,
+    });
   }
 
   _updateStatusConsumers() {
@@ -1483,7 +1491,11 @@ class GameEngine {
       totalEats > this.spawnSupersAfterThisManyEats;
 
     if (superIsActive) {
-      this._initSpawnSupersAfterThisManyEats({ offset: totalEats });
+      this._initSpawnSupersAfterThisManyEats({
+        offset: totalEats,
+        lower: SPAWN_SUPERS_AFTER_THIS_MANY_EATS.duringGame.lower,
+        upper: SPAWN_SUPERS_AFTER_THIS_MANY_EATS.duringGame.upper,
+      });
       return;
     }
     if (!exceededSuperSpawnThreshold) {
@@ -1540,7 +1552,11 @@ class GameEngine {
     }
 
     if (spawnedOne) {
-      this._initSpawnSupersAfterThisManyEats({ offset: totalEats });
+      this._initSpawnSupersAfterThisManyEats({
+        offset: totalEats,
+        lower: SPAWN_SUPERS_AFTER_THIS_MANY_EATS.duringGame.lower,
+        upper: SPAWN_SUPERS_AFTER_THIS_MANY_EATS.duringGame.upper,
+      });
     }
   }
 
