@@ -316,32 +316,32 @@ function App() {
       <TutorialHandler tutorialInstruction={tutorialInstruction} />
       <HiddenImage
         ref={(node) => (spriteSheets.current["yellow"] = node)}
-        src="/aseprite/pacman-yellow.png"
+        src="./aseprite/pacman-yellow.png"
         alt=""
       />
       <HiddenImage
         ref={(node) => (spriteSheets.current["pink"] = node)}
-        src="/aseprite/pacman-pink.png"
+        src="./aseprite/pacman-pink.png"
         alt=""
       />
       <HiddenImage
         ref={(node) => (spriteSheets.current["green"] = node)}
-        src="/aseprite/pacman-green.png"
+        src="./aseprite/pacman-green.png"
         alt=""
       />
       <HiddenImage
         ref={(node) => (spriteSheets.current["orange"] = node)}
-        src="/aseprite/pacman-orange.png"
+        src="./aseprite/pacman-orange.png"
         alt=""
       />
       <HiddenImage
         ref={(node) => (spriteSheets.current["ghost"] = node)}
-        src="/aseprite/pacman-ghost.png"
+        src="./aseprite/pacman-ghost.png"
         alt=""
       />
       <HiddenImage
         ref={(node) => (spriteSheets.current["super"] = node)}
-        src="/aseprite/pacman-super.png"
+        src="./aseprite/pacman-super.png"
         alt=""
       />
       <GameHolderOverlapping>

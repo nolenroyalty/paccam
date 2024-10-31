@@ -7,6 +7,7 @@
     "predev": "rimraf .parcel-cache dist",
     "dev": "parcel public/index.html",
     "build": "parcel build public/index.html",
+    "build-public": "parcel build public/index.html --public-url /paccam",
     "new-component": "new-component"
   },
   "keywords": [],

@@ -181,7 +181,7 @@ function VideoDemoWithCanvas() {
     <VideoDemoWrapper>
       <VideoDemoHiddenVideo
         ref={videoRef}
-        src="/videos/instructions-greenscreen.mp4"
+        src="./videos/instructions-greenscreen.mp4"
         muted
         autoPlay
         playsInline

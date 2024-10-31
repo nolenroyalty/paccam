@@ -18,11 +18,11 @@ const PelletItem = React.memo(
   ({ x, y, kind, enabled, delay, slotSizePx, slotWidth, status }) => {
     const imgSrc = React.useMemo(() => {
       if (kind === "pellet") {
-        return "/aseprite/pellet.png";
+        return "./aseprite/pellet.png";
       } else if (kind === "fruit") {
-        return "/aseprite/strawberry2.png";
+        return "./aseprite/strawberry2.png";
       } else if (kind === "power-pellet") {
-        return "/aseprite/powerpellet.png";
+        return "./aseprite/powerpellet.png";
       }
       throw new Error(`Unknown pellet kind: ${kind}`);
     }, [kind]);

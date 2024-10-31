@@ -16,7 +16,7 @@ class SoundManager {
   }
 
   async loadSound({ src, volume, name }) {
-    const response = await fetch(`/sounds/${src}`);
+    const response = await fetch(`./sounds/${src}`);
     const arrayBuffer = await response.arrayBuffer();
     const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
     const nodes = { source: null, gainNode: null };
