@@ -352,7 +352,7 @@ const Wrapper = styled(TranslucentWindow)`
   // this could be more precise - this really only matters if we're also
   // narrow enough that we're stacking our buttons vertically. but this just
   // makes it more likely that the UI fits on small screens...
-  @media (min-height: 730px) {
+  @media (min-height: 850px) {
     top: 10%;
     gap: 1.5rem;
   }
@@ -511,8 +511,9 @@ function ExplainNoOnlineYet() {
       <br />
       Want this feature?? Tell me!{" "}
       <a href="https://x.com/itseieio">Tweet at me</a> or{" "}
-      <a href="https://mastodon.gamedev.place/home">toot(?)</a> at me or send me{" "}
-      <a href="https://buymeacoffee.com/eieio">money</a> or{" "}
+      <a href="https://mastodon.gamedev.place/home">toot(?)</a> at me or{" "}
+      <a href="https://bsky.app/profile/itseieio.bsky.social">bsky(??)</a> me
+      {" or"} send me <a href="https://buymeacoffee.com/eieio">money</a> or{" "}
       <a href="mailto:eieiogames@gmail.com?subject=I want online play for paccam and i promise i am serious about this request, really really really">
         email me
       </a>{" "}
